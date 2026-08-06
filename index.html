@@ -87,7 +87,7 @@
   <div class="auth-card">
     <div id="authLoginView">
       <h1>Вход в платформу</h1>
-      <p>Введите почту, на которую вам был выдан доступ. Мы отправим одноразовую ссылку для входа.</p>
+      <p><strong>Входите впервые?</strong> Сначала откройте письмо-приглашение и нажмите кнопку внутри него. Уже принимали приглашение — введите свою почту ниже, и мы отправим новую одноразовую ссылку для входа.</p>
       <form id="authForm">
         <div class="field"><label>Электронная почта</label><input id="authEmail" type="email" autocomplete="email" required placeholder="name@example.com"></div>
         <button class="btn primary" id="authSubmit" type="submit">Получить ссылку для входа</button>
@@ -243,7 +243,7 @@
     e.preventDefault();const email=document.getElementById('authEmail').value.trim(),btn=document.getElementById('authSubmit');if(!email)return;btn.disabled=true;btn.textContent='Отправляем…';message.className='auth-message';
     const {error}=await client.auth.signInWithOtp({email,options:{shouldCreateUser:false,emailRedirectTo:SITE_URL}});
     btn.disabled=false;btn.textContent='Получить ссылку для входа';
-    showMessage(error?'Доступ для этой почты не найден или письмо временно не отправляется.':'Ссылка отправлена. Проверьте входящие письма и папку «Спам».',!!error);
+    showMessage(error?'Новую ссылку отправить не удалось. Если вы входите впервые, сначала примите приглашение из первого письма. Если уже принимали — проверьте адрес почты или напишите @leraMathTutor.':'Новая ссылка отправлена. Проверьте входящие письма, папки «Спам» и «Промоакции».',!!error);
   });
   document.getElementById('authOtherAccount').addEventListener('click',async()=>{await client.auth.signOut();sessionStorage.removeItem('tutor_cloud_loaded_user');location.reload()});
   document.getElementById('logoutBtn').addEventListener('click',async()=>{await pushCloud();await client.auth.signOut();sessionStorage.removeItem('tutor_cloud_loaded_user');location.reload()});
