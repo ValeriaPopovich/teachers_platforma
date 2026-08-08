@@ -223,7 +223,7 @@
   function magicCooldownLeft(){return Math.max(0,Math.ceil(((+sessionStorage.getItem(MAGIC_COOLDOWN_KEY)||0)-Date.now())/1000))}
   function refreshMagicBtn(){const btn=document.getElementById('authMagic');if(!btn)return;const left=magicCooldownLeft();clearTimeout(magicTimer);if(left>0){btn.disabled=true;btn.textContent=`Ссылка отправлена · ${left} сек`;magicTimer=setTimeout(refreshMagicBtn,1000)}else{btn.disabled=false;btn.textContent='Войти по ссылке на почту'}}
   function startMagicCooldown(){sessionStorage.setItem(MAGIC_COOLDOWN_KEY,Date.now()+60000);refreshMagicBtn()}
-  function friendlyAuthError(err){const m=err?.message||'';if(/rate limit/i.test(m))return 'Слишком много запросов. Подождите пару минут и попробуйте снова.';if(/invalid.*credentials|invalid login/i.test(m))return 'Не удалось войти. Проверьте пароль. Если вы его ещё не задавали — нажмите «Войти по ссылке на почту» и придумайте пароль.';if(/email not confirmed/i.test(m))return 'Почта не подтверждена. Откройте письмо-приглашение и перейдите по ссылке.';return 'Не удалось выполнить действие: '+m}
+  function friendlyAuthError(err){const m=err?.message||'';if(/rate limit/i.test(m))return 'Слишком много запросов. Подождите пару минут и попробуйте снова.';if(/invalid.*credentials|invalid login/i.test(m))return 'Не удалось войти. Проверьте пароль. Если вы его ещё не задавали — нажмите «Войти по ссылке на почту» и придумайте пароль.';if(/email not confirmed/i.test(m))return 'Почта не подтверждена. Откройте письмо-приглашение и перейдите по ссылке.';if(/reauth/i.test(m))return 'Сессия слишком старая для смены пароля. Сейчас выйдем — войдите по ссылке из почты и попробуйте снова.';return 'Не удалось выполнить действие: '+m}
   function showSync(text,kind=''){status.querySelector('span').textContent=text;status.className='cloud-status show '+kind;clearTimeout(showSync.timer);if(kind!=='error')showSync.timer=setTimeout(()=>status.classList.remove('show'),1800)}
   async function pushCloud(raw=localStorage.getItem(STORAGE_KEY)){
     if(!window.tutorCloud.ready||!window.tutorCloud.user||!raw||raw===lastSaved)return;
@@ -291,7 +291,7 @@
     btn.disabled=true;btn.textContent='Сохраняем…';setPwdMessage.className='auth-message';
     const {data,error}=await client.auth.updateUser({password:p1,data:{password_set:true}});
     btn.disabled=false;btn.textContent='Сохранить пароль';
-    if(error){showMessage(friendlyAuthError(error),true,setPwdMessage);return}
+    if(error){showMessage(friendlyAuthError(error),true,setPwdMessage);if(/reauth/i.test(error.message||'')){setTimeout(async()=>{await client.auth.signOut();sessionStorage.removeItem('tutor_cloud_loaded_user');location.reload()},3500)}return}
     showMessage('Пароль сохранён. Открываем платформу…',false,setPwdMessage);
     recoveryMode=false;document.getElementById('authNewPassword').value='';document.getElementById('authNewPassword2').value='';
     const user=data?.user||(await client.auth.getUser()).data.user;if(user)openAccount(user);
