@@ -98,7 +98,7 @@
         <div class="field" id="authPasswordField"><label>Пароль</label><input id="authPassword" type="password" autocomplete="current-password" placeholder="Ваш пароль"></div>
         <button class="btn primary" id="authSubmit" type="submit">Войти</button>
       </form>
-      <div class="auth-links" id="authLinksPassword"><button type="button" class="auth-link" id="authForgot">Забыли пароль?</button><span class="auth-sep">·</span><button type="button" class="auth-link" id="authMagic">Войти по ссылке на почту</button></div>
+      <div class="auth-links" id="authLinksPassword"><button type="button" class="auth-link" id="authForgot">Забыли пароль?</button></div>
       <div class="auth-links" id="authLinksAlt" hidden><button type="button" class="auth-link" id="authBackToPassword">← Вернуться к входу по паролю</button></div>
       <div class="auth-message" id="authMessage"></div>
       <a class="auth-contact" href="https://t.me/leraMathTutor" target="_blank" rel="noopener">Нужна помощь с доступом — <b>@leraMathTutor</b></a>
@@ -222,7 +222,6 @@
   const MAGIC_COOLDOWN_KEY='tutor_magic_cooldown_until';
   const AUTH_MODES={
     password:{title:'Вход в платформу',desc:'Введите почту и пароль. <strong>Входите впервые?</strong> Откройте письмо-приглашение — платформа попросит придумать пароль.',pwd:true,submit:'Войти',primary:true},
-    magic:{title:'Вход по ссылке на почту',desc:'Введите свою почту — отправим одноразовую ссылку. Откройте её, и вы сразу войдёте.',pwd:false,submit:'Отправить ссылку',primary:false},
     recovery:{title:'Восстановление пароля',desc:'Введите свою почту — отправим ссылку, по которой вы придумаете новый пароль.',pwd:false,submit:'Отправить ссылку для сброса',primary:false}
   };
   let saveTimer=null,lastSaved='',openingUser='',recoveryMode=false,authMode='password';
@@ -304,17 +303,10 @@
     const exists=await emailExistsInDb(email);
     if(exists===false){btn.disabled=false;btn.textContent=AUTH_MODES[authMode].submit;showRichMessage('<strong>Аккаунта с такой почтой нет.</strong><br>Проверьте адрес или напишите <b>@leraMathTutor</b> — доступ выдаётся по приглашению.',true);return}
     btn.textContent='Отправляем…';
-    if(authMode==='magic'){
-      const {error}=await client.auth.signInWithOtp({email,options:{shouldCreateUser:false,emailRedirectTo:SITE_URL}});
-      btn.disabled=false;btn.textContent=AUTH_MODES.magic.submit;
-      if(error)showMessage(friendlyAuthError(error),true);else{startMagicCooldown();showRichMessage('<strong>✉️ Ссылка отправлена на '+escHtml(email)+'</strong><br>Письмо приходит за 1–2 минуты. Тема — <code>Your sign-in link</code>, отправитель — <code>LeraMathTutor</code>. <strong>Обязательно проверьте «Спам» и «Промоакции»</strong> — письма от новых отправителей часто туда попадают.')}
-    }else if(authMode==='recovery'){
-      const {error}=await client.auth.resetPasswordForEmail(email,{redirectTo:SITE_URL});
-      btn.disabled=false;btn.textContent=AUTH_MODES.recovery.submit;
-      if(error)showMessage(friendlyAuthError(error),true);else{startMagicCooldown();showRichMessage('<strong>🔑 Ссылка для сброса пароля отправлена на '+escHtml(email)+'</strong><br>Откройте письмо (тема — <code>Reset Your Password</code>, отправитель — <code>LeraMathTutor</code>) и придумайте новый пароль. <strong>Проверьте «Спам» и «Промоакции»</strong> — письма часто попадают туда.')}
-    }
+    const {error}=await client.auth.resetPasswordForEmail(email,{redirectTo:SITE_URL});
+    btn.disabled=false;btn.textContent=AUTH_MODES.recovery.submit;
+    if(error)showMessage(friendlyAuthError(error),true);else{startMagicCooldown();showRichMessage('<strong>🔑 Ссылка для сброса пароля отправлена на '+escHtml(email)+'</strong><br>Откройте письмо (тема — <code>Reset Your Password</code>, отправитель — <code>LeraMathTutor</code>) и придумайте новый пароль. <strong>Проверьте «Спам» и «Промоакции»</strong> — письма часто попадают туда.')}
   });
-  document.getElementById('authMagic').addEventListener('click',()=>setAuthMode('magic'));
   document.getElementById('authForgot').addEventListener('click',()=>setAuthMode('recovery'));
   document.getElementById('authBackToPassword').addEventListener('click',()=>setAuthMode('password'));
   document.getElementById('authSetPasswordForm').addEventListener('submit',async e=>{
