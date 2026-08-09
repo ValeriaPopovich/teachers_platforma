@@ -40,4 +40,15 @@ CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) прогоняет `
 
 ## Deploy
 
-Push в ветку, обслуживающую GitHub Pages. Перед выпуском пройти [release gate](docs/REFACTORING_SPEC.md#release-gate) и smoke-чеклист.
+Push в ветку, обслуживающую GitHub Pages. Перед выпуском пройти release gate и [smoke-чеклист](docs/smoke-checklist.md).
+
+### Release gate
+
+Перед production deploy:
+
+- [ ] `npm run lint`, `npm run validate:stage0`, `npm test` — зелёные;
+- [ ] прогнан [smoke-чеклист](docs/smoke-checklist.md), включая пункт про backup replace + recovery, cloud conflict и гейтинг доступа;
+- [ ] проверен вход и reload session; cloud save и reload;
+- [ ] `docs/SUPABASE_RLS_AUDIT.md` не имеет открытых пунктов, критичных для этого выпуска;
+- [ ] PR содержит риск и способ rollback (обычно `git revert HEAD` на соответствующий этап);
+- [ ] после deploy вручную: вход, открытие ученика, сохранение занятия, оплата, reload, backup export.
