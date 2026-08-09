@@ -59,7 +59,7 @@ describe('UI ownership boundaries', () => {
     expect(appJs).toContain('f.elements.targetId.disabled = false');
     expect(appJs).toContain("$('#lessonModalTitle').textContent = 'Новое разовое занятие'");
     expect(appJs).toContain("$('#lessonModalTitle').textContent = 'Редактировать занятие'");
-    expect(appJs).toMatch(/\(o\.targetId \|\| existingTarget\)\.split\(':\'\)/);
+    expect(appJs).toMatch(/\(o\.targetId \|\| existingTarget\)\.split\(':'\)/);
   });
 
   it('individual calendar lessons are never collapsed into one session', () => {
