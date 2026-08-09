@@ -38,6 +38,33 @@ export function timeConflicts(a, b, durationMinutes) {
   return startA < endB && startB < endA;
 }
 
+/**
+ * Возвращает владельца для редактируемого занятия.
+ * Индивидуальное занятие можно передать другому ученику. Преобразование
+ * индивидуального занятия в групповое (и наоборот) требует отдельной операции,
+ * потому что групповая встреча хранится как несколько связанных записей.
+ */
+export function existingLessonOwnerPatch(lesson, { type, id }) {
+  if (!lesson || !id) return null;
+  if (lesson.groupId) {
+    return type === 'g' && id === lesson.groupId
+      ? { groupId: lesson.groupId, seriesId: lesson.seriesId }
+      : null;
+  }
+  return type === 's' ? { studentId: id } : null;
+}
+
+/** Диапазон дат для переключателя «день / неделя / месяц». */
+export function calendarViewRange(view, now = new Date()) {
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  if (view !== 'day') start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+  return {
+    start,
+    days: view === 'day' ? 1 : view === 'month' ? 35 : 7,
+  };
+}
+
 /** Все повторения регулярных слотов в календарном месяце, отсортированные по дате. */
 export function monthlyRecurringDates(slots = [], date = new Date()) {
   const year = date.getFullYear(),

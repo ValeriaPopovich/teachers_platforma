@@ -10,7 +10,9 @@ import {
 import { periodAnalytics as calculatePeriodAnalytics } from '../src/domain/analytics.js';
 import { finances as calculateFinances } from '../src/domain/finances.js';
 import {
+  calendarViewRange,
   countMonthlyRecurringLessons,
+  existingLessonOwnerPatch,
   extendAllSchedules as extendSchedules,
   generateSchedule as generateRecurringSchedule,
   monthlyRecurringDates,
@@ -47,7 +49,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
   let data = structuredClone(store.getState()),
     activeStudent = null,
     lessonInitial = '',
-    calendarView = 'month',
+    calendarView = 'week',
     pendingImport = null;
   if (!loaded.ok)
     console.error(
@@ -741,14 +743,18 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
   function renderCalendar() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const start = new Date(today);
-    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
-    const heads = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+    const { start, days } = calendarViewRange(calendarView, today),
+      weekdayHeads =
+        calendarView === 'day'
+          ? [today.toLocaleDateString('ru-RU', { weekday: 'short' })]
+          : ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
+      heads = weekdayHeads
       .map((x) => `<div class="calendar-weekday">${x}</div>`)
       .join('');
+    $('#calendar').dataset.calendarView = calendarView;
     $('#calendar').innerHTML =
       heads +
-      Array.from({ length: calendarView === 'week' ? 7 : 35 }, (_, i) => {
+      Array.from({ length: days }, (_, i) => {
         const d = new Date(start);
         d.setDate(start.getDate() + i);
         const ds = localDay(d),
@@ -1845,6 +1851,15 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       existing = data.lessons.find((l) => l.id === o.id),
       [type, id] = (o.targetId || '').split(':');
     if (!id) return;
+    const ownerPatch = existing ? existingLessonOwnerPatch(existing, { type, id }) : null;
+    if (existing && !ownerPatch) {
+      inform(
+        'Нельзя превратить индивидуальное занятие в групповое или групповое в индивидуальное. Создайте новое занятие нужного типа.',
+        'Нельзя изменить тип занятия',
+        true,
+      );
+      return;
+    }
     delete o.targetId;
     delete o.attendees;
     o.testScore = o.testScore === '' ? '' : +o.testScore;
@@ -1891,7 +1906,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
         Object.assign(l, o, {
           status,
           id: l.id,
-          studentId: l.studentId,
+          studentId: existing.groupId ? l.studentId : ownerPatch.studentId,
           groupId: l.groupId,
           seriesId: l.seriesId,
           manualEdited: l.auto ? true : l.manualEdited,

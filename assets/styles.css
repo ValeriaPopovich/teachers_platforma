@@ -1957,6 +1957,10 @@ body {
 .calendar-view-switch .pill:hover:not(.active) {
   color: var(--text);
 }
+#page-schedule #calendar[data-calendar-view='day'] {
+  grid-template-columns: minmax(0, 1fr) !important;
+  min-width: 0 !important;
+}
 .profile-lesson-link {
   display: inline-flex;
   margin-top: 8px;

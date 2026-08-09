@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const appJs = fs.readFileSync(path.resolve(here, '../assets/app.js'), 'utf8');
+const indexHtml = fs.readFileSync(path.resolve(here, '../index.html'), 'utf8');
 
 describe('UI ownership boundaries', () => {
   it('page code has no direct storage or Supabase writes', () => {
@@ -32,5 +33,14 @@ describe('UI ownership boundaries', () => {
     ]) {
       expect(appJs).toContain(`from '${source}'`);
     }
+  });
+
+  it('calendar views are ordered day, week, month and week is the default', () => {
+    const switchMarkup = indexHtml.match(/<div class="calendar-view-switch"[\s\S]*?<\/div>/)?.[0];
+    expect(switchMarkup).toMatch(
+      /data-calendar-view="day"[\s\S]*data-calendar-view="week"[\s\S]*data-calendar-view="month"/,
+    );
+    expect(switchMarkup).toMatch(/class="pill active" data-calendar-view="week"/);
+    expect(appJs).toMatch(/calendarView = 'week'/);
   });
 });

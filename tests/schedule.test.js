@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
+  calendarViewRange,
   countMonthlyRecurringLessons,
   deduplicateLessons,
+  existingLessonOwnerPatch,
   extendAllSchedules,
   generateSchedule,
   monthlyRecurringDates,
@@ -95,6 +97,57 @@ describe('timeConflicts', () => {
     expect(
       timeConflicts({ date: '2026-01-01T10:00:00Z' }, { date: '2026-01-01T11:00:00Z' }, 60),
     ).toBe(false);
+  });
+});
+
+describe('existingLessonOwnerPatch', () => {
+  it('передаёт существующее индивидуальное занятие другому ученику', () => {
+    const lesson = { id: 'l1', studentId: 's1', date: '2026-08-12T18:00' };
+
+    expect(existingLessonOwnerPatch(lesson, { type: 's', id: 's2' })).toEqual({
+      studentId: 's2',
+    });
+    expect(lesson.studentId).toBe('s1');
+  });
+
+  it('сохраняет владельца существующего группового занятия', () => {
+    const lesson = { id: 'l1', studentId: 's1', groupId: 'g1', seriesId: 'series-1' };
+
+    expect(existingLessonOwnerPatch(lesson, { type: 'g', id: 'g1' })).toEqual({
+      groupId: 'g1',
+      seriesId: 'series-1',
+    });
+  });
+
+  it('отклоняет преобразование индивидуального занятия в групповое и наоборот', () => {
+    expect(
+      existingLessonOwnerPatch({ id: 'individual', studentId: 's1' }, { type: 'g', id: 'g1' }),
+    ).toBeNull();
+    expect(
+      existingLessonOwnerPatch(
+        { id: 'group', studentId: 's1', groupId: 'g1', seriesId: 'series-1' },
+        { type: 's', id: 's2' },
+      ),
+    ).toBeNull();
+  });
+});
+
+describe('calendarViewRange', () => {
+  const now = new Date(2026, 7, 12, 18, 30);
+
+  it('для дня показывает только сегодняшний день', () => {
+    const range = calendarViewRange('day', now);
+    expect(range.days).toBe(1);
+    expect([range.start.getDate(), range.start.getHours(), range.start.getMinutes()]).toEqual([
+      12, 0, 0,
+    ]);
+  });
+
+  it('для недели и месяца начинает диапазон с понедельника', () => {
+    const week = calendarViewRange('week', now);
+    const month = calendarViewRange('month', now);
+    expect([week.start.getDay(), week.start.getDate(), week.days]).toEqual([1, 10, 7]);
+    expect([month.start.getDay(), month.start.getDate(), month.days]).toEqual([1, 10, 35]);
   });
 });
 
