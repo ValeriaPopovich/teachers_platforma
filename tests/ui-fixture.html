@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>UI test fixture</title>
+  </head>
+  <body>
+    <script type="module">
+      const base = new URL('../', location.href).href;
+      const day = new Date();
+      day.setHours(12, 0, 0, 0);
+      const state = {
+        meta: { schemaVersion: 1, updatedAt: new Date().toISOString() },
+        data: {
+          students: [
+            {
+              id: 'student-ui',
+              name: 'Тестовый ученик',
+              grade: '8 класс',
+              parentName: 'Родитель',
+              price: 1500,
+              duration: 60,
+              payType: 'single',
+              scheduleSlots: [],
+              goals: '',
+              notes: '',
+              createdAt: Date.now(),
+            },
+          ],
+          groups: [],
+          lessons: [
+            {
+              id: 'lesson-ui',
+              studentId: 'student-ui',
+              date: day.toISOString(),
+              duration: 60,
+              status: 'planned',
+              payment: 'unpaid',
+              amount: 1500,
+              lessonKind: 'oneoff',
+              topics: 'Линейные уравнения',
+              homework: '№ 1–5',
+              comment: 'Тестовый комментарий',
+              previousHomework: 'no',
+              homeworkGrade: '',
+              testDone: 'no',
+              reportFilled: false,
+            },
+          ],
+          events: [],
+          payments: [],
+          financeArchive: {},
+          topicLog: {},
+          settings: {
+            tutor: 'UI Тест',
+            theme: 'light',
+            timeZone: 'auto',
+            reminder: 15,
+            sidebarCompact: false,
+            customGoals: [],
+            deletedGoals: [],
+            onboarded: true,
+          },
+        },
+      };
+      let html = await (await fetch('../index.html')).text();
+      html = html
+        .replace(/<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase[^>]*><\/script>/, '')
+        .replace('<script type="module" src="assets/auth.js"><\/script>', '')
+        .replace(
+          '<head>',
+          `<head><base href="${base}"><script>localStorage.setItem('tutorCabinet_v1', ${JSON.stringify(JSON.stringify(state))});window.tutorCloud={ready:false,conflict:false,queueSave(){},flushSave:async()=>true};<\/script>`,
+        );
+      document.open();
+      document.write(html);
+      document.close();
+    </script>
+  </body>
+</html>

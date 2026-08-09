@@ -12,7 +12,8 @@
   --warn: #e79a25;
   --bad: #dc5260;
   --shadow: 0 16px 45px rgba(34, 28, 45, 0.08);
-  --ring: rgba(239, 79, 145, 0.5);
+  --ring: rgba(55, 112, 184, 0.42);
+  --focus: #3770b8;
   --brand-ink: #c9256b;
   --neutral-chip: #eceaf1;
   --radius: 22px;
@@ -26,12 +27,33 @@
   --line: #39353f;
   --soft: #35252b;
   --shadow: 0 18px 50px rgba(0, 0, 0, 0.25);
-  --ring: rgba(239, 79, 145, 0.65);
+  --ring: rgba(112, 168, 238, 0.55);
+  --focus: #70a8ee;
   --brand-ink: #ff9ec2;
   --neutral-chip: #332f3b;
 }
 * {
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted) 55%, transparent) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  min-height: 30px;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted) 55%, transparent);
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--muted) 75%, transparent);
+  background-clip: padding-box;
 }
 :focus-visible {
   outline: 3px solid var(--ring);
@@ -40,8 +62,12 @@
 .toolbar input:focus-visible,
 .toolbar select:focus-visible {
   outline: none;
-  border-color: var(--brand2);
-  box-shadow: 0 0 0 3px rgba(239, 79, 145, 0.12);
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 16%, transparent);
+}
+html.modal-open,
+html.modal-open body {
+  overflow: hidden;
 }
 body {
   margin: 0;
@@ -466,6 +492,10 @@ button {
   border-color: var(--brand2);
 }
 .event {
+  display: block;
+  width: 100%;
+  text-align: left;
+  color: var(--text);
   font-size: 12px;
   padding: 6px 7px;
   border-radius: 9px;
@@ -511,6 +541,20 @@ button {
   padding: 11px 12px;
   outline: none;
 }
+.field select,
+.toolbar select,
+select {
+  appearance: none;
+  padding-right: 42px;
+  background-image:
+    linear-gradient(45deg, transparent 48%, var(--muted) 49% 63%, transparent 64%),
+    linear-gradient(135deg, transparent 48%, var(--muted) 49% 63%, transparent 64%);
+  background-position:
+    calc(100% - 20px) 50%,
+    calc(100% - 14px) 50%;
+  background-size: 7px 7px;
+  background-repeat: no-repeat;
+}
 .field textarea {
   resize: vertical;
   min-height: 82px;
@@ -518,8 +562,8 @@ button {
 .field input:focus,
 .field select:focus,
 .field textarea:focus {
-  border-color: var(--brand2);
-  box-shadow: 0 0 0 3px rgba(239, 79, 145, 0.1);
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 14%, transparent);
 }
 .checkline {
   display: flex;
@@ -535,6 +579,7 @@ button {
   justify-content: center;
   padding: 18px;
   z-index: 100;
+  overscroll-behavior: contain;
 }
 .modal-wrap.open {
   display: flex;
@@ -543,6 +588,7 @@ button {
   width: min(720px, 100%);
   max-height: 92vh;
   overflow: auto;
+  overscroll-behavior: contain;
   background: var(--panel);
   border-radius: 24px;
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.3);
@@ -1775,7 +1821,7 @@ body {
 }
 .student-card-main {
   cursor: pointer;
-  padding-right: 38px;
+  padding-right: 0;
 }
 .student-delete {
   position: absolute;
@@ -1925,10 +1971,7 @@ body {
   margin-top: 18px;
 }
 .lesson-paid-field {
-  padding: 13px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--panel2);
+  padding: 0;
 }
 
 .calendar-view-switch {
@@ -2572,6 +2615,15 @@ body {
 #customPeriodFields {
   animation: fieldIn 0.24s ease;
 }
+#homeworkGradeField {
+  display: grid !important;
+  transition: opacity 0.18s ease;
+}
+#homeworkGradeField.is-disabled {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
 .page.active {
   animation: pageIn 0.24s ease;
 }
@@ -2703,6 +2755,55 @@ body {
   opacity: 1;
   visibility: visible;
   transform: translate(-50%, 0);
+}
+.modal .help-tip:after {
+  left: 0;
+  transform: translate(0, 5px);
+}
+.modal .help-tip:hover:after,
+.modal .help-tip:focus:after {
+  transform: none;
+}
+.textarea-copy {
+  position: relative;
+}
+.textarea-copy textarea {
+  padding-right: 48px;
+}
+.copy-textarea-btn {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 21px;
+  line-height: 1;
+  box-shadow: 0 4px 12px rgba(24, 22, 30, 0.08);
+}
+.copy-textarea-btn:hover {
+  color: var(--focus);
+  border-color: color-mix(in srgb, var(--focus) 45%, var(--line));
+}
+#paymentHistory .icon-btn {
+  transition:
+    color 0.16s ease,
+    background 0.16s ease,
+    border-color 0.16s ease,
+    transform 0.16s ease;
+}
+#paymentHistory .icon-btn:hover,
+#paymentHistory .icon-btn:focus-visible {
+  color: #fff;
+  border-color: var(--bad);
+  background: var(--bad);
+  transform: scale(1.06);
 }
 .report-history-action {
   display: flex;

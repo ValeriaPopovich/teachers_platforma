@@ -43,4 +43,13 @@ describe('UI ownership boundaries', () => {
     expect(switchMarkup).toMatch(/class="pill active" data-calendar-view="week"/);
     expect(appJs).toMatch(/calendarView = 'week'/);
   });
+
+  it('calendar event clicks are not mistaken for calendar view switches', () => {
+    expect(appJs).toContain(
+      "closest('#calendarViewSwitch [data-calendar-view]')?.dataset.calendarView",
+    );
+    expect(appJs).not.toContain("e.target.closest('[data-calendar-view]')?.dataset.calendarView");
+    expect(appJs).toMatch(/<button class="event event--\$\{l\.status\}"[^>]*data-edit-lesson=/);
+    expect(appJs).toMatch(/<button class="event custom-event"[^>]*data-edit-event=/);
+  });
 });

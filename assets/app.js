@@ -261,6 +261,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     if (modal) modal.scrollTop = 0;
     open._lastFocus = document.activeElement;
     wrap.classList.add('open');
+    document.documentElement.classList.add('modal-open');
     requestAnimationFrame(() => {
       const f =
         modal &&
@@ -305,6 +306,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
   }
   function closeAll() {
     $$('.modal-wrap').forEach((x) => x.classList.remove('open'));
+    document.documentElement.classList.remove('modal-open');
     const l = open._lastFocus;
     open._lastFocus = null;
     if (l && document.contains(l))
@@ -748,9 +750,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
         calendarView === 'day'
           ? [today.toLocaleDateString('ru-RU', { weekday: 'short' })]
           : ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
-      heads = weekdayHeads
-      .map((x) => `<div class="calendar-weekday">${x}</div>`)
-      .join('');
+      heads = weekdayHeads.map((x) => `<div class="calendar-weekday">${x}</div>`).join('');
     $('#calendar').dataset.calendarView = calendarView;
     $('#calendar').innerHTML =
       heads +
@@ -761,14 +761,14 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
           lessons = uniqueSessions(data.lessons.filter((l) => localDay(l.date) === ds)).map(
             (l) => ({
               date: l.date,
-              html: `<div class="event event--${l.status}" role="button" tabindex="0" data-edit-lesson="${l.id}">${fmtTime(l.date)} ${esc(lessonName(l))}<br><span class="sub">${statusName(l.status)}${l.lessonKind === 'oneoff' ? ' · разовое' : ''}</span></div>`,
+              html: `<button class="event event--${l.status}" type="button" data-edit-lesson="${l.id}">${fmtTime(l.date)} ${esc(lessonName(l))}<br><span class="sub">${statusName(l.status)}${l.lessonKind === 'oneoff' ? ' · разовое' : ''}</span></button>`,
             }),
           ),
           own = data.events
             .filter((x) => localDay(x.date) === ds)
             .map((x) => ({
               date: x.date,
-              html: `<div class="event custom-event" role="button" tabindex="0" data-edit-event="${x.id}">${fmtTime(x.date)} ${esc(x.title)}<br><span class="sub">Своё событие · ${x.duration || 60} мин</span></div>`,
+              html: `<button class="event custom-event" type="button" data-edit-event="${x.id}">${fmtTime(x.date)} ${esc(x.title)}<br><span class="sub">Своё событие · ${x.duration || 60} мин</span></button>`,
             })),
           items = [...lessons, ...own].sort((a, b) => a.date.localeCompare(b.date)),
           weekday = d.toLocaleDateString('ru-RU', { weekday: 'long' }),
@@ -1029,13 +1029,15 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
   function syncStatusForTime(changeDefault = false) {
     const f = $('#lessonForm'),
       planned = [...f.elements.status.options].find((o) => o.value === 'planned'),
-      past = f.elements.date.value && new Date(f.elements.date.value) <= new Date();
+      past = f.elements.date.value && new Date(f.elements.date.value) <= new Date(),
+      isExistingLesson = !!f.elements.id.value;
     if (planned) {
-      planned.hidden = !!past;
-      planned.disabled = !!past;
+      planned.hidden = !!past && isExistingLesson;
+      planned.disabled = !!past && isExistingLesson;
     }
     if (changeDefault) {
-      if (past && f.elements.status.value === 'planned') f.elements.status.value = 'done';
+      if (past && isExistingLesson && f.elements.status.value === 'planned')
+        f.elements.status.value = 'done';
       if (!past && f.elements.status.value === 'done' && !f.elements.id.value)
         f.elements.status.value = 'planned';
     }
@@ -1159,7 +1161,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       toggle = $('#previousHomeworkToggle'),
       yes = toggle.checked;
     f.elements.previousHomework.value = yes ? 'yes' : 'no';
-    $('#homeworkGradeField').style.display = yes ? 'grid' : 'none';
+    $('#homeworkGradeField').classList.toggle('is-disabled', !yes);
     f.elements.homeworkGrade.disabled = !yes;
   }
   function buildParentMessage() {
@@ -1209,7 +1211,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     const d = new Date(Date.now() - new Date().getTimezoneOffset() * 60000);
     f.elements.date.value = d.toISOString().slice(0, 16);
     f.elements.targetId.value = studentId ? 's:' + studentId : '';
-    f.elements.status.value = 'done';
+    f.elements.status.value = 'planned';
     f.elements.lessonKind.value = 'oneoff';
     $('#testDoneToggle').checked = false;
     $('#previousHomeworkToggle').checked = false;
@@ -1220,7 +1222,8 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     syncHomeworkFields();
     syncMovedField();
     syncLessonDefaults();
-    syncStatusForTime(true);
+    syncStatusForTime(false);
+    f.elements.status.value = 'planned';
     refreshParentMessage();
     lessonInitial = snapshotLesson();
   }
@@ -2160,7 +2163,10 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     if (editLessonId) editLesson(editLessonId);
     const editEventId = e.target.closest('[data-edit-event]')?.dataset.editEvent;
     if (editEventId) editEvent(editEventId);
-    const sid = e.target.closest('[data-student]')?.dataset.student;
+    const studentCard = e.target.closest('.student-card:not(.group-card)'),
+      sid =
+        e.target.closest('[data-student]')?.dataset.student ||
+        studentCard?.querySelector('[data-student]')?.dataset.student;
     if (sid && !editLessonId && !e.target.closest('a,button')) showProfile(sid);
     const gid = e.target.closest('[data-group]')?.dataset.group;
     if (gid) editGroup(gid);
@@ -2187,7 +2193,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     handleEntityClick(e);
   });
   $('#page-schedule').addEventListener('click', (e) => {
-    const view = e.target.closest('[data-calendar-view]')?.dataset.calendarView;
+    const view = e.target.closest('#calendarViewSwitch [data-calendar-view]')?.dataset.calendarView;
     if (view) {
       calendarView = view;
       $$('#calendarViewSwitch .pill').forEach((button) =>
@@ -2920,11 +2926,17 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     closeAll();
   });
   $('#clearBtn').onclick = async () => {
+    const firstConfirmation = await ask(
+      'Будут удалены все ученики, занятия и настройки. Восстановить их можно только из резервной копии.',
+      'Удалить все данные?',
+      'Продолжить',
+    );
+    if (!firstConfirmation) return;
     if (
       await ask(
-        'Будут удалены все ученики, занятия и настройки. Восстановить их можно только из резервной копии.',
-        'Очистить все данные?',
-        'Очистить всё',
+        'Это последнее подтверждение. Все данные аккаунта будут удалены.',
+        'Точно удалить?',
+        'Удалить все данные',
       )
     ) {
       data = structuredClone(blank);

@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>UI smoke tests</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 24px;
+        font:
+          15px/1.5 system-ui,
+          sans-serif;
+        background: #f5f7fb;
+        color: #20232a;
+      }
+      main {
+        max-width: 920px;
+        margin: auto;
+      }
+      h1 {
+        margin-top: 0;
+      }
+      #summary {
+        margin: 16px 0;
+        padding: 14px 16px;
+        border-radius: 12px;
+        background: #fff;
+      }
+      #results {
+        display: grid;
+        gap: 8px;
+        padding: 0;
+        list-style: none;
+      }
+      #results li {
+        padding: 11px 13px;
+        border-radius: 10px;
+        background: #fff;
+        border-left: 4px solid #9aa3b2;
+      }
+      #results .pass {
+        border-color: #2ca66f;
+      }
+      #results .fail {
+        border-color: #dc5260;
+      }
+      iframe {
+        width: 100%;
+        height: 760px;
+        margin-top: 18px;
+        border: 1px solid #dfe3ea;
+        border-radius: 14px;
+        background: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Базовые UI-сценарии</h1>
+      <div id="summary" role="status">Запускаю тесты…</div>
+      <ol id="results"></ol>
+      <iframe id="app" title="Тестовый экземпляр платформы"></iframe>
+    </main>
+    <script type="module">
+      const results = document.querySelector('#results');
+      const summary = document.querySelector('#summary');
+      const frame = document.querySelector('#app');
+      const base = new URL('../', location.href).href;
+      const day = new Date();
+      day.setHours(12, 0, 0, 0);
+      const state = {
+        meta: { schemaVersion: 1, updatedAt: new Date().toISOString() },
+        data: {
+          students: [
+            {
+              id: 'student-ui',
+              name: 'Тестовый ученик',
+              grade: '8 класс',
+              contact: '',
+              parentContact: '',
+              parentName: 'Родитель',
+              lessonLink: '',
+              price: 1500,
+              duration: 60,
+              payType: 'single',
+              packageSize: 0,
+              scheduleSlots: [],
+              goals: 'Повысить успеваемость',
+              notes: '',
+              createdAt: Date.now(),
+            },
+          ],
+          groups: [],
+          lessons: [
+            {
+              id: 'lesson-ui',
+              studentId: 'student-ui',
+              date: day.toISOString(),
+              duration: 60,
+              status: 'planned',
+              payment: 'unpaid',
+              amount: 1500,
+              lessonKind: 'oneoff',
+              topics: 'Линейные уравнения',
+              homework: '№ 1–5',
+              comment: 'Тестовый комментарий',
+              previousHomework: 'no',
+              homeworkGrade: '',
+              testDone: 'no',
+              reportFilled: false,
+            },
+          ],
+          events: [],
+          payments: [],
+          financeArchive: {},
+          topicLog: {},
+          settings: {
+            tutor: 'UI Тест',
+            theme: 'light',
+            timeZone: 'auto',
+            reminder: 15,
+            sidebarCompact: false,
+            customGoals: [],
+            deletedGoals: [],
+            onboarded: true,
+          },
+        },
+      };
+
+      function record(name, passed, detail = '') {
+        const item = document.createElement('li');
+        item.className = passed ? 'pass' : 'fail';
+        item.textContent = `${passed ? '✓' : '✕'} ${name}${detail ? ` — ${detail}` : ''}`;
+        results.append(item);
+        return passed;
+      }
+      const waitFrame = () =>
+        new Promise((resolve) => frame.addEventListener('load', resolve, { once: true }));
+      const nextFrame = (win) =>
+        new Promise((resolve) =>
+          win.requestAnimationFrame(() => win.requestAnimationFrame(resolve)),
+        );
+
+      try {
+        let html = await (await fetch('../index.html')).text();
+        html = html
+          .replace(/<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase[^>]*><\/script>/, '')
+          .replace('<script type="module" src="assets/auth.js"><\/script>', '')
+          .replace(
+            '<head>',
+            `<head><base href="${base}"><script>localStorage.setItem('tutorCabinet_v1', ${JSON.stringify(JSON.stringify(state))});window.tutorCloud={ready:false,conflict:false,queueSave(){},flushSave:async()=>true};<\/script>`,
+          );
+        const loaded = waitFrame();
+        frame.srcdoc = html;
+        await loaded;
+        const win = frame.contentWindow;
+        const doc = frame.contentDocument;
+        await nextFrame(win);
+        const checks = [];
+
+        doc.querySelector('[data-page="schedule"]').click();
+        checks.push(
+          record(
+            'Переход в расписание',
+            doc.querySelector('#page-schedule').classList.contains('active'),
+          ),
+        );
+
+        const calendarLesson = doc.querySelector('#page-schedule [data-edit-lesson="lesson-ui"]');
+        calendarLesson?.click();
+        await nextFrame(win);
+        const lessonModal = doc.querySelector('#lessonModal');
+        const lessonForm = doc.querySelector('#lessonForm');
+        checks.push(
+          record(
+            'Клик по занятию открывает модалку',
+            !!calendarLesson && lessonModal.classList.contains('open'),
+          ),
+        );
+        checks.push(
+          record(
+            'В модалке показаны данные занятия',
+            lessonForm.elements.topics.value === 'Линейные уравнения' &&
+              lessonForm.elements.comment.value === 'Тестовый комментарий',
+          ),
+        );
+        checks.push(
+          record(
+            'При открытой модалке фон заблокирован',
+            doc.documentElement.classList.contains('modal-open'),
+          ),
+        );
+
+        const homeworkCard = doc.querySelector('.lesson-homework-card');
+        const heightBefore = homeworkCard.getBoundingClientRect().height;
+        doc.querySelector('#previousHomeworkToggle').click();
+        await nextFrame(win);
+        const heightAfter = homeworkCard.getBoundingClientRect().height;
+        checks.push(
+          record(
+            'Переключатель предыдущего ДЗ не меняет высоту блока',
+            Math.abs(heightAfter - heightBefore) < 1,
+            `${heightBefore}px → ${heightAfter}px`,
+          ),
+        );
+        checks.push(
+          record(
+            'Копирование находится внутри поля сообщения',
+            !!doc.querySelector('.textarea-copy > #parentMessage + #copyParentMessage'),
+          ),
+        );
+
+        doc.querySelector('#previousHomeworkToggle').click();
+        await nextFrame(win);
+        lessonModal.querySelector('[data-close]').click();
+        await nextFrame(win);
+        checks.push(
+          record(
+            'Закрытие модалки возвращает прокрутку',
+            !doc.documentElement.classList.contains('modal-open'),
+          ),
+        );
+
+        doc.querySelector('[data-open="lesson"]').click();
+        await nextFrame(win);
+        checks.push(
+          record(
+            'Новое разовое занятие по умолчанию запланировано',
+            lessonForm.elements.lessonKind.value === 'oneoff' &&
+              lessonForm.elements.status.value === 'planned',
+          ),
+        );
+        lessonModal.querySelector('[data-close]').click();
+
+        doc.querySelector('[data-page="students"]').click();
+        await nextFrame(win);
+        const studentCard = doc.querySelector('.student-card');
+        studentCard?.click();
+        await nextFrame(win);
+        checks.push(
+          record(
+            'Клик по карточке ученика открывает профиль',
+            !!studentCard &&
+              doc.querySelector('#profileModal').classList.contains('open') &&
+              doc.querySelector('#profileBody').textContent.includes('Тестовый ученик'),
+          ),
+        );
+
+        const passed = checks.filter(Boolean).length;
+        summary.textContent = `${passed} из ${checks.length} сценариев пройдено`;
+        summary.style.color = passed === checks.length ? '#18794e' : '#b42318';
+        document.title =
+          passed === checks.length
+            ? `✓ UI smoke tests (${passed}/${checks.length})`
+            : `✕ UI smoke tests (${passed}/${checks.length})`;
+      } catch (error) {
+        record('Запуск тестов', false, error.message);
+        summary.textContent = 'Тесты не завершены';
+        summary.style.color = '#b42318';
+      }
+    </script>
+  </body>
+</html>
