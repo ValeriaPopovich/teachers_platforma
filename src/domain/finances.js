@@ -35,18 +35,25 @@ export function finances(data, id) {
   );
 
   if (s && s.payType === 'package') {
+    const packagePayments = balancePayments.filter(
+      (p) => p.billingType === 'package' || +p.packageLessons > 0,
+    );
     const bought =
       (+arch.packageBought || 0) +
-      balancePayments.reduce((n, p) => n + (+p.packageLessons || +s.packageSize || 0), 0);
+      packagePayments.reduce((n, p) => n + (+p.packageLessons || 0), 0);
     const used = (+arch.packageUsed || 0) + done.filter((x) => x.payment === 'package').length;
+    const extraDebt =
+      (+arch.singleCharged || 0) +
+      done.filter((x) => x.payment === 'unpaid').reduce((n, x) => n + (+x.amount || 0), 0);
     const paid =
       (+arch.paidAmount || 0) + balancePayments.reduce((n, p) => n + (+p.amount || 0), 0);
     const balanceLessons = bought - used;
     return {
-      charged: used * (+s.price || 0),
+      charged: used * (+s.price || 0) + extraDebt,
       paid,
       balanceLessons,
-      debt: Math.max(0, -balanceLessons) * (+s.price || 0),
+      extraDebt,
+      debt: Math.max(0, -balanceLessons) * (+s.price || 0) + extraDebt,
       bought,
       used,
       balance: 0,

@@ -33,6 +33,47 @@ describe('pruneOldHistory', () => {
     pruneOldHistory(data, 45, Date.parse('2026-08-09T00:00:00Z'));
     expect(data).toEqual(snap);
   });
+
+  it('сворачивает старые занятия и платежи в финансовый архив', () => {
+    const data = seed({
+      students: [
+        { id: 's1', payType: 'single', price: 1000 },
+        { id: 's2', payType: 'package', price: 1500, packageSize: 4 },
+      ],
+      lessons: [
+        {
+          id: 'l1',
+          studentId: 's1',
+          date: '2026-01-01',
+          status: 'done',
+          payment: 'unpaid',
+          amount: 1000,
+        },
+        {
+          id: 'l2',
+          studentId: 's2',
+          date: '2026-01-01',
+          status: 'done',
+          payment: 'package',
+          amount: 1500,
+        },
+      ],
+      payments: [
+        { id: 'p1', studentId: 's1', date: '2026-01-02', amount: 1000 },
+        { id: 'p2', studentId: 's2', date: '2026-01-02', amount: 6000, packageLessons: 4 },
+      ],
+    });
+    const r = pruneOldHistory(data, 45, Date.parse('2026-08-09T00:00:00Z'));
+    expect(r.data.lessons).toEqual([]);
+    expect(r.data.payments).toEqual([]);
+    expect(r.data.financeArchive.s1).toMatchObject({ singleCharged: 1000, paidAmount: 1000 });
+    expect(r.data.financeArchive.s2).toMatchObject({
+      packageUsed: 1,
+      packageBought: 4,
+      paidAmount: 6000,
+    });
+    expect(r.changes).toMatchObject({ lessonsRemoved: 2, paymentsRemoved: 2 });
+  });
 });
 
 describe('sweepOrphans', () => {

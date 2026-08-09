@@ -1,11 +1,45 @@
 import { describe, it, expect } from 'vitest';
 import {
+  countMonthlyRecurringLessons,
   deduplicateLessons,
   extendAllSchedules,
   generateSchedule,
+  monthlyRecurringDates,
   timeConflicts,
 } from '../src/domain/schedule.js';
 import { blankData } from '../src/state/schema.js';
+
+describe('countMonthlyRecurringLessons', () => {
+  it('учитывает реальное число будних дней в конкретном месяце', () => {
+    const slots = [
+      { day: 1, time: '16:00' },
+      { day: 3, time: '16:00' },
+    ];
+    expect(countMonthlyRecurringLessons(slots, new Date(2026, 7, 1))).toBe(9);
+    expect(countMonthlyRecurringLessons(slots, new Date(2026, 8, 1))).toBe(9);
+  });
+
+  it('считает два занятия в один день как два слота', () => {
+    const slots = [
+      { day: 1, time: '16:00' },
+      { day: 1, time: '18:00' },
+    ];
+    expect(countMonthlyRecurringLessons(slots, new Date(2026, 7, 1))).toBe(10);
+  });
+});
+
+describe('monthlyRecurringDates', () => {
+  it('возвращает точные даты и время занятий в выбранном месяце', () => {
+    const dates = monthlyRecurringDates([{ day: 2, time: '16:30' }], new Date(2026, 8, 1));
+    expect(dates.map((date) => [date.getDate(), date.getHours(), date.getMinutes()])).toEqual([
+      [1, 16, 30],
+      [8, 16, 30],
+      [15, 16, 30],
+      [22, 16, 30],
+      [29, 16, 30],
+    ]);
+  });
+});
 
 describe('deduplicateLessons', () => {
   it('убирает дубли по (studentId, groupId, date)', () => {

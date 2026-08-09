@@ -56,7 +56,7 @@
 
 На `main` cloud save выполняет `upsert` полного JSON, а сохранение триггерится через monkey patch `Storage.prototype.setItem`. Debounce не исключает параллельные запросы, а `last-write-wins` может затереть изменения другого устройства или вкладки.
 
-**Статус:** клиент устранён: monkey patch убран, сохранения сериализованы, `assets/auth.js` использует CAS-протокол и показывает `offline/error/conflict`. SQL-контракт готов, но read-only проверка live Supabase 2026-08-09 вернула `42703: column app_data.revision does not exist`; до применения миграции legacy cloud data загружаются, а небезопасная запись явно заблокирована.
+**Статус:** устранено: monkey patch убран, сохранения сериализованы, `assets/auth.js` использует CAS-протокол и показывает `offline/error/conflict`. SQL-контракт применён в live Supabase 2026-08-09.
 
 ### 2.4. Неполная проверка backup
 
@@ -508,7 +508,7 @@ loading / idle / dirty / saving / saved / offline / error / conflict
 #### DoD
 
 - [x] Save operations сериализованы (`saveChain` в inline + `createSaveQueue` в модуле, тест).
-- [~] Atomic server contract готов (`save_app_data` с `WHERE revision = expected`), но live Supabase ещё без колонок: read-only REST-проверка 2026-08-09 получила PostgreSQL `42703`.
+- [x] Atomic server contract (`save_app_data` с `WHERE revision = expected`) применён в live Supabase 2026-08-09.
 - [x] Клиентский протокол — CAS-логика полностью протестирована (`tests/sync-protocol.test.js`, 10 тестов: SAVED/CONFLICT/OFFLINE/ERROR).
 - [x] Более новая облачная revision не перезаписывается молча (`saveWithCas` возвращает `CONFLICT` при `rowsAffected=0`, автоматическая перезапись запрещена).
 - [x] Offline snapshot остаётся локально, статус не маскируется под success, ограниченный повтор запускается на `online`.
@@ -633,7 +633,7 @@ Selective rendering вводится только там, где это упро
 - [x] Финансовый baseline совпадает; UI делегирует расчёт `src/domain/finances.js` (99/99 тестов зелёных на момент интеграции).
 - [x] Полные `generateSchedule`/`extendAllSchedules` находятся в чистом модуле, повторный вызов не создаёт дубли и сохраняет protected lessons.
 - [x] Backup merge сохраняет ссылки, включая `payment.lessonId` (fix + тесты + regression guard).
-- [~] Cloud CAS полностью готов в репозитории и подключён в клиенте; единственный незакрытый runtime-шаг — применить SQL в live Supabase (проверено: колонок пока нет).
+- [x] Cloud CAS готов в репозитории, подключён в клиенте и применён в live Supabase 2026-08-09.
 - [x] Offline/error/conflict состояния видимы и persistent; conflict предлагает загрузить облако или после подтверждения CAS-заменить его локальной копией.
 
 ### Качество выпуска

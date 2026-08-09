@@ -37,7 +37,7 @@ CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) прогоняет `
 - План рефакторинга: [`docs/REFACTORING_SPEC.md`](docs/REFACTORING_SPEC.md).
 - Архитектурные решения: [`docs/adr/`](docs/adr/README.md).
 - RLS-аудит: [`docs/SUPABASE_RLS_AUDIT.md`](docs/SUPABASE_RLS_AUDIT.md).
-- Включение atomic cloud save: [`docs/CLOUD_SYNC_SETUP.md`](docs/CLOUD_SYNC_SETUP.md). Пока миграция не применена, legacy cloud data читаются, но cloud write намеренно заблокирован.
+- Atomic cloud save включён; инструкция и сценарий проверки: [`docs/CLOUD_SYNC_SETUP.md`](docs/CLOUD_SYNC_SETUP.md).
 
 ## Deploy
 

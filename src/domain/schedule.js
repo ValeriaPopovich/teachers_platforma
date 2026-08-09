@@ -38,6 +38,31 @@ export function timeConflicts(a, b, durationMinutes) {
   return startA < endB && startB < endA;
 }
 
+/** Все повторения регулярных слотов в календарном месяце, отсортированные по дате. */
+export function monthlyRecurringDates(slots = [], date = new Date()) {
+  const year = date.getFullYear(),
+    month = date.getMonth(),
+    days = new Date(year, month + 1, 0).getDate();
+  const dates = [];
+  for (let day = 1; day <= days; day++) {
+    const weekday = new Date(year, month, day).getDay();
+    slots
+      .filter((slot) => +slot.day === weekday)
+      .forEach((slot) => {
+        const [hours = 0, minutes = 0] = String(slot.time || '00:00')
+          .split(':')
+          .map(Number);
+        dates.push(new Date(year, month, day, hours, minutes));
+      });
+  }
+  return dates.sort((a, b) => a - b);
+}
+
+/** Точное число повторений регулярных слотов в календарном месяце. */
+export function countMonthlyRecurringLessons(slots = [], date = new Date()) {
+  return monthlyRecurringDates(slots, date).length;
+}
+
 export function isProtectedAutomaticLesson(lesson) {
   return (
     lesson.manualEdited ||

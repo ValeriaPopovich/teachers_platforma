@@ -12,16 +12,69 @@ function mutate(data, fn) {
   return { data: next, changes };
 }
 
-/** Удаляет events старше `retentionDays` дней (по умолчанию 45). */
+/**
+ * Удаляет детальную историю старше retentionDays, сохраняя только компактные
+ * финансовые итоги, необходимые для корректного баланса.
+ */
 export function pruneOldHistory(data, retentionDays = 45, now = Date.now()) {
   return mutate(data, (d) => {
     const cut = new Date(now);
     cut.setHours(0, 0, 0, 0);
     cut.setDate(cut.getDate() - retentionDays);
     const cutMs = cut.getTime();
-    const before = d.events.length;
+    const eventsBefore = d.events.length,
+      lessonsBefore = d.lessons.length,
+      paymentsBefore = d.payments.length;
+    d.financeArchive ||= {};
+    for (const s of d.students) {
+      const cutoff = +s.billingSince || 0,
+        archived = d.financeArchive[s.id] || {},
+        oldLessons = d.lessons.filter(
+          (l) =>
+            l.studentId === s.id &&
+            new Date(l.date).getTime() < cutMs &&
+            new Date(l.date).getTime() >= cutoff &&
+            ['done', 'paid_missed'].includes(l.status),
+        ),
+        oldPayments = d.payments.filter(
+          (p) =>
+            p.studentId === s.id &&
+            !p.ledgerOnly &&
+            new Date(p.date).getTime() < cutMs &&
+            Math.max(+p.createdAt || 0, new Date(p.date).getTime()) >= cutoff,
+        );
+      const oldPackagePayments = oldPayments.filter(
+        (p) => p.billingType === 'package' || +p.packageLessons > 0,
+      );
+      archived.packageUsed =
+        (+archived.packageUsed || 0) + oldLessons.filter((l) => l.payment === 'package').length;
+      archived.singleCharged =
+        (+archived.singleCharged || 0) +
+        oldLessons
+          .filter((l) => l.payment === 'unpaid')
+          .reduce((sum, l) => sum + (+l.amount || 0), 0);
+      archived.packageBought =
+        (+archived.packageBought || 0) +
+        oldPackagePayments.reduce((sum, p) => sum + (+p.packageLessons || 0), 0);
+      archived.paidAmount =
+        (+archived.paidAmount || 0) + oldPayments.reduce((sum, p) => sum + (+p.amount || 0), 0);
+      if (
+        archived.packageUsed ||
+        archived.singleCharged ||
+        archived.packageBought ||
+        archived.paidAmount
+      )
+        d.financeArchive[s.id] = archived;
+    }
     d.events = d.events.filter((ev) => new Date(ev.date).getTime() >= cutMs);
-    return { eventsRemoved: before - d.events.length };
+    d.lessons = d.lessons.filter((l) => new Date(l.date).getTime() >= cutMs);
+    d.payments = d.payments.filter((p) => new Date(p.date).getTime() >= cutMs);
+    d.topicLog = {};
+    return {
+      eventsRemoved: eventsBefore - d.events.length,
+      lessonsRemoved: lessonsBefore - d.lessons.length,
+      paymentsRemoved: paymentsBefore - d.payments.length,
+    };
   });
 }
 
@@ -38,7 +91,7 @@ export function normalizePastLessons(data, now = Date.now(), duration = (l) => +
       if (l.status !== 'planned') continue;
       const endMs = new Date(l.date).getTime() + duration(l) * 60000;
       if (endMs < now) {
-        l.status = 'done';
+        l.status = 'unconfirmed';
         if (l.reportFilled == null) l.reportFilled = false;
         changed++;
         completedLessonIds.push(l.id);

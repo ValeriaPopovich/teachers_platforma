@@ -7,13 +7,17 @@ import {
   validateBackup,
   validateBackupSize,
 } from '../src/domain/backup.js';
+import { periodAnalytics as calculatePeriodAnalytics } from '../src/domain/analytics.js';
 import { finances as calculateFinances } from '../src/domain/finances.js';
 import {
+  countMonthlyRecurringLessons,
   extendAllSchedules as extendSchedules,
   generateSchedule as generateRecurringSchedule,
+  monthlyRecurringDates,
 } from '../src/domain/schedule.js';
 import {
   normalizePastLessons as completePastLessons,
+  pruneOldHistory,
   syncFutureGroupBilling as refreshGroupBilling,
 } from '../src/state/maintenance.js';
 import { createBrowserPersistence } from '../src/state/persistence.js';
@@ -43,6 +47,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
   let data = structuredClone(store.getState()),
     activeStudent = null,
     lessonInitial = '',
+    calendarView = 'month',
     pendingImport = null;
   if (!loaded.ok)
     console.error(
@@ -283,7 +288,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
           help.tabIndex = 0;
           help.textContent = '?';
           help.dataset.tip =
-            'История занятий хранится бессрочно. Пройденные темы дополнительно сохраняются в архиве ниже, чтобы их было удобно посмотреть отдельно.';
+            'В карточке показывается история за последние 45 дней. Более старые детали автоматически удаляются.';
           heading.append(help);
         }
       });
@@ -398,7 +403,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       unfilled = uniqueSessions(
         data.lessons.filter(
           (l) =>
-            l.status === 'done' &&
+            ['done', 'unconfirmed'].includes(l.status) &&
             lessonEnded(l) &&
             !lessonFilled(l) &&
             localDay(l.date) !== today &&
@@ -447,7 +452,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
             return `<article class="card student-card"><button class="btn student-delete" data-quick-delete-student="${s.id}" title="Удалить ученика" aria-label="Удалить ученика">🗑</button><div class="student-card-main" role="button" tabindex="0" aria-label="Открыть карточку: ${esc(s.name)}" data-student="${s.id}"><div class="student-top"><div><h3>${esc(s.name)}</h3><div class="meta">${esc(s.grade || 'Класс не указан')} · ${esc(scheduleText(s.scheduleSlots))}</div></div></div><div class="student-metrics"><div><b>${m.attendance}%</b><small>Посещение</small></div><div><b>${m.homework == null ? '—' : String(m.homework).replace('.', ',') + '/5'}</b><small>Средняя оценка ДЗ</small></div><div><b class="${(s.payType === 'package' && fin.balanceLessons <= 0) || m.debt ? 'danger-text' : ''}">${s.payType === 'package' ? packageText : m.debt ? money(m.debt) : '✓'}</b><small>${s.payType === 'package' ? 'Абонемент' : m.debt ? 'Долг' : 'Оплачено'}</small></div></div></div></article>`;
           })
           .join('')
-      : `<div class="card empty">Ученики не найдены</div>`;
+      : `<div class="empty students-empty">Ученики не найдены</div>`;
   }
   function scheduleText(slots = []) {
     const days = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
@@ -501,102 +506,17 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
   }
   // Аналитика за произвольный диапазон дат [fromMs, toMs]. Не трогает архив — только живые записи.
   function periodAnalytics(fromMs, toMs) {
-    const inRange = (ms) => ms >= fromMs && ms <= toMs;
-    const pays = data.payments.filter((p) => !p.ledgerOnly && inRange(new Date(p.date).getTime()));
-    const lessons = data.lessons.filter(
-      (l) => ['done', 'paid_missed'].includes(l.status) && inRange(new Date(l.date).getTime()),
-    );
-    const paid = pays.reduce((n, p) => n + (+p.amount || 0), 0),
-      charged = lessons.reduce((n, l) => n + (+l.amount || 0), 0);
-    const byStudent = {};
-    pays.forEach((p) => {
-      byStudent[p.studentId] = byStudent[p.studentId] || { paid: 0, charged: 0, lessons: 0 };
-      byStudent[p.studentId].paid += +p.amount || 0;
-    });
-    lessons.forEach((l) => {
-      if (!l.studentId) return;
-      byStudent[l.studentId] = byStudent[l.studentId] || { paid: 0, charged: 0, lessons: 0 };
-      byStudent[l.studentId].charged += +l.amount || 0;
-      byStudent[l.studentId].lessons++;
-    });
-    return {
-      paid,
-      charged,
-      paidCount: pays.length,
-      lessonsCount: lessons.length,
-      pays,
-      lessons,
-      byStudent,
-    };
+    return calculatePeriodAnalytics(data, fromMs, toMs);
   }
-  function monthlyBreakdown(fromMs, toMs) {
-    const buckets = new Map();
-    const push = (ms, key, val) => {
-      const d = new Date(ms),
-        k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      if (ms < fromMs || ms > toMs) return;
-      const b = buckets.get(k) || {
-        paid: 0,
-        charged: 0,
-        lessons: 0,
-        label: d.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' }),
-      };
-      b[key] += val;
-      if (key === 'lessons') b.lessons = b.lessons || 0;
-      buckets.set(k, b);
-    };
-    data.payments
-      .filter((p) => !p.ledgerOnly)
-      .forEach((p) => {
-        const ms = new Date(p.date).getTime();
-        push(ms, 'paid', +p.amount || 0);
-      });
-    data.lessons
-      .filter((l) => ['done', 'paid_missed'].includes(l.status))
-      .forEach((l) => {
-        const ms = new Date(l.date).getTime();
-        push(ms, 'charged', +l.amount || 0);
-        const b = buckets.get(
-          `${new Date(ms).getFullYear()}-${String(new Date(ms).getMonth() + 1).padStart(2, '0')}`,
-        );
-        if (b && ms >= fromMs && ms <= toMs) b.lessons++;
-      });
-    return [...buckets.entries()]
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([k, v]) => ({ key: k, ...v }));
-  }
-  let analyticsState = { period: '30', from: '', to: '' };
   function analyticsRange() {
-    const now = Date.now();
-    if (analyticsState.period === 'all') {
-      const times = [
-        ...data.payments.map((p) => new Date(p.date).getTime()),
-        ...data.lessons.map((l) => new Date(l.date).getTime()),
-      ].filter(Number.isFinite);
-      const from = times.length ? Math.min(...times) : now;
-      return { from, to: now, label: 'Всё время' };
-    }
-    if (analyticsState.period === 'custom') {
-      const f = analyticsState.from,
-        t = analyticsState.to;
-      if (!f || !t) return { from: 0, to: 0, label: 'Выберите даты' };
-      return {
-        from: new Date(f + 'T00:00').getTime(),
-        to: new Date(t + 'T23:59:59').getTime(),
-        label: `${fmtDate(f)} — ${fmtDate(t)}`,
-      };
-    }
-    const days = +analyticsState.period || 30;
-    const from = now - days * 864e5;
-    const label =
-      days === 30
-        ? 'Последние 30 дней'
-        : days === 90
-          ? 'Последние 3 месяца'
-          : days === 365
-            ? 'Последний год'
-            : `Последние ${days} дней`;
-    return { from, to: now, label };
+    const now = new Date();
+    return {
+      from: new Date(now.getFullYear(), now.getMonth(), 1).getTime(),
+      to: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).getTime(),
+      label: now
+        .toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })
+        .replace(/^./, (letter) => letter.toUpperCase()),
+    };
   }
   function renderPayments() {
     const body = $('#paymentBalances');
@@ -665,10 +585,11 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     if (s.payType === 'package') {
       const left = f.balanceLessons || 0;
       return {
-        kind: left <= 0 ? 'need' : left <= 2 ? 'ending' : 'ok',
+        kind: f.extraDebt || left <= 0 ? 'need' : left <= 2 ? 'ending' : 'ok',
         format: 'Абонемент',
-        state:
-          left < 0
+        state: f.extraDebt
+          ? `Доплата: долг ${money(f.extraDebt)}`
+          : left < 0
             ? `Долг: ${Math.abs(left)} занят.`
             : left === 0
               ? 'Абонемент закончился'
@@ -688,6 +609,41 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
             : 'Оплачено',
     };
   }
+  function packagePlan(s, date = new Date()) {
+    const start = Math.max(+s.createdAt || 0, +s.billingSince || 0),
+      dates = monthlyRecurringDates(s.scheduleSlots || [], date).filter(
+        (lessonDate) => lessonDate.getTime() >= start,
+      ),
+      lessons = dates.length;
+    return { lessons, dates, cost: lessons * (+s.price || 0) };
+  }
+
+  function packagePlanDates(plan) {
+    const grouped = new Map();
+    plan.dates.forEach((date) => {
+      const label = date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }),
+        time = date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+      grouped.set(label, [...(grouped.get(label) || []), time]);
+    });
+    return [...grouped]
+      .map(([date, times]) => (times.length > 1 ? `${date} (${times.join(', ')})` : date))
+      .join(', ');
+  }
+  function renderPackageMonthPlans() {
+    const card = $('#packageMonthCard'),
+      grid = $('#packageMonthGrid'),
+      packageStudents = data.students.filter((s) => s.payType === 'package'),
+      now = new Date();
+    card.style.display = packageStudents.length ? 'block' : 'none';
+    if (!packageStudents.length) return;
+    $('#packageMonthLabel').textContent = monthName(now);
+    grid.innerHTML = packageStudents
+      .map((s) => {
+        const plan = packagePlan(s, now);
+        return `<div class="package-month-item"><div><b>${esc(s.name)}</b><small>${plan.lessons ? `${plan.lessons} ${lessonCountWord(plan.lessons)} по регулярному расписанию` : 'Регулярное расписание не заполнено'}</small></div><strong>${money(plan.cost)}</strong></div>`;
+      })
+      .join('');
+  }
   function renderPaymentsSimple() {
     const stats = $('#paymentStats'),
       alerts = $('#packageAlerts'),
@@ -697,47 +653,32 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       historyStudent = $('#paymentHistoryStudent'),
       historyHint = $('#paymentHistoryHint');
     if (!stats) return;
+    renderPackageMonthPlans();
     const range = analyticsRange();
     $('#analyticsRangeLabel').textContent = range.label;
-    const isEmptyRange =
-      analyticsState.period === 'custom' && (!analyticsState.from || !analyticsState.to);
-    const a = isEmptyRange
-      ? { paid: 0, charged: 0, paidCount: 0, lessonsCount: 0, pays: [], lessons: [], byStudent: {} }
-      : periodAnalytics(range.from, range.to);
+    const a = periodAnalytics(range.from, range.to);
     const debtTotal = data.students.reduce((n, s) => n + finances(s.id).debt, 0),
       debtorsN = data.students.filter((s) => finances(s.id).debt > 0).length;
     analyticsCard.style.display = data.students.length ? '' : 'none';
     const tips = [
-      'Сумма реально пришедших денег за период — по дате платежа. Пример: 1 августа родитель заплатил 20 000 ₽ за абонемент — вся сумма попадёт в август.',
-      'Стоимость проведённых занятий за период — по дате занятия, независимо от оплаты. Пример: 3 урока по 2 500 ₽ в августе дают 7 500 ₽, даже если абонемент был оплачен раньше.',
-      'Текущая задолженность прямо сейчас — на момент открытия страницы, не зависит от выбранного периода. Разовые: сколько родители должны. Абонементы: занятия, проведённые сверх остатка.',
-      'Слева — сколько уроков «Проведено» или «Пропуск с оплатой» попало в период. Справа — сколько было платежей от родителей за тот же период.',
+      'Сумма реально пришедших денег в текущем месяце — по дате платежа. Пример: 1 августа родитель заплатил 20 000 ₽ за абонемент — вся сумма попадёт в август.',
+      'Начислено в текущем месяце: для абонемента — полная стоимость по дате оплаты, для разовых занятий — стоимость проведённых уроков по дате занятия.',
+      'Текущая задолженность прямо сейчас. Разовые: сколько родители должны. Абонементы: занятия, проведённые сверх остатка.',
     ];
     stats.innerHTML = [
-      [money(a.paid), 'Получено за период', ''],
-      [money(a.charged), 'Начислено за период', ''],
+      [money(a.paid), 'Реальный доход за месяц', ''],
+      [money(a.charged), 'Планируемый доход за месяц', ''],
       [
         money(debtTotal),
         debtorsN ? `Долги сейчас · ${debtorsN} чел.` : 'Долгов нет',
         debtTotal ? 'debt-stat' : '',
       ],
-      [a.lessonsCount, `Занятий проведено · ${a.paidCount} платежей`, ''],
     ]
       .map(
         (x, i) =>
           `<div class="card stat ${x[2]}"><span class="help-tip" tabindex="0" data-tip="${esc(tips[i])}">?</span><div class="value">${x[0]}</div><div class="label">${x[1]}</div></div>`,
       )
       .join('');
-    // Помесячная разбивка (только если период > 45 дней или "всё время"/год)
-    const wantMonthly = isEmptyRange ? false : range.to - range.from > 50 * 864e5;
-    const monthlyBox = $('#analyticsMonthly');
-    if (wantMonthly) {
-      const buckets = monthlyBreakdown(range.from, range.to),
-        max = Math.max(1, ...buckets.map((b) => b.paid));
-      monthlyBox.innerHTML = buckets.length
-        ? `<h3>Помесячно · получено</h3><div class="month-bars">${buckets.map((b) => `<div class="month-bar"><span class="month-bar-label">${esc(b.label)}</span><div class="month-bar-track"><div class="month-bar-fill" style="width:${Math.round((b.paid / max) * 100)}%"></div></div><span class="month-bar-value">${money(b.paid)}</span></div>`).join('')}</div>`
-        : '<div class="analytics-empty">В этом периоде поступлений нет</div>';
-    } else monthlyBox.innerHTML = '';
     alerts.style.display = 'none';
     const rows = data.students.map((s) => ({ s, ...paymentState(s) })),
       groups = [
@@ -771,11 +712,9 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     const historyFilter = historyStudent?.value || '';
     historyHint.textContent =
       range.label + (historyFilter ? ` · ${student(historyFilter)?.name || ''}` : '');
-    const history = isEmptyRange
-      ? []
-      : a.pays
-          .filter((p) => !historyFilter || p.studentId === historyFilter)
-          .sort((b, c) => new Date(c.date) - new Date(b.date));
+    const history = a.pays
+      .filter((p) => !historyFilter || p.studentId === historyFilter)
+      .sort((b, c) => new Date(c.date) - new Date(b.date));
     $('#paymentHistory').innerHTML = history.length
       ? history
           .map(
@@ -783,7 +722,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
               `<div class="row"><div class="grow"><b>${esc(student(p.studentId)?.name || 'Удалённый ученик')}</b><small>${fmtDate(p.date)}${p.packageLessons ? ` · ${p.packageLessons} занятий` : ''}${p.note ? ' · ' + esc(p.note) : ''}</small></div><b class="payment-positive">+${money(p.amount)}</b><button class="icon-btn" data-delete-payment="${p.id}" title="Удалить платёж">×</button></div>`,
           )
           .join('')
-      : `<div class="empty">${isEmptyRange ? 'Выберите даты периода' : 'За выбранный период платежей не было'}</div>`;
+      : '<div class="empty">В текущем месяце платежей не было</div>';
   }
   function renderCalendar() {
     const today = new Date();
@@ -795,7 +734,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       .join('');
     $('#calendar').innerHTML =
       heads +
-      Array.from({ length: 35 }, (_, i) => {
+      Array.from({ length: calendarView === 'week' ? 7 : 35 }, (_, i) => {
         const d = new Date(start);
         d.setDate(start.getDate() + i);
         const ds = localDay(d),
@@ -812,14 +751,20 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
               html: `<div class="event custom-event" role="button" tabindex="0" data-edit-event="${x.id}">${fmtTime(x.date)} ${esc(x.title)}<br><span class="sub">Своё событие · ${x.duration || 60} мин</span></div>`,
             })),
           items = [...lessons, ...own].sort((a, b) => a.date.localeCompare(b.date)),
-          weekday = d.toLocaleDateString('ru-RU', { weekday: 'long' });
-        return `<div class="day ${ds === localDay(today) ? 'today' : ''} ${items.length ? 'has-events' : ''}"><div class="date"><span class="mobile-weekday">${weekday},&nbsp;</span>${d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}</div>${items.map((x) => x.html).join('')}</div>`;
+          weekday = d.toLocaleDateString('ru-RU', { weekday: 'long' }),
+          past = d < today;
+        return `<div class="day ${ds === localDay(today) ? 'today' : ''} ${past ? 'past-day' : ''} ${items.length ? 'has-events' : ''}"><div class="date"><span class="mobile-weekday">${weekday},&nbsp;</span>${d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}</div>${items.map((x) => x.html).join('')}</div>`;
       }).join('');
+    requestAnimationFrame(() => {
+      const card = $('#calendar')?.closest('.calendar-card');
+      if (card) card.scrollLeft = 0;
+    });
   }
   function statusName(v) {
     return (
       {
         planned: 'Запланировано',
+        unconfirmed: 'Требует подтверждения',
         done: 'Проведено',
         missed: 'Пропуск',
         paid_missed: 'Пропуск с оплатой',
@@ -881,7 +826,6 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     if (!s) return;
     activeStudent = id;
     const m = metrics(id),
-      fin = finances(id),
       ls = lessonsOf(id),
       tests = ls.filter((l) => l.status === 'done' && l.testDone === 'yes').length,
       next = data.lessons
@@ -890,19 +834,15 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
         )
         .sort((a, b) => new Date(a.date) - new Date(b.date))[0],
       nextDate = next ? fmtDate(next.date, true) : 'Ближайшее занятие не запланировано',
-      nextNote = next ? next.prepNote || 'Пометки пока нет' : '—',
-      financeBlock =
-        s.payType === 'package'
-          ? `<div class="kpi-line"><span>Осталось в абонементе</span><b class="${fin.balanceLessons <= 0 ? 'danger-text' : ''}">${fin.balanceLessons} зан.</b></div><div class="kpi-line"><span>Использовано занятий</span><b>${fin.used}</b></div>`
-          : `<div class="kpi-line"><span>Формат оплаты</span><b>Разовые занятия</b></div><div class="kpi-line"><span>Баланс</span><b class="${fin.balance < 0 ? 'danger-text' : ''}">${fin.balance < 0 ? 'Долг ' + money(-fin.balance) : fin.balance > 0 ? 'Аванс ' + money(fin.balance) : 'Оплачено'}</b></div>`;
+      nextNote = next ? next.prepNote || 'Пометки пока нет' : '—';
     $('#profileBody').innerHTML =
-      `<div class="profile-summary"><div class="avatar">${esc(initials(s.name))}</div><div><h2 style="margin:0">${esc(s.name)}</h2><div class="sub">${esc(s.grade || 'Класс не указан')} · ${esc(s.contact || 'Контакт не указан')}</div></div></div><div class="student-metrics"><div><b>${m.attendance}%</b><small>Посещаемость</small></div><div><b>${m.homework == null ? '—' : String(m.homework).replace('.', ',') + '/5'}</b><small>Средняя оценка ДЗ</small></div><div><b>${tests}</b><small>Проверочных</small></div></div>${financeBlock}<div class="notice"><b>Следующее занятие:</b> ${esc(nextDate)}<br><b>Пометка на следующий урок:</b> ${esc(nextNote)}</div><div class="notice"><b>Цели:</b> ${esc(s.goals || 'не указаны')}<br><b>Заметки:</b> ${esc(s.notes || 'нет')}</div><h3>История занятий</h3>${
+      `<div class="profile-summary"><div class="avatar">${esc(initials(s.name))}</div><div><h2 style="margin:0">${esc(s.name)}</h2><div class="sub">${esc(s.grade || 'Класс не указан')} · ${esc(s.contact || 'Контакт не указан')}</div>${s.parentName ? `<div class="sub">Родитель: ${esc(s.parentName)}</div>` : ''}${s.lessonLink ? `<a class="btn profile-lesson-link" href="${esc(s.lessonLink)}" target="_blank" rel="noopener">Открыть занятие</a>` : ''}</div></div><div class="student-metrics"><div><b>${m.attendance}%</b><small>Посещаемость</small></div><div><b>${m.homework == null ? '—' : String(m.homework).replace('.', ',') + '/5'}</b><small>Средняя оценка ДЗ</small></div><div><b>${tests}</b><small>Проверочных</small></div></div><div class="notice"><b>Следующее занятие:</b> ${esc(nextDate)}<br><b>Пометка на следующий урок:</b> ${esc(nextNote)}</div><div class="notice"><b>Цели:</b> ${esc(s.goals || 'не указаны')}<br><b>Заметки:</b> ${esc(s.notes || 'нет')}</div><h3>История занятий</h3>${
         ls.length
-          ? `<div style="overflow:auto"><table class="mini-table"><thead><tr><th>Дата</th><th>Статус</th><th>Темы / комментарий</th><th>ДЗ</th><th>Проверочная</th><th>Оплата</th></tr></thead><tbody>${ls
+          ? `<div style="overflow:auto"><table class="mini-table"><thead><tr><th>Дата</th><th>Статус</th><th>Темы / комментарий</th><th>ДЗ</th><th>Проверочная</th></tr></thead><tbody>${ls
               .slice(0, 20)
               .map((l) => {
                 const grade = homeworkGrade(l);
-                return `<tr><td>${fmtDate(l.date, true)}</td><td>${statusName(l.status)}</td><td>${esc(l.topics || '—')}<br><span class="sub">${esc(l.comment || '')}</span></td><td>${grade == null ? '—' : 'Оценка ' + grade}</td><td>${l.testDone === 'yes' ? `${esc(l.testName || 'Работа')}: ${esc(l.testScore || '—')}/${esc(l.testMax || '—')}` : '—'}</td><td class="${l.payment === 'unpaid' ? 'danger-text' : ''}">${paymentName(l.payment)}</td></tr>`;
+                return `<tr><td>${fmtDate(l.date, true)}</td><td>${statusName(l.status)}</td><td>${esc(l.topics || '—')}<br><span class="sub">${esc(l.comment || '')}</span></td><td>${l.homework ? `${esc(l.homework)}${grade == null ? '' : `<br><b>Оценка ${grade}</b>`}` : grade == null ? '—' : 'Оценка ' + grade}</td><td>${l.testDone === 'yes' ? `${esc(l.testName || 'Работа')}: ${esc(l.testScore || '—')}/${esc(l.testMax || '—')}` : '—'}</td></tr>`;
               })
               .join('')}</tbody></table></div>`
           : '<div class="empty">Занятий пока нет</div>'
@@ -921,16 +861,29 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
   function syncPackageField() {
     const f = $('#studentForm'),
       on = f.elements.payType.value === 'package',
-      input = f.elements.packageSize;
-    $('#packageSizeField').style.display = on ? 'grid' : 'none';
+      input = f.elements.packageSize,
+      now = new Date(),
+      slots = getSlots('#studentScheduleSlots'),
+      count = countMonthlyRecurringLessons(slots, now);
     input.disabled = !on;
-    if (on && !+input.value) {
-      const slots = getSlots('#studentScheduleSlots'),
-        now = new Date(),
-        daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate(),
-        perWeek = slots.length || 2;
-      input.value = Math.max(1, Math.round((perWeek * daysInMonth) / 7)) || 8;
-    }
+    if (!on) return;
+    input.value = count;
+  }
+  function monthName(date) {
+    return date
+      .toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })
+      .replace(/^./, (letter) => letter.toUpperCase());
+  }
+  function lessonCountWord(count) {
+    const mod100 = count % 100,
+      mod10 = count % 10;
+    return mod100 >= 11 && mod100 <= 14
+      ? 'занятий'
+      : mod10 === 1
+        ? 'занятие'
+        : mod10 >= 2 && mod10 <= 4
+          ? 'занятия'
+          : 'занятий';
   }
   const builtinGoals = [
     'Повысить успеваемость',
@@ -999,8 +952,8 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       if (f.elements[k]) f.elements[k].value = s[k] ?? '';
     });
     setGoalChecks(s.goals || '');
-    syncPackageField();
     setSlots('#studentScheduleSlots', s.scheduleSlots || [], false);
+    syncPackageField();
     $('#studentModalTitle').textContent = 'Редактировать ученика';
     closeAll();
     open('studentModal');
@@ -1020,6 +973,14 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     closeAll();
     open('groupModal');
   }
+  function groupLessonRecords(lesson) {
+    if (!lesson?.groupId) return lesson ? [lesson] : [];
+    return data.lessons.filter((item) =>
+      lesson.seriesId
+        ? item.seriesId === lesson.seriesId
+        : item.groupId === lesson.groupId && item.date === lesson.date,
+    );
+  }
   function renderGroupAttendance(groupId, seriesId = '') {
     const g = group(groupId),
       box = $('#groupAttendance');
@@ -1029,11 +990,16 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       return;
     }
     box.style.display = 'grid';
-    const series = seriesId ? data.lessons.filter((l) => l.seriesId === seriesId) : [];
+    const edited = data.lessons.find((l) => l.id === $('#lessonForm [name=id]').value),
+      series = edited?.groupId
+        ? groupLessonRecords(edited)
+        : seriesId
+          ? data.lessons.filter((l) => l.seriesId === seriesId)
+          : [];
     $('#groupAttendanceMembers').innerHTML = (g.members || [])
       .map((id) => {
         const record = series.find((l) => l.studentId === id),
-          checked = !series.length || record?.status !== 'missed';
+          checked = !series.length || !['missed', 'paid_missed'].includes(record?.status);
         return `<label class="member-chip"><input type="checkbox" name="attendees" value="${id}" ${checked ? 'checked' : ''}> ${esc(student(id)?.name || 'Удалён')}</label>`;
       })
       .join('');
@@ -1084,6 +1050,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       groupMode = type === 'g',
       s = type === 's' ? student(id) : null,
       pack = s?.payType === 'package',
+      packageOneoff = pack && f.elements.lessonKind.value === 'oneoff',
       hidden = f.elements.lessonPaymentChoice,
       toggle = $('#lessonPaymentToggle'),
       label = $('#lessonPaymentLabel'),
@@ -1091,18 +1058,48 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       existing = f.elements.id.value
         ? data.lessons.find((x) => x.id === f.elements.id.value)
         : null;
-    $('#lessonPaymentField').style.display = groupMode ? 'none' : 'grid';
-    $('#lessonAmountField').style.display = groupMode ? 'none' : 'grid';
+    $('#packageOneoffField').style.display = packageOneoff ? 'grid' : 'none';
+    $('#lessonPaymentField').style.display = groupMode || packageOneoff ? 'none' : 'grid';
     toggle.disabled = groupMode;
     hidden.disabled = groupMode;
     if (groupMode) return;
+    if (packageOneoff) {
+      const select = $('#packageOneoffBilling');
+      if (existing && select.dataset.lessonId !== existing.id) {
+        select.value =
+          existing.payment === 'package'
+            ? 'package'
+            : existing.payment === 'paid'
+              ? 'extra_paid'
+              : 'extra_unpaid';
+        select.dataset.lessonId = existing.id;
+      }
+      hidden.value =
+        select.value === 'package' ? 'package' : select.value === 'extra_paid' ? 'paid' : 'unpaid';
+      $('#lessonAmountField').style.display = select.value === 'package' ? 'none' : 'grid';
+      return;
+    }
+    $('#lessonAmountField').style.display = pack ? 'none' : 'grid';
     label.textContent = pack ? 'Списать занятие из абонемента' : 'Занятие оплачено';
-    hint.textContent = pack
-      ? 'Выключите, если занятие списывать не нужно'
-      : 'Выключите, если оплата ещё не поступила';
     const checked = existing ? existing.payment === (pack ? 'package' : 'paid') : pack;
     toggle.checked = checked;
     hidden.value = checked ? (pack ? 'package' : 'paid') : pack ? 'not_charged' : 'unpaid';
+    hint.textContent = checked
+      ? pack
+        ? 'Выключите, если занятие списывать не нужно'
+        : 'Выключите, если оплата ещё не поступила'
+      : pack
+        ? 'Включите, если занятие нужно списать'
+        : 'Включите, если оплата уже поступила';
+  }
+  function matchesRegularSlot(type, id, dateValue) {
+    const owner = type === 'g' ? group(id) : student(id),
+      date = new Date(dateValue);
+    if (!owner || !Number.isFinite(date.getTime())) return false;
+    const time = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+    return (owner.scheduleSlots || []).some(
+      (slot) => +slot.day === date.getDay() && slot.time === time,
+    );
   }
   function syncOneoffAmount() {
     const f = $('#lessonForm');
@@ -1115,11 +1112,16 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     const f = $('#lessonForm'),
       raw = f.elements.targetId.value,
       [type, id] = raw.split(':');
+    if (!f.elements.id.value && id)
+      f.elements.lessonKind.value = matchesRegularSlot(type, id, f.elements.date.value)
+        ? 'regular'
+        : 'oneoff';
     syncOneoffAmount();
     renderGroupAttendance(type === 'g' ? id : '');
     syncStatusForTime();
     syncLessonPayment();
     renderLessonContext();
+    refreshParentMessage();
   }
   function updateTestFields() {
     const hidden = $('#lessonForm [name=testDone]'),
@@ -1138,6 +1140,40 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     $('#homeworkGradeField').style.display = yes ? 'grid' : 'none';
     f.elements.homeworkGrade.disabled = !yes;
   }
+  function buildParentMessage() {
+    const f = $('#lessonForm'),
+      [type, id] = (f.elements.targetId.value || '').split(':'),
+      s = type === 's' ? student(id) : null;
+    if (!s) return '';
+    const parent = s.parentName?.trim() ? `, ${s.parentName.trim()}` : '',
+      status = f.elements.status.value,
+      details = [
+        f.elements.topics.value.trim() ? `Разобрали: ${f.elements.topics.value.trim()}.` : '',
+        f.elements.comment.value.trim(),
+        f.elements.homework.value.trim()
+          ? `Новое домашнее задание: ${f.elements.homework.value.trim()}.`
+          : '',
+        $('#previousHomeworkToggle').checked
+          ? `Предыдущее домашнее задание оценено на ${f.elements.homeworkGrade.value}.`
+          : '',
+        $('#testDoneToggle').checked
+          ? `Проверочная работа: ${f.elements.testName.value.trim() || 'выполнена'}${f.elements.testScore.value && f.elements.testMax.value ? ` — ${f.elements.testScore.value} из ${f.elements.testMax.value}` : ''}.`
+          : '',
+      ].filter(Boolean);
+    return [
+      `Здравствуйте${parent}.`,
+      ['done', 'paid_missed'].includes(status)
+        ? `Сегодня занятие с ${s.name} прошло${status === 'done' ? ' по плану' : ', но ученик отсутствовал'}.`
+        : `Сообщаю о занятии с ${s.name}.`,
+      ...details,
+    ].join(' ');
+  }
+  function refreshParentMessage() {
+    const box = $('#parentMessage'),
+      [type] = ($('#lessonForm').elements.targetId.value || '').split(':');
+    $('#parentMessageField').style.display = type === 's' ? 'grid' : 'none';
+    box.value = buildParentMessage();
+  }
   function syncMovedField() {
     const moved = $('#lessonForm [name=status]').value === 'moved',
       field = $('#movedToField'),
@@ -1155,6 +1191,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     f.elements.lessonKind.value = 'oneoff';
     $('#testDoneToggle').checked = false;
     $('#previousHomeworkToggle').checked = false;
+    $('#packageOneoffBilling').dataset.lessonId = '';
     $('#deleteLesson').style.display = 'none';
     showConflict('#lessonConflict', []);
     updateTestFields();
@@ -1162,6 +1199,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     syncMovedField();
     syncLessonDefaults();
     syncStatusForTime(true);
+    refreshParentMessage();
     lessonInitial = snapshotLesson();
   }
   function editLesson(id) {
@@ -1175,6 +1213,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     f.elements.id.value = l.id;
     f.elements.targetId.value = l.groupId ? 'g:' + l.groupId : 's:' + l.studentId;
     f.elements.lessonKind.value = l.lessonKind || (l.auto ? 'regular' : 'oneoff');
+    $('#packageOneoffBilling').dataset.lessonId = '';
     $('#testDoneToggle').checked = l.testDone === 'yes' || !!l.score;
     $('#previousHomeworkToggle').checked =
       (l.previousHomework || (l.homeworkGrade !== '' && l.homeworkGrade != null ? 'yes' : 'no')) ===
@@ -1188,6 +1227,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     syncStatusForTime(true);
     syncLessonPayment();
     renderLessonContext();
+    refreshParentMessage();
     lessonInitial = snapshotLesson();
     open('lessonModal');
   }
@@ -1225,9 +1265,12 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       ['Воскресенье', 0],
     ];
     row.innerHTML = `<select class="slot-day">${days.map(([x, i]) => `<option value="${i}" ${+slot.day === i ? 'selected' : ''}>${x}</option>`).join('')}</select><input class="slot-time" type="time" value="${slot.time || '17:00'}"><button type="button" class="icon-btn remove-slot">×</button>`;
-    row
-      .querySelectorAll('select,input')
-      .forEach((x) => x.addEventListener('change', () => checkSlotConflict(row)));
+    row.querySelectorAll('select,input').forEach((x) =>
+      x.addEventListener('change', () => {
+        checkSlotConflict(row);
+        if (row.closest('#studentScheduleSlots')) syncPackageField();
+      }),
+    );
     return row;
   }
   function setSlots(target, slots = [], ensureRow = true) {
@@ -1513,6 +1556,16 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       period = $('#reportPeriodName').value.trim() || '—',
       tutor = data.settings.tutor || 'Не указано',
       assigned = done.length + miss.length;
+    const nextMonth = new Date();
+    nextMonth.setMonth(nextMonth.getMonth() + 1, 1);
+    const nextPlan = s.payType === 'package' ? packagePlan(s, nextMonth) : null,
+      nextPackageText = nextPlan
+        ? `В ${nextMonth.toLocaleDateString('ru-RU', { month: 'long' })} планируется ${nextPlan.lessons} ${lessonCountWord(nextPlan.lessons)}, поэтому стоимость абонемента составляет ${money(nextPlan.cost)}. Даты: ${packagePlanDates(nextPlan) || 'регулярное расписание не заполнено'}.`
+        : '';
+    $('#reportNextPackageBuilder').style.display = nextPlan ? '' : 'none';
+    $('#paperNextPackageSection').style.display = nextPlan ? '' : 'none';
+    $('#reportNextPackagePreview').textContent = nextPackageText;
+    $('#paperNextPackage').textContent = nextPackageText;
     $('#paperPills').innerHTML =
       `<span class="paper-pill">Педагог: ${esc(tutor)}</span><span class="paper-pill">Ученик: ${esc(s.name)}, ${esc(s.grade || 'класс не указан')}</span><span class="paper-pill">Период: ${esc(period)}</span><span class="paper-pill">Посещено: ${done.length}/${assigned}</span>`;
     const list = (arr, graded) =>
@@ -1544,6 +1597,53 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       progress == null ? circumference : circumference * (1 - progress / 100),
     );
     $('#paperPct').textContent = progress == null ? '—' : progress + '%';
+    applyReportBlockVisibility();
+  }
+  function reportBlockEnabled(name) {
+    return $(`[data-report-block="${name}"]`)?.checked !== false;
+  }
+  function applyReportBlockVisibility() {
+    $$('[data-report-block]').forEach((input) => {
+      const label = input.closest('.report-include-toggle'),
+        state = label?.querySelector('.report-toggle-state'),
+        action = input.checked ? 'Скрыть блок из отчёта' : 'Добавить блок в отчёт';
+      if (state) state.textContent = input.checked ? 'В отчёте' : 'Скрыт';
+      if (label) label.title = action;
+      input.setAttribute('aria-label', action);
+    });
+    $$('[data-report-section]').forEach((section) => {
+      const name = section.dataset.reportSection,
+        available =
+          name !== 'nextPackage' || student($('#reportStudent').value)?.payType === 'package';
+      section.style.display = reportBlockEnabled(name) && available ? '' : 'none';
+    });
+  }
+  function buildReportText() {
+    const s = student($('#reportStudent').value);
+    if (!s) return '';
+    const lines = [`Отчёт об обучении: ${s.name}`, ''];
+    const addList = (title, rows, graded = false) => {
+      lines.push(title);
+      if (rows.length) {
+        rows.forEach((row) => lines.push(`• ${row.name}${graded ? ` — оценка ${row.grade}` : ''}`));
+      } else lines.push('Не было');
+      lines.push('');
+    };
+    if (reportBlockEnabled('general')) {
+      lines.push('Общая информация');
+      lines.push(`Педагог: ${data.settings.tutor || 'не указано'}`);
+      lines.push(`Период: ${$('#reportPeriodName').value.trim() || '—'}`);
+      lines.push($('#reportComment').value.trim() || '—');
+      lines.push(`Средний результат: ${$('#paperPct').textContent}`, '');
+    }
+    if (reportBlockEnabled('topics')) addList('Пройденные темы', reportRows('#reportTopics'));
+    if (reportBlockEnabled('hws')) addList('Домашние задания', reportRows('#reportHws'), true);
+    if (reportBlockEnabled('tests'))
+      addList('Проверочные работы', reportRows('#reportTests'), true);
+    if (s.payType === 'package' && reportBlockEnabled('nextPackage')) {
+      lines.push('Следующий месяц', $('#paperNextPackage').textContent, '');
+    }
+    return lines.join('\n').trim();
   }
   $('#studentForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1556,8 +1656,8 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     o.goals = collectGoals();
     o.price = +o.price || 0;
     o.duration = +o.duration || 60;
-    o.packageSize = o.payType === 'package' ? +o.packageSize || 8 : 0;
     o.scheduleSlots = getSlots('#studentScheduleSlots');
+    o.packageSize = o.payType === 'package' ? countMonthlyRecurringLessons(o.scheduleSlots) : 0;
     const own = ownSlotConflict(o.scheduleSlots, o.duration),
       conflicts = recurringConflicts(o.scheduleSlots, o.duration, 'student', o.id),
       warnings = [];
@@ -1580,6 +1680,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       data.students[i] = { ...data.students[i], ...o };
     } else {
       o.id = uid();
+      o.createdAt = Date.now();
       data.students.push(o);
     }
     generateSchedule('student', o.id, o.scheduleSlots);
@@ -1651,18 +1752,27 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     const prev = data.lessons
       .filter(
         (x) =>
-          x.studentId === l.studentId &&
-          new Date(x.date) < new Date(l.date) &&
-          x.status === 'done' &&
-          x.homework,
+          x.studentId === l.studentId && new Date(x.date) < new Date(l.date) && x.status === 'done',
       )
       .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
-    if (prev) prev.homeworkResult = +l.homeworkGrade;
+    if (prev) {
+      if (!prev.homework) prev.homework = 'Домашнее задание было задано';
+      prev.homeworkResult = +l.homeworkGrade;
+    }
   }
   function applyStudentBilling(l) {
     const s = student(l.studentId);
     l.amount = +s?.price || 0;
     l.payment = s?.payType === 'package' ? 'package' : 'unpaid';
+  }
+  function clearAbsentStudentResults(lesson) {
+    if (lesson.status !== 'missed') return;
+    lesson.previousHomework = 'no';
+    lesson.homeworkGrade = '';
+    lesson.testDone = 'no';
+    lesson.testName = '';
+    lesson.testScore = '';
+    lesson.testMax = '';
   }
   function syncFutureStudentBilling(id, formatChanged = false) {
     const s = student(id);
@@ -1688,20 +1798,24 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
   }
   function syncPaidLessonHistory(l) {
     if (l.groupId) return;
-    const index = data.payments.findIndex((p) => p.lessonId === l.id),
+    const s = student(l.studentId),
+      extraPackagePayment = s?.payType === 'package' && l.payment === 'paid',
+      index = data.payments.findIndex((p) => p.lessonId === l.id),
       old = index >= 0 ? data.payments[index] : null,
-      should = l.payment === 'paid' && ['planned', 'done', 'paid_missed'].includes(l.status);
+      should =
+        l.payment === 'paid' &&
+        ['planned', 'unconfirmed', 'done', 'paid_missed'].includes(l.status);
     if (should) {
       const entry = {
         id: old?.id || uid(),
         studentId: l.studentId,
         amount: +l.amount || 0,
-        date: localDay(l.date),
+        date: old?.date || localDay(),
         createdAt: old?.createdAt || Date.now(),
         note: 'Оплата за занятие',
         lessonId: l.id,
-        ledgerOnly: true,
-        billingType: 'single',
+        ledgerOnly: !extraPackagePayment,
+        billingType: extraPackagePayment ? 'extra' : 'single',
       };
       if (index >= 0) data.payments[index] = entry;
       else data.payments.push(entry);
@@ -1752,9 +1866,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     o.reportFilled = o.status === 'done';
     let saved = [];
     if (existing) {
-      const targets = existing.seriesId
-        ? data.lessons.filter((l) => l.seriesId === existing.seriesId)
-        : [existing];
+      const targets = existing.groupId ? groupLessonRecords(existing) : [existing];
       targets.forEach((l) => {
         const status =
           type === 'g' && o.status === 'done' && !attendees.includes(l.studentId)
@@ -1768,6 +1880,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
           seriesId: l.seriesId,
           manualEdited: l.auto ? true : l.manualEdited,
         });
+        if (type === 'g') clearAbsentStudentResults(l);
       });
       saved = targets;
     } else if (type === 's') {
@@ -1785,6 +1898,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
         groupId: id,
         studentId,
       }));
+      saved.forEach(clearAbsentStudentResults);
       data.lessons.push(...saved);
     }
     if (type === 'g') saved.forEach(applyStudentBilling);
@@ -1835,12 +1949,16 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       pack = s?.payType === 'package',
       field = $('#paymentPackageField'),
       title = $('#paymentModal .modal-head h2'),
-      submit = $('#paymentForm button[type=submit]');
+      submit = $('#paymentForm button[type=submit]'),
+      paymentMonth = f.elements.date.value
+        ? new Date(f.elements.date.value + 'T12:00')
+        : new Date(),
+      packageLessons = pack ? packagePlan(s, paymentMonth).lessons : 0;
     field.style.display = pack ? 'grid' : 'none';
     field.querySelector('input').required = !!pack;
     if (pack) {
-      field.querySelector('input').value = s.packageSize || 8;
-      f.elements.amount.value = (+s.price || 0) * (+s.packageSize || 8);
+      field.querySelector('input').value = packageLessons;
+      f.elements.amount.value = (+s.price || 0) * packageLessons;
       title.textContent = 'Пополнить абонемент';
       submit.textContent = 'Пополнить абонемент';
     } else {
@@ -1857,8 +1975,17 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     o.createdAt = Date.now();
     o.billingType = s?.payType || 'single';
     o.amount = +o.amount || 0;
-    if (s?.payType === 'package') o.packageLessons = +o.packageLessons || +s.packageSize || 0;
-    else delete o.packageLessons;
+    if (s?.payType === 'package') {
+      o.packageLessons = +o.packageLessons || 0;
+      if (!o.packageLessons) {
+        inform(
+          'У ученика не заполнено регулярное расписание на выбранный месяц. Сначала добавьте дни занятий в карточке ученика.',
+          'Абонемент не рассчитан',
+          true,
+        );
+        return;
+      }
+    } else delete o.packageLessons;
     data.payments.push(o);
     save();
     closeAll();
@@ -1958,10 +2085,10 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       f.reset();
       f.elements.id.value = '';
       f.elements.duration.value = 60;
-      f.elements.packageSize.value = 8;
+      f.elements.packageSize.value = 0;
       setGoalChecks('');
-      syncPackageField();
       setSlots('#studentScheduleSlots', [], false);
+      syncPackageField();
       $('#studentModalTitle').textContent = 'Новый ученик';
       open('studentModal');
     }
@@ -2029,6 +2156,18 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     handleEntityClick(e);
   });
   $('#page-schedule').addEventListener('click', (e) => {
+    const view = e.target.closest('[data-calendar-view]')?.dataset.calendarView;
+    if (view) {
+      calendarView = view;
+      $$('#calendarViewSwitch .pill').forEach((button) =>
+        button.classList.toggle('active', button.dataset.calendarView === view),
+      );
+      $$('#calendarViewSwitch .pill').forEach((button) =>
+        button.setAttribute('aria-pressed', String(button.dataset.calendarView === view)),
+      );
+      renderCalendar();
+      return;
+    }
     openFromTrigger(e.target.closest('[data-open]')?.dataset.open);
     handleEntityClick(e);
   });
@@ -2093,7 +2232,11 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
   });
   $('#studentFilter').addEventListener('change', renderStudents);
   $('#lessonForm [name=targetId]').addEventListener('change', syncLessonDefaults);
-  $('#lessonForm [name=lessonKind]').addEventListener('change', syncOneoffAmount);
+  $('#lessonForm [name=lessonKind]').addEventListener('change', () => {
+    syncOneoffAmount();
+    syncLessonPayment();
+  });
+  $('#packageOneoffBilling').addEventListener('change', syncLessonPayment);
   $('#lessonForm [name=date]').addEventListener('change', () => {
     syncStatusForTime(true);
     renderLessonContext();
@@ -2111,10 +2254,34 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       : pack
         ? 'not_charged'
         : 'unpaid';
+    $('#lessonPaymentHint').textContent = $('#lessonPaymentToggle').checked
+      ? pack
+        ? 'Выключите, если занятие списывать не нужно'
+        : 'Выключите, если оплата ещё не поступила'
+      : pack
+        ? 'Включите, если занятие нужно списать'
+        : 'Включите, если оплата уже поступила';
   });
   $('#lessonForm [name=status]').addEventListener('change', syncMovedField);
+  $('#lessonForm').addEventListener('input', (e) => {
+    if (e.target.id === 'parentMessage') return;
+    refreshParentMessage();
+  });
+  $('#copyParentMessage').onclick = async () => {
+    const text = $('#parentMessage').value.trim();
+    if (!text) return toast('Сначала заполните информацию о занятии');
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('Сообщение скопировано');
+    } catch {
+      $('#parentMessage').select();
+      document.execCommand('copy');
+      toast('Сообщение скопировано');
+    }
+  };
   $('#studentForm [name=payType]').addEventListener('change', syncPackageField);
   $('#paymentForm [name=studentId]').addEventListener('change', syncPaymentForm);
+  $('#paymentForm [name=date]').addEventListener('change', syncPaymentForm);
   $('#page-payments').addEventListener('click', (e) => {
     if (e.target.closest('[data-open="payment"],[data-payment-student]'))
       setTimeout(syncPaymentForm);
@@ -2203,11 +2370,18 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     persistLocal();
     toast('Цель удалена');
   });
-  $('#addStudentSlot').onclick = () => $('#studentScheduleSlots').append(slotRow());
+  $('#addStudentSlot').onclick = () => {
+    $('#studentScheduleSlots').append(slotRow());
+    syncPackageField();
+  };
   $('#addGroupSlot').onclick = () => $('#groupScheduleSlots').append(slotRow());
   for (const modal of [$('#studentModal'), $('#groupModal')])
     modal.addEventListener('click', (e) => {
-      if (e.target.classList.contains('remove-slot')) e.target.closest('.schedule-slot').remove();
+      if (e.target.classList.contains('remove-slot')) {
+        const studentSchedule = !!e.target.closest('#studentScheduleSlots');
+        e.target.closest('.schedule-slot').remove();
+        if (studentSchedule) syncPackageField();
+      }
     });
   function toggleTheme() {
     data.settings.theme = data.settings.theme === 'dark' ? 'light' : 'dark';
@@ -2223,12 +2397,12 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     {
       icon: '👋',
       title: 'Начните с профиля',
-      text: 'Укажите своё имя — оно будет автоматически добавляться в отчёты родителям. Здесь же можно выбрать время напоминания перед уроком.',
+      text: 'Укажите имя педагога для родительских отчётов и выберите время напоминания перед уроком. Здесь же можно сменить тему, проверить аккаунт, скачать резервную копию и заново открыть этот туториал.',
     },
     {
       icon: '👤',
       title: 'Добавьте ученика',
-      text: 'Откройте раздел «Ученики», укажите стоимость и длительность занятия, формат оплаты, цели и регулярное расписание. Система сама создаст будущие уроки.',
+      text: 'Откройте раздел «Ученики», укажите стоимость одного урока, формат оплаты, цели и регулярное расписание. Имя родителя и ссылка на онлайн-занятие необязательны. Для абонемента количество уроков каждого месяца рассчитывается автоматически.',
     },
     {
       icon: '👥',
@@ -2238,27 +2412,27 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     {
       icon: '📅',
       title: 'Работайте с расписанием',
-      text: 'Регулярные уроки создаются автоматически. Разовое занятие или своё событие можно добавить вручную. Если время занято, платформа не даст сохранить пересечение.',
+      text: 'Переключайтесь между месяцем и текущей неделей. Регулярные уроки создаются на 8 недель вперёд, а разовое занятие и личное событие добавляются вручную. При пересечении времени платформа предупредит, но решение о сохранении останется за вами.',
     },
     {
       icon: '✓',
       title: 'Заполняйте урок после проведения',
-      text: 'Укажите тему, проверочную работу, домашнее задание, статус оплаты и пометку на следующий урок. Прошедшие незаполненные занятия останутся на главной.',
+      text: 'Укажите тему, домашнее задание, результат предыдущего ДЗ, проверочную работу, оплату и пометку на следующий урок. Сообщение родителю составится автоматически и будет обновляться вместе с формой — останется только скопировать его.',
     },
     {
       icon: '₽',
       title: 'Следите за оплатами',
-      text: 'Для разовых занятий видно долг или аванс. У абонемента показывается остаток занятий. После принятия оплаты баланс пересчитается автоматически.',
+      text: 'Аналитика показывает реальный и планируемый доход текущего месяца. Для разовых занятий видны долг или аванс, а для абонементов — остаток и рассчитанные на месяц количество уроков и стоимость.',
     },
     {
       icon: '▤',
       title: 'Создавайте отчёты',
-      text: 'Выберите ученика и период, затем нажмите «Заполнить из занятий». Карточка справа обновляется автоматически при каждом изменении и скачивается в PNG.',
+      text: 'Выберите ученика и период до 45 дней — данные из занятий заполнятся автоматически. Переключателями «В отчёте» можно скрыть отдельные блоки. Готовый отчёт скачивается в PNG или копируется текстом; для абонемента добавляется план следующего месяца.',
     },
     {
-      icon: '↓',
-      title: 'Не забывайте про копию',
-      text: 'Данные хранятся только в текущем браузере. Раз в несколько недель скачивайте резервную копию — её можно загрузить на другом устройстве или вернуть после очистки браузера.',
+      icon: '☁️',
+      title: 'Данные сохраняются автоматически',
+      text: 'Изменения сохраняются в аккаунте и доступны на другом устройстве. Подробная история занятий, платежей и личных событий хранится 45 дней, затем финансовые итоги остаются в компактном архиве. Резервную копию всё равно полезно скачивать раз в месяц.',
     },
   ];
   let tutorialIndex = 0;
@@ -2336,6 +2510,11 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     data.groups.forEach(
       (g) => (g.members = (g.members || []).filter((studentId) => studentId !== id)),
     );
+    const emptyGroupIds = new Set(
+      data.groups.filter((g) => !(g.members || []).length).map((g) => g.id),
+    );
+    data.groups = data.groups.filter((g) => !emptyGroupIds.has(g.id));
+    data.lessons = data.lessons.filter((l) => !emptyGroupIds.has(l.groupId));
     save();
     closeAll();
     toast('Ученик полностью удалён');
@@ -2380,7 +2559,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     body.innerHTML = ls
       .map(
         (l) =>
-          `<tr><td>${fmtDate(l.date, true)}</td><td>${statusName(l.status)}</td><td>${esc(l.topics || '—')}<br><span class="sub">${esc(l.comment || '')}</span></td><td>${homeworkGrade(l) == null ? '—' : `Оценка ${homeworkGrade(l)}`}</td><td>${l.testDone === 'yes' ? `${esc(l.testName || 'Работа')}: ${esc(l.testScore || '—')}/${esc(l.testMax || '—')}` : '—'}</td><td>${l.payment === 'unpaid' ? '<span class="danger-text">Не оплачено</span>' : 'Учтено'}</td></tr>`,
+          `<tr><td>${fmtDate(l.date, true)}</td><td>${statusName(l.status)}</td><td>${esc(l.topics || '—')}<br><span class="sub">${esc(l.comment || '')}</span></td><td>${l.homework ? `${esc(l.homework)}${homeworkGrade(l) == null ? '' : `<br><b>Оценка ${homeworkGrade(l)}</b>`}` : homeworkGrade(l) == null ? '—' : `Оценка ${homeworkGrade(l)}`}</td><td>${l.testDone === 'yes' ? `${esc(l.testName || 'Работа')}: ${esc(l.testScore || '—')}/${esc(l.testMax || '—')}` : '—'}</td></tr>`,
       )
       .join('');
   }
@@ -2395,26 +2574,21 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     if (
       l &&
       (await ask(
-        `${lessonName(l)} · ${fmtDate(l.date, true)}${l.seriesId ? ' (вместе со всей группой на эту дату)' : ''}. Занятие сразу исчезнет из расписания.`,
+        `${lessonName(l)} · ${fmtDate(l.date, true)}${l.groupId ? ' (вместе со всей группой на эту дату)' : ''}. Занятие сразу исчезнет из расписания.`,
         'Удалить занятие?',
         'Удалить',
       ))
     ) {
-      const removedIds = l.seriesId
-        ? data.lessons.filter((x) => x.seriesId === l.seriesId).map((x) => x.id)
-        : [id];
-      data.lessons = l.seriesId
-        ? data.lessons.filter((x) => x.seriesId !== l.seriesId)
-        : data.lessons.filter((x) => x.id !== id);
+      const removed = l.groupId ? groupLessonRecords(l) : [l],
+        removedIds = removed.map((x) => x.id),
+        removedIdSet = new Set(removedIds);
+      data.lessons = data.lessons.filter((x) => !removedIdSet.has(x.id));
       data.payments = data.payments.filter((p) => !removedIds.includes(p.lessonId));
       lessonInitial = '';
       save();
       closeAll();
       toast('Занятие удалено');
     }
-  };
-  $('#makeReport').onclick = () => {
-    if (validReportDates()) autoFillReport(true);
   };
   function validReportDates() {
     const fromV = $('#reportDateFrom').value,
@@ -2427,6 +2601,19 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       inform(
         'Дата «С» не может быть позже даты «По». Поменяйте даты местами или выберите другой период.',
         'Проверьте период',
+        true,
+      );
+      return false;
+    }
+    const from = new Date(fromV + 'T00:00'),
+      to = new Date(toV + 'T23:59:59'),
+      oldest = new Date();
+    oldest.setHours(0, 0, 0, 0);
+    oldest.setDate(oldest.getDate() - RETENTION_DAYS);
+    if (to - from > RETENTION_DAYS * 864e5 || from < oldest) {
+      inform(
+        'Отчёт можно построить только по данным за последние 45 дней. Сократите или сдвиньте выбранный период.',
+        'Период слишком большой',
         true,
       );
       return false;
@@ -2449,33 +2636,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       if (from && to) $('#reportPeriodName').value = `${fmtDate(from)} — ${fmtDate(to)}`;
     }
   }
-  // --- Аналитика на странице «Оплаты» ---
-  $('#page-payments').addEventListener('click', (e) => {
-    const tab = e.target.closest('#analyticsTabs .pill');
-    if (!tab) return;
-    const p = tab.dataset.period;
-    analyticsState.period = p;
-    $$('#analyticsTabs .pill').forEach((x) => x.classList.toggle('active', x === tab));
-    $('#analyticsCustom').style.display = p === 'custom' ? 'block' : 'none';
-    if (p === 'custom' && (!analyticsState.from || !analyticsState.to)) {
-      const to = new Date(),
-        from = new Date(to.getTime() - 30 * 864e5);
-      analyticsState.from = analyticsState.from || localDay(from);
-      analyticsState.to = analyticsState.to || localDay(to);
-      $('#analyticsFrom').value = analyticsState.from;
-      $('#analyticsTo').value = analyticsState.to;
-    }
-    renderPaymentsSimple();
-  });
   $('#page-payments').addEventListener('change', (e) => {
-    if (e.target.id === 'analyticsFrom') {
-      analyticsState.from = e.target.value;
-      renderPaymentsSimple();
-    }
-    if (e.target.id === 'analyticsTo') {
-      analyticsState.to = e.target.value;
-      renderPaymentsSimple();
-    }
     if (e.target.id === 'paymentHistoryStudent') renderPaymentsSimple();
   });
   $('#reportStudent').addEventListener('change', () => {
@@ -2492,12 +2653,24 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
   $('#reportDateFrom').addEventListener('change', () => {
     updateReportPeriodName();
     updateReportHistoryHint();
-    if ($('#reportStudent').value && validReportDates()) autoFillReport(true);
+    if (
+      $('#reportStudent').value &&
+      $('#reportDateFrom').value &&
+      $('#reportDateTo').value &&
+      validReportDates()
+    )
+      autoFillReport(true);
   });
   $('#reportDateTo').addEventListener('change', () => {
     updateReportPeriodName();
     updateReportHistoryHint();
-    if ($('#reportStudent').value && validReportDates()) autoFillReport(true);
+    if (
+      $('#reportStudent').value &&
+      $('#reportDateFrom').value &&
+      $('#reportDateTo').value &&
+      validReportDates()
+    )
+      autoFillReport(true);
   });
   $('#reportPeriodName').addEventListener('input', updateReportCard);
   $('#reportComment').addEventListener('input', updateReportCard);
@@ -2508,8 +2681,28 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     if (e.target.matches('.r-name,.r-grade')) updateReportCard();
   });
   $('#page-reports').addEventListener('change', (e) => {
+    if (e.target.matches('[data-report-block]')) {
+      applyReportBlockVisibility();
+      return;
+    }
     if (e.target.matches('.r-name,.r-grade')) updateReportCard();
   });
+  $('#copyReportText').onclick = async () => {
+    const text = buildReportText();
+    if (!text) return toast('Сначала выберите ученика');
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('Текст отчёта скопирован');
+    } catch {
+      const area = document.createElement('textarea');
+      area.value = text;
+      document.body.append(area);
+      area.select();
+      document.execCommand('copy');
+      area.remove();
+      toast('Текст отчёта скопирован');
+    }
+  };
   $('#saveReportPng').onclick = async () => {
     updateReportCard();
     if (typeof html2canvas !== 'function') {
@@ -2715,7 +2908,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
   const dataInfo = $('#page-settings .settings-grid .card:nth-child(2) p.sub');
   if (dataInfo)
     dataInfo.textContent =
-      'Данные автоматически сохраняются в аккаунте и доступны после входа на другом устройстве. Занятия и платежи хранятся бессрочно — по ним можно строить статистику за любой период. Рекомендуется делать резервную копию хотя бы раз в месяц.';
+      'Данные автоматически сохраняются в аккаунте и доступны после входа на другом устройстве. Детальная история занятий и платежей хранится 45 дней; финансовые итоги сохраняются компактно. Рекомендуется делать резервную копию хотя бы раз в месяц.';
   const lessonNotice = $('#lessonForm .notice');
   if (lessonNotice) {
     const context = document.createElement('div');
@@ -2787,10 +2980,18 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
   const beforeBootstrap = JSON.stringify(data);
   extendAllSchedules();
   normalizePastLessons();
+  data = pruneOldHistory(data, RETENTION_DAYS).data;
   syncFutureGroupBilling();
   if (loaded.stage === 'empty' || loaded.needsWrite || JSON.stringify(data) !== beforeBootstrap)
     persistLocal('bootstrap-maintenance');
   updateReportPeriodName();
+  const reportMax = localDay(),
+    reportMinDate = new Date();
+  reportMinDate.setDate(reportMinDate.getDate() - RETENTION_DAYS);
+  for (const input of [$('#reportDateFrom'), $('#reportDateTo')]) {
+    input.min = localDay(reportMinDate);
+    input.max = reportMax;
+  }
   renderAll();
   scheduleReminders();
   setInterval(updateClock, 30000);

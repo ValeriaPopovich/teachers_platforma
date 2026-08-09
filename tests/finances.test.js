@@ -69,4 +69,34 @@ describe('finances — characterization baseline (зеркалит index.html)',
       debt: 0,
     });
   });
+
+  it('разовое занятие абонементного ученика можно учесть отдельной доплатой', () => {
+    const data = {
+      students: [{ id: 's1', payType: 'package', price: 2000 }],
+      lessons: [
+        {
+          id: 'l1',
+          studentId: 's1',
+          date: '2026-08-09',
+          status: 'done',
+          payment: 'unpaid',
+          amount: 2500,
+        },
+      ],
+      payments: [],
+      financeArchive: {},
+    };
+    expect(finances(data, 's1')).toMatchObject({ used: 0, extraDebt: 2500, debt: 2500 });
+    data.lessons[0].payment = 'paid';
+    data.payments.push({
+      id: 'p1',
+      studentId: 's1',
+      lessonId: 'l1',
+      date: '2026-08-09',
+      createdAt: Date.now(),
+      amount: 2500,
+      billingType: 'extra',
+    });
+    expect(finances(data, 's1')).toMatchObject({ used: 0, extraDebt: 0, debt: 0 });
+  });
 });

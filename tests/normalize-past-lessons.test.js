@@ -9,12 +9,12 @@ function seed(lessons) {
 }
 
 describe('normalizePastLessons', () => {
-  it('planned + закончившееся → done', () => {
+  it('planned + закончившееся → требует подтверждения', () => {
     const data = seed([
       { id: 'l1', date: '2026-08-01T10:00:00Z', status: 'planned', duration: 60 },
     ]);
     const r = normalizePastLessons(data, NOW);
-    expect(r.data.lessons[0].status).toBe('done');
+    expect(r.data.lessons[0].status).toBe('unconfirmed');
     expect(r.data.lessons[0].reportFilled).toBe(false);
     expect(r.changes.lessonsCompleted).toBe(1);
     expect(r.changes.completedLessonIds).toEqual(['l1']);
