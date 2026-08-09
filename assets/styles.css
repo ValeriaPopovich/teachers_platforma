@@ -380,11 +380,52 @@ button {
 .student-card .meta {
   color: var(--muted);
 }
+.student-card-details {
+  display: grid;
+  gap: 8px;
+  margin: -3px 0 14px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--panel2);
+}
+.student-card-details div {
+  display: grid;
+  gap: 2px;
+}
+.student-card-details span,
+.profile-contact-grid span {
+  color: var(--muted);
+  font-size: 11px;
+}
+.student-card-details b,
+.profile-contact-grid b {
+  font-size: 13px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.student-card-notes b {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.student-lesson-link {
+  width: fit-content;
+  color: var(--brand-ink);
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.student-lesson-link:hover {
+  text-decoration: underline;
+}
 .student-metrics {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   text-align: center;
+  margin-bottom: 15px;
 }
 .student-metrics div {
   padding: 9px 5px;
@@ -573,6 +614,25 @@ button {
   width: 56px;
   height: 56px;
   font-size: 20px;
+}
+.profile-contact-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.profile-contact-grid div {
+  display: grid;
+  gap: 3px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel2);
+}
+@media (max-width: 560px) {
+  .profile-contact-grid {
+    grid-template-columns: 1fr;
+  }
 }
 .mini-table {
   width: 100%;

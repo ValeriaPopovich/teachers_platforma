@@ -136,6 +136,14 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
         .toUpperCase() || '?'
     );
   }
+  function safeExternalUrl(value = '') {
+    try {
+      const url = new URL(String(value).trim());
+      return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+    } catch {
+      return '';
+    }
+  }
   function student(id) {
     return data.students.find((s) => s.id === id);
   }
@@ -431,7 +439,11 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     const q = $('#studentSearch').value.toLowerCase(),
       f = $('#studentFilter').value;
     let list = data.students.filter((s) =>
-      (s.name + ' ' + s.grade + ' ' + s.contact).toLowerCase().includes(q),
+      [s.name, s.grade, s.contact, s.parentName, s.parentContact, s.goals, s.notes]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+        .includes(q),
     );
     if (f === 'debt')
       list = list.filter((s) =>
@@ -443,13 +455,15 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
           .map((s) => {
             const m = metrics(s.id),
               fin = finances(s.id),
+              lessonUrl = safeExternalUrl(s.lessonLink),
+              parent = [s.parentName, s.parentContact].filter(Boolean).join(' · '),
               packageText =
                 fin.balanceLessons < 0
                   ? `Долг ${Math.abs(fin.balanceLessons)} зан.`
                   : fin.balanceLessons === 0
                     ? 'Закончился'
                     : `${fin.balanceLessons} зан.`;
-            return `<article class="card student-card"><button class="btn student-delete" data-quick-delete-student="${s.id}" title="Удалить ученика" aria-label="Удалить ученика">🗑</button><div class="student-card-main" role="button" tabindex="0" aria-label="Открыть карточку: ${esc(s.name)}" data-student="${s.id}"><div class="student-top"><div><h3>${esc(s.name)}</h3><div class="meta">${esc(s.grade || 'Класс не указан')} · ${esc(scheduleText(s.scheduleSlots))}</div></div></div><div class="student-metrics"><div><b>${m.attendance}%</b><small>Посещение</small></div><div><b>${m.homework == null ? '—' : String(m.homework).replace('.', ',') + '/5'}</b><small>Средняя оценка ДЗ</small></div><div><b class="${(s.payType === 'package' && fin.balanceLessons <= 0) || m.debt ? 'danger-text' : ''}">${s.payType === 'package' ? packageText : m.debt ? money(m.debt) : '✓'}</b><small>${s.payType === 'package' ? 'Абонемент' : m.debt ? 'Долг' : 'Оплачено'}</small></div></div></div></article>`;
+            return `<article class="card student-card"><button class="btn student-delete" data-quick-delete-student="${s.id}" title="Удалить ученика" aria-label="Удалить ученика">🗑</button><div class="student-card-main" role="button" tabindex="0" aria-label="Открыть карточку: ${esc(s.name)}" data-student="${s.id}"><div class="student-top"><div><h3>${esc(s.name)}</h3><div class="meta">${esc(s.grade || 'Класс не указан')} · ${esc(scheduleText(s.scheduleSlots))}</div></div></div><div class="student-card-details">${s.contact ? `<div><span>Контакт ученика</span><b>${esc(s.contact)}</b></div>` : ''}${parent ? `<div><span>Родитель</span><b>${esc(parent)}</b></div>` : ''}<div><span>Условия занятий</span><b>${money(s.price)} · ${+s.duration || 60} мин · ${s.payType === 'package' ? 'абонемент' : 'разовая оплата'}</b></div>${s.goals ? `<div><span>Цели</span><b>${esc(s.goals)}</b></div>` : ''}${s.notes ? `<div class="student-card-notes"><span>Заметки</span><b>${esc(s.notes)}</b></div>` : ''}${lessonUrl ? `<a class="student-lesson-link" href="${esc(lessonUrl)}" target="_blank" rel="noopener">↗ Открыть ссылку на занятие</a>` : ''}</div><div class="student-metrics"><div><b>${m.attendance}%</b><small>Посещение</small></div><div><b>${m.homework == null ? '—' : String(m.homework).replace('.', ',') + '/5'}</b><small>Средняя оценка ДЗ</small></div><div><b class="${(s.payType === 'package' && fin.balanceLessons <= 0) || m.debt ? 'danger-text' : ''}">${s.payType === 'package' ? packageText : m.debt ? money(m.debt) : '✓'}</b><small>${s.payType === 'package' ? 'Абонемент' : m.debt ? 'Долг' : 'Оплачено'}</small></div></div></div></article>`;
           })
           .join('')
       : `<div class="empty students-empty">Ученики не найдены</div>`;
@@ -834,9 +848,11 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
         )
         .sort((a, b) => new Date(a.date) - new Date(b.date))[0],
       nextDate = next ? fmtDate(next.date, true) : 'Ближайшее занятие не запланировано',
-      nextNote = next ? next.prepNote || 'Пометки пока нет' : '—';
+      nextNote = next ? next.prepNote || 'Пометки пока нет' : '—',
+      lessonUrl = safeExternalUrl(s.lessonLink),
+      paymentFormat = s.payType === 'package' ? 'Абонемент' : 'Разовая оплата';
     $('#profileBody').innerHTML =
-      `<div class="profile-summary"><div class="avatar">${esc(initials(s.name))}</div><div><h2 style="margin:0">${esc(s.name)}</h2><div class="sub">${esc(s.grade || 'Класс не указан')} · ${esc(s.contact || 'Контакт не указан')}</div>${s.parentName ? `<div class="sub">Родитель: ${esc(s.parentName)}</div>` : ''}${s.lessonLink ? `<a class="btn profile-lesson-link" href="${esc(s.lessonLink)}" target="_blank" rel="noopener">Открыть занятие</a>` : ''}</div></div><div class="student-metrics"><div><b>${m.attendance}%</b><small>Посещаемость</small></div><div><b>${m.homework == null ? '—' : String(m.homework).replace('.', ',') + '/5'}</b><small>Средняя оценка ДЗ</small></div><div><b>${tests}</b><small>Проверочных</small></div></div><div class="notice"><b>Следующее занятие:</b> ${esc(nextDate)}<br><b>Пометка на следующий урок:</b> ${esc(nextNote)}</div><div class="notice"><b>Цели:</b> ${esc(s.goals || 'не указаны')}<br><b>Заметки:</b> ${esc(s.notes || 'нет')}</div><h3>История занятий</h3>${
+      `<div class="profile-summary"><div class="avatar">${esc(initials(s.name))}</div><div><h2 style="margin:0">${esc(s.name)}</h2><div class="sub">${esc(s.grade || 'Класс не указан')}</div>${lessonUrl ? `<a class="btn profile-lesson-link" href="${esc(lessonUrl)}" target="_blank" rel="noopener">Открыть занятие ↗</a>` : ''}</div></div><div class="profile-contact-grid">${s.contact ? `<div><span>Контакт ученика</span><b>${esc(s.contact)}</b></div>` : ''}${s.parentName ? `<div><span>Имя родителя</span><b>${esc(s.parentName)}</b></div>` : ''}${s.parentContact ? `<div><span>Контакт родителя</span><b>${esc(s.parentContact)}</b></div>` : ''}<div><span>Условия занятий</span><b>${money(s.price)} · ${+s.duration || 60} мин · ${paymentFormat}</b></div></div><div class="student-metrics"><div><b>${m.attendance}%</b><small>Посещаемость</small></div><div><b>${m.homework == null ? '—' : String(m.homework).replace('.', ',') + '/5'}</b><small>Средняя оценка ДЗ</small></div><div><b>${tests}</b><small>Проверочных</small></div></div><div class="notice"><b>Следующее занятие:</b> ${esc(nextDate)}<br><b>Регулярное расписание:</b> ${esc(scheduleText(s.scheduleSlots))}<br><b>Пометка на следующий урок:</b> ${esc(nextNote)}</div><div class="notice"><b>Цели:</b> ${esc(s.goals || 'не указаны')}<br><b>Заметки:</b> ${esc(s.notes || 'нет')}</div><h3>История занятий</h3>${
         ls.length
           ? `<div style="overflow:auto"><table class="mini-table"><thead><tr><th>Дата</th><th>Статус</th><th>Темы / комментарий</th><th>ДЗ</th><th>Проверочная</th></tr></thead><tbody>${ls
               .slice(0, 20)
@@ -2130,7 +2146,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     const editEventId = e.target.closest('[data-edit-event]')?.dataset.editEvent;
     if (editEventId) editEvent(editEventId);
     const sid = e.target.closest('[data-student]')?.dataset.student;
-    if (sid && !editLessonId) showProfile(sid);
+    if (sid && !editLessonId && !e.target.closest('a,button')) showProfile(sid);
     const gid = e.target.closest('[data-group]')?.dataset.group;
     if (gid) editGroup(gid);
     const paySid = e.target.closest('[data-payment-student]')?.dataset.paymentStudent;
