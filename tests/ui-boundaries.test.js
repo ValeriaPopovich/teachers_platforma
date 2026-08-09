@@ -52,4 +52,18 @@ describe('UI ownership boundaries', () => {
     expect(appJs).toMatch(/<button class="event event--\$\{l\.status\}"[^>]*data-edit-lesson=/);
     expect(appJs).toMatch(/<button class="event custom-event"[^>]*data-edit-event=/);
   });
+
+  it('editing a lesson cannot silently transfer it to another student', () => {
+    expect(appJs).toMatch(/function defaultLesson[\s\S]*?f\.elements\.id\.value = ''/);
+    expect(appJs).toContain('f.elements.targetId.disabled = true');
+    expect(appJs).toContain('f.elements.targetId.disabled = false');
+    expect(appJs).toContain("$('#lessonModalTitle').textContent = 'Новое разовое занятие'");
+    expect(appJs).toContain("$('#lessonModalTitle').textContent = 'Редактировать занятие'");
+    expect(appJs).toMatch(/\(o\.targetId \|\| existingTarget\)\.split\(':\'\)/);
+  });
+
+  it('individual calendar lessons are never collapsed into one session', () => {
+    expect(appJs).toContain("`individual:${l.id || 'missing'}:${index}`");
+    expect(appJs).toContain("'Статус не указан'");
+  });
 });

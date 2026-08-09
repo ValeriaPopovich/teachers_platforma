@@ -579,8 +579,13 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
   function uniqueSessions(list) {
     const rank = { done: 6, paid_missed: 5, missed: 4, planned: 3, moved: 2, cancelled: 1 },
       map = new Map();
-    list.forEach((l) => {
-      const k = l.seriesId || l.id,
+    list.forEach((l, index) => {
+      // Only group records represent one shared session and need collapsing.
+      // Individual lessons must always remain separate, even if legacy data
+      // contains a duplicated or malformed id.
+      const k = l.groupId
+          ? l.seriesId || `group:${l.groupId}:${l.date}`
+          : `individual:${l.id || 'missing'}:${index}`,
         old = map.get(k);
       if (!old || (rank[l.status] || 0) > (rank[old.status] || 0)) map.set(k, l);
     });
@@ -790,7 +795,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
         paid_missed: 'Пропуск с оплатой',
         moved: 'Перенесено',
         cancelled: 'Отменено',
-      }[v] || v
+      }[v] || 'Статус не указан'
     );
   }
   function fillStudents() {
@@ -1208,6 +1213,12 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
   function defaultLesson(studentId = '') {
     const f = $('#lessonForm');
     f.reset();
+    // Hidden inputs keep their live value after reset in some browsers
+    // (notably Safari/iPadOS). Without an explicit clear, a new lesson can
+    // accidentally overwrite the lesson that was opened previously.
+    f.elements.id.value = '';
+    f.elements.targetId.disabled = false;
+    $('#lessonModalTitle').textContent = 'Новое разовое занятие';
     const d = new Date(Date.now() - new Date().getTimezoneOffset() * 60000);
     f.elements.date.value = d.toISOString().slice(0, 16);
     f.elements.targetId.value = studentId ? 's:' + studentId : '';
@@ -1237,6 +1248,8 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     });
     f.elements.id.value = l.id;
     f.elements.targetId.value = l.groupId ? 'g:' + l.groupId : 's:' + l.studentId;
+    f.elements.targetId.disabled = true;
+    $('#lessonModalTitle').textContent = 'Редактировать занятие';
     f.elements.lessonKind.value = l.lessonKind || (l.auto ? 'regular' : 'oneoff');
     $('#packageOneoffBilling').dataset.lessonId = '';
     $('#testDoneToggle').checked = l.testDone === 'yes' || !!l.score;
@@ -1852,7 +1865,12 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       o = Object.fromEntries(fd),
       attendees = fd.getAll('attendees'),
       existing = data.lessons.find((l) => l.id === o.id),
-      [type, id] = (o.targetId || '').split(':');
+      existingTarget = existing
+        ? existing.groupId
+          ? `g:${existing.groupId}`
+          : `s:${existing.studentId}`
+        : '',
+      [type, id] = (o.targetId || existingTarget).split(':');
     if (!id) return;
     const ownerPatch = existing ? existingLessonOwnerPatch(existing, { type, id }) : null;
     if (existing && !ownerPatch) {
@@ -1884,6 +1902,16 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       return;
     }
     if (o.previousHomework !== 'yes') o.homeworkGrade = '';
+    const validStatuses = new Set([
+      'planned',
+      'unconfirmed',
+      'done',
+      'missed',
+      'paid_missed',
+      'moved',
+      'cancelled',
+    ]);
+    if (!validStatuses.has(o.status)) o.status = existing?.status || 'planned';
     const owner = type === 'g' ? group(id) : student(id),
       duration = +owner?.duration || 60,
       exclude = existing ? existing.seriesId || existing.id : '',

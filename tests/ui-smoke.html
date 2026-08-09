@@ -227,7 +227,8 @@
         checks.push(
           record(
             'Новое разовое занятие по умолчанию запланировано',
-            lessonForm.elements.lessonKind.value === 'oneoff' &&
+            lessonForm.elements.id.value === '' &&
+              lessonForm.elements.lessonKind.value === 'oneoff' &&
               lessonForm.elements.status.value === 'planned',
           ),
         );
