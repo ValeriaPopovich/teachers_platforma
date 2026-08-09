@@ -58,7 +58,8 @@ describe('payments action-first redesign contract', () => {
     expect(html).toContain('name="packageLessons"');
     expect(html).toContain('id="paymentPackageMonthLabel"');
     expect(app).toContain("$('#paymentPackageField')");
-    expect(app).toContain("f.elements.packageLessons");
+    expect(app).toContain("field.querySelector('input').value = packageLessons");
+    expect(app).toContain("#paymentForm [name=packageLessons]");
   });
 
   it('keeps context payment actions discoverable by existing delegated handlers', () => {
