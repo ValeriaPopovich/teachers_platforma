@@ -1,0 +1,22 @@
+{
+  "name": "teachers-platforma",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Кабинет репетитора. Статический сайт на GitHub Pages; тесты и линт — только для разработки.",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "validate:stage0": "node scripts/validate-stage0.mjs",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.13.0",
+    "eslint": "^9.13.0",
+    "globals": "^17.9.0",
+    "prettier": "^3.3.3",
+    "vitest": "^2.1.4"
+  }
+}

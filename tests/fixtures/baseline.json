@@ -1,0 +1,220 @@
+{
+  "meta": {
+    "note": "Синтетический анонимизированный fixture в формате production. Ожидаемые числа зафиксированы в docs/baseline-manifest.md и в tests. Персональных данных нет.",
+    "billingCutoffNote": "s-single-billing.billingSince = 1780272000000 = 2026-06-01T00:00:00Z"
+  },
+  "students": [
+    { "id": "s-single-debt", "name": "Ученик Долг", "price": 1000, "duration": 60 },
+    { "id": "s-single-advance", "name": "Ученик Аванс", "price": 1000, "duration": 60 },
+    {
+      "id": "s-single-billing",
+      "name": "Ученик Биллинг",
+      "price": 1000,
+      "duration": 60,
+      "billingSince": 1780272000000
+    },
+    {
+      "id": "s-pack",
+      "name": "Ученик Абонемент",
+      "price": 800,
+      "duration": 60,
+      "payType": "package",
+      "packageSize": 8
+    },
+    {
+      "id": "s-pack-archive",
+      "name": "Ученик Абонемент Архив",
+      "price": 500,
+      "duration": 60,
+      "payType": "package",
+      "packageSize": 4
+    }
+  ],
+  "groups": [
+    {
+      "id": "g-1",
+      "name": "Группа А",
+      "duration": 60,
+      "members": ["s-single-debt", "s-single-advance"]
+    }
+  ],
+  "lessons": [
+    {
+      "id": "l-sd-1",
+      "studentId": "s-single-debt",
+      "date": "2026-07-01T10:00:00Z",
+      "status": "done",
+      "payment": "unpaid",
+      "amount": 1000
+    },
+    {
+      "id": "l-sd-2",
+      "studentId": "s-single-debt",
+      "date": "2026-07-03T10:00:00Z",
+      "status": "done",
+      "payment": "unpaid",
+      "amount": 1000
+    },
+    {
+      "id": "l-sd-3",
+      "studentId": "s-single-debt",
+      "date": "2026-07-05T10:00:00Z",
+      "status": "done",
+      "payment": "unpaid",
+      "amount": 1000
+    },
+    {
+      "id": "l-sd-paid",
+      "studentId": "s-single-debt",
+      "date": "2026-07-06T10:00:00Z",
+      "status": "done",
+      "payment": "paid",
+      "amount": 1000
+    },
+    {
+      "id": "l-sd-future",
+      "studentId": "s-single-debt",
+      "date": "2026-09-01T10:00:00Z",
+      "status": "planned",
+      "payment": "unpaid",
+      "amount": 1000
+    },
+    {
+      "id": "l-sa-1",
+      "studentId": "s-single-advance",
+      "date": "2026-07-02T10:00:00Z",
+      "status": "done",
+      "payment": "unpaid",
+      "amount": 1000
+    },
+    {
+      "id": "l-sb-old",
+      "studentId": "s-single-billing",
+      "date": "2026-05-15T10:00:00Z",
+      "status": "done",
+      "payment": "unpaid",
+      "amount": 1000,
+      "homeworkPercent": 80
+    },
+    {
+      "id": "l-sb-new",
+      "studentId": "s-single-billing",
+      "date": "2026-07-15T10:00:00Z",
+      "status": "done",
+      "payment": "unpaid",
+      "amount": 1000
+    },
+    {
+      "id": "l-pk-1",
+      "studentId": "s-pack",
+      "date": "2026-07-04T10:00:00Z",
+      "status": "done",
+      "payment": "package"
+    },
+    {
+      "id": "l-pk-2",
+      "studentId": "s-pack",
+      "date": "2026-07-06T10:00:00Z",
+      "status": "done",
+      "payment": "package"
+    },
+    {
+      "id": "l-pk-3",
+      "studentId": "s-pack",
+      "date": "2026-07-08T10:00:00Z",
+      "status": "done",
+      "payment": "package"
+    },
+    {
+      "id": "l-pk-fut",
+      "studentId": "s-pack",
+      "date": "2026-09-08T10:00:00Z",
+      "status": "planned",
+      "payment": "package"
+    },
+    {
+      "id": "l-pa-1",
+      "studentId": "s-pack-archive",
+      "date": "2026-07-04T10:00:00Z",
+      "status": "done",
+      "payment": "package"
+    },
+    {
+      "id": "l-pa-2",
+      "studentId": "s-pack-archive",
+      "date": "2026-07-05T10:00:00Z",
+      "status": "done",
+      "payment": "package"
+    },
+    {
+      "id": "l-pa-3",
+      "studentId": "s-pack-archive",
+      "date": "2026-07-06T10:00:00Z",
+      "status": "done",
+      "payment": "package"
+    },
+    {
+      "id": "l-pa-4",
+      "studentId": "s-pack-archive",
+      "date": "2026-07-07T10:00:00Z",
+      "status": "done",
+      "payment": "package"
+    },
+    {
+      "id": "l-pa-5",
+      "studentId": "s-pack-archive",
+      "date": "2026-07-08T10:00:00Z",
+      "status": "done",
+      "payment": "package"
+    },
+    {
+      "id": "l-pa-6",
+      "studentId": "s-pack-archive",
+      "date": "2026-07-09T10:00:00Z",
+      "status": "done",
+      "payment": "package"
+    },
+    {
+      "id": "l-grp-1",
+      "groupId": "g-1",
+      "seriesId": "ser-1",
+      "date": "2026-07-10T10:00:00Z",
+      "status": "planned"
+    }
+  ],
+  "events": [{ "id": "e-1", "title": "Личное событие", "date": "2026-07-20T12:00:00Z" }],
+  "payments": [
+    { "id": "p-sd-1", "studentId": "s-single-debt", "date": "2026-07-04", "amount": 2000 },
+    { "id": "p-sa-1", "studentId": "s-single-advance", "date": "2026-07-03", "amount": 1500 },
+    {
+      "id": "p-sa-ledger",
+      "studentId": "s-single-advance",
+      "date": "2026-07-03",
+      "amount": 9999,
+      "ledgerOnly": true
+    },
+    { "id": "p-sb-old", "studentId": "s-single-billing", "date": "2026-05-15", "amount": 500 },
+    { "id": "p-sb-new", "studentId": "s-single-billing", "date": "2026-07-15", "amount": 1200 },
+    {
+      "id": "p-pk-1",
+      "studentId": "s-pack",
+      "date": "2026-07-01",
+      "amount": 6400,
+      "packageLessons": 8
+    },
+    {
+      "id": "p-pa-1",
+      "studentId": "s-pack-archive",
+      "date": "2026-07-01",
+      "amount": 2000,
+      "packageLessons": 4
+    }
+  ],
+  "financeArchive": {
+    "s-pack-archive": { "packageBought": 4, "packageUsed": 4, "paidAmount": 2000 }
+  },
+  "topicLog": {
+    "s-single-debt": [{ "d": "2026-07-01", "t": "Дроби" }]
+  },
+  "settings": { "tutor": "Преп", "theme": "light", "reminder": 15 }
+}
