@@ -34,21 +34,15 @@ if (authIndex !== -1 && appIndex !== -1) {
   assert.ok(authIndex < appIndex, 'auth.js must load before app.js');
 }
 
-// Инварианты Этапа 0 (§5 спеки).
-assert.ok(
-  combined.includes("const OWNER_KEY='tutorCabinet_owner_user_id'"),
-  'Owner marker key is missing',
-);
-assert.ok(
-  combined.includes('window.tutorCloud.queueSave=queueCloudSave'),
-  'Explicit cloud save API is missing',
-);
-assert.ok(
-  combined.includes('window.tutorCloud.flushSave=flushCloudSave'),
-  'Cloud flush API is missing',
-);
-assert.ok(
-  combined.includes('window.tutorCloud?.queueSave?.(raw)'),
+// Инварианты Этапа 0 (§5 спеки). Устойчиво к форматированию (Prettier может добавить пробелы).
+function has(pattern, msg) {
+  assert.ok(pattern.test(combined), msg);
+}
+has(/const\s+OWNER_KEY\s*=\s*['"]tutorCabinet_owner_user_id['"]/, 'Owner marker key is missing');
+has(/window\.tutorCloud\.queueSave\s*=\s*queueCloudSave/, 'Explicit cloud save API is missing');
+has(/window\.tutorCloud\.flushSave\s*=\s*flushCloudSave/, 'Cloud flush API is missing');
+has(
+  /window\.tutorCloud\?\.queueSave\?\.\(\s*raw\s*\)/,
   'Local persistence does not notify cloud sync',
 );
 assert.ok(
@@ -56,8 +50,24 @@ assert.ok(
   'Storage.prototype.setItem override must not exist',
 );
 
-// renderAll не должен вызывать destructive/mutating операции.
-const renderBody = combined.split('function renderAll(){')[1]?.split('}')[0] || '';
+// renderAll не должен вызывать destructive/mutating операции. Балансируем скобки,
+// чтобы forma-agnostic-но извлечь тело функции.
+function extractFn(src, name) {
+  const start = src.indexOf(`function ${name}(`);
+  if (start === -1) return '';
+  const open = src.indexOf('{', start);
+  let depth = 0;
+  for (let i = open; i < src.length; i++) {
+    if (src[i] === '{') depth++;
+    else if (src[i] === '}') {
+      depth--;
+      if (depth === 0) return src.slice(open + 1, i);
+    }
+  }
+  return '';
+}
+const renderBody = extractFn(combined, 'renderAll');
+assert.ok(renderBody, 'renderAll function is missing');
 for (const mutation of [
   'pruneOldHistory',
   'sweepOrphans',
@@ -67,10 +77,13 @@ for (const mutation of [
   assert.ok(!renderBody.includes(mutation), `renderAll must not call ${mutation}`);
 }
 
-// Guard-функция и её таблица истинности.
-const ownershipSource = combined.match(/function canUploadLocalState\([^)]*\)\{[^}]*\}/)?.[0];
-assert.ok(ownershipSource, 'Ownership guard function is missing');
-const canUploadLocalState = new Function(`${ownershipSource}; return canUploadLocalState`)();
+// Guard-функция и её таблица истинности. Извлекаем через brace-balance —
+// prettier может разложить однострочник на несколько строк.
+const guardBody = extractFn(combined, 'canUploadLocalState');
+assert.ok(guardBody, 'Ownership guard function is missing');
+const canUploadLocalState = new Function(
+  `function canUploadLocalState(owner, userId, allowUnowned){${guardBody}}; return canUploadLocalState`,
+)();
 
 assert.equal(canUploadLocalState('user-a', 'user-a', false), true, 'Matching owner must upload');
 assert.equal(
@@ -90,10 +103,12 @@ assert.equal(
 );
 
 // pushCloud при непарсимом raw возвращает false и показывает ошибку (хвост Этапа 0).
-const pushCloudMatch = combined.match(/async function pushCloud\([\s\S]*?\n {2}\}/);
-assert.ok(pushCloudMatch, 'pushCloud function is missing');
+const pushCloudBody = extractFn(combined, 'pushCloud');
+assert.ok(pushCloudBody, 'pushCloud function is missing');
 assert.ok(
-  /catch\{showSync\('Не удалось сохранить','error'\);return false\}/.test(pushCloudMatch[0]),
+  /catch[\s\S]*?showSync\(\s*['"]Не удалось сохранить['"]\s*,\s*['"]error['"]\s*\)[\s\S]*?return\s+false/.test(
+    pushCloudBody,
+  ),
   'pushCloud must return false and surface error on JSON parse failure',
 );
 
