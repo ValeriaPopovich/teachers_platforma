@@ -66,4 +66,15 @@ describe('UI ownership boundaries', () => {
     expect(appJs).toContain("`individual:${l.id || 'missing'}:${index}`");
     expect(appJs).toContain("'Статус не указан'");
   });
+
+  it('warns about closing a modal only after an actual form change', () => {
+    expect(appJs).toContain("const form = wrap.querySelector('form')");
+    expect(appJs).toContain("if (form && id !== 'onboardingModal') modalInitial[id] = formSnapshot(form)");
+    expect(appJs).not.toMatch(/setTimeout\(\(\) => \(modalInitial\[id\]/);
+    expect(appJs).toContain('formSnapshot(form) !== modalInitial[wrap.id]');
+    expect(appJs).toContain('control.name || control.id || String(index)');
+    expect(appJs).toContain('Object.keys(modalInitial).forEach((id) => delete modalInitial[id])');
+    expect(appJs).toMatch(/syncPaymentForm\(\);\s*open\('paymentModal'\)/);
+    expect(appJs).not.toMatch(/setTimeout\(syncPaymentForm\)/);
+  });
 });

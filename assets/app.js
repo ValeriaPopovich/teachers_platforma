@@ -50,6 +50,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     activeStudent = null,
     lessonInitial = '',
     calendarView = 'week',
+    paymentsExpanded = { attention: false, all: false, packages: false, history: false },
     pendingImport = null;
   if (!loaded.ok)
     console.error(
@@ -244,16 +245,16 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     appDialog({ title, message, confirmText, danger: true });
   const inform = (message, title = 'Обратите внимание', danger = false) =>
     appDialog({ title, message, confirmOnly: true, danger });
-  const modalForms = {
-      studentModal: '#studentForm',
-      lessonModal: '#lessonForm',
-      groupModal: '#groupForm',
-      paymentModal: '#paymentForm',
-      eventModal: '#eventForm',
-    },
-    modalInitial = {};
-  function formSnapshot(selector) {
-    return new URLSearchParams(new FormData($(selector))).toString();
+  const modalInitial = {};
+  function formSnapshot(form) {
+    return JSON.stringify(
+      [...form.elements]
+        .filter((control) => !['button', 'submit', 'reset', 'file'].includes(control.type))
+        .map((control, index) => ({
+          key: control.name || control.id || String(index),
+          value: ['checkbox', 'radio'].includes(control.type) ? control.checked : control.value,
+        })),
+    );
   }
   function open(id) {
     const wrap = $('#' + id),
@@ -274,7 +275,11 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
           f.focus();
         } catch (e) {}
     });
-    if (modalForms[id]) setTimeout(() => (modalInitial[id] = formSnapshot(modalForms[id])));
+    // All callers populate the form before opening it, so capture the baseline
+    // synchronously. A delayed snapshot can race with a quick close or the next
+    // modal opening and produce a false "unsaved changes" warning.
+    const form = wrap.querySelector('form');
+    if (form && id !== 'onboardingModal') modalInitial[id] = formSnapshot(form);
     if (id === 'profileModal')
       requestAnimationFrame(() => {
         const m = metrics(activeStudent),
@@ -306,6 +311,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
   }
   function closeAll() {
     $$('.modal-wrap').forEach((x) => x.classList.remove('open'));
+    Object.keys(modalInitial).forEach((id) => delete modalInitial[id]);
     document.documentElement.classList.remove('modal-open');
     const l = open._lastFocus;
     open._lastFocus = null;
@@ -674,57 +680,242 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       badge = $('#paymentNavBadge'),
       analyticsCard = $('#analyticsCard'),
       historyStudent = $('#paymentHistoryStudent'),
-      historyHint = $('#paymentHistoryHint');
-    if (!stats) return;
-    renderPackageMonthPlans();
-    const range = analyticsRange();
+      historyPeriod = $('#paymentHistoryPeriod'),
+      historyHint = $('#paymentHistoryHint'),
+      attentionPanel = $('#paymentAttentionPanel'),
+      allPanel = $('#paymentAllPanel'),
+      attentionCount = $('#paymentAttentionCount'),
+      allCount = $('#paymentAllCount'),
+      packageCard = $('#packageMonthCard'),
+      packageGrid = $('#packageMonthGrid'),
+      packageMeta = $('#packageMonthMeta'),
+      now = new Date();
+    if (!stats || !body || !attentionPanel || !allPanel) return;
+
+    const monthBounds = (date = new Date()) => ({
+        from: new Date(date.getFullYear(), date.getMonth(), 1).getTime(),
+        to: new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999).getTime(),
+      }),
+      paymentDateMs = (value) => {
+        const raw = String(value || '');
+        return new Date(raw.length === 10 ? `${raw}T12:00` : raw).getTime();
+      },
+      packageProgress = (s, date = now) => {
+        const plan = packagePlan(s, date),
+          bounds = monthBounds(date),
+          cutoff = Math.max(+s.createdAt || 0, +s.billingSince || 0),
+          payments = data.payments.filter((p) => {
+            const at = paymentDateMs(p.date);
+            return (
+              p.studentId === s.id &&
+              !p.ledgerOnly &&
+              (+p.packageLessons > 0 || p.billingType === 'package') &&
+              at >= bounds.from &&
+              at <= bounds.to &&
+              Math.max(+p.createdAt || 0, at) >= cutoff
+            );
+          }),
+          bought = payments.reduce((sum, p) => sum + (+p.packageLessons || 0), 0),
+          missingLessons = Math.max(0, plan.lessons - bought);
+        return {
+          plan,
+          bought,
+          missingLessons,
+          due: missingLessons * (+s.price || 0),
+          percent: plan.lessons ? Math.min(100, Math.round((bought / plan.lessons) * 100)) : 0,
+        };
+      },
+      paymentRowState = (s) => {
+        const f = finances(s.id);
+        if (s.payType === 'package') {
+          const progress = packageProgress(s),
+            extraDebt = +f.extraDebt || 0,
+            debtAmount = progress.due + extraDebt,
+            left = f.balanceLessons || 0;
+          if (!progress.plan.lessons)
+            return {
+              kind: 'ending',
+              format: 'Абонемент',
+              state: 'Не рассчитан — нет регулярного расписания',
+              debtAmount: extraDebt,
+              actionable: false,
+            };
+          if (debtAmount > 0)
+            return {
+              kind: 'need',
+              format: 'Абонемент',
+              state:
+                progress.due && extraDebt
+                  ? `К оплате ${money(debtAmount)} · абонемент + доплата`
+                  : progress.due
+                    ? `К оплате ${money(progress.due)} · ${progress.missingLessons} ${lessonCountWord(progress.missingLessons)}`
+                    : `Доплата ${money(extraDebt)}`,
+              debtAmount,
+              actionable: true,
+            };
+          if (left <= 2)
+            return {
+              kind: 'ending',
+              format: 'Абонемент',
+              state:
+                left <= 0
+                  ? 'Абонемент закончился'
+                  : left === 1
+                    ? 'Осталось 1 занятие'
+                    : 'Осталось 2 занятия',
+              debtAmount: 0,
+              actionable: true,
+            };
+          return {
+            kind: 'ok',
+            format: 'Абонемент',
+            state: `Оплачено за месяц · осталось ${left} ${lessonCountWord(left)}`,
+            debtAmount: 0,
+            actionable: true,
+          };
+        }
+        return {
+          kind: f.debt > 0 ? 'need' : 'ok',
+          format: 'Разовые занятия',
+          state:
+            f.debt > 0
+              ? `Долг ${money(f.debt)}`
+              : f.balance > 0
+                ? `Аванс ${money(f.balance)}`
+                : 'Оплачено',
+          debtAmount: f.debt || 0,
+          actionable: true,
+        };
+      },
+      historyRange = () => {
+        if (historyPeriod?.value === '45') {
+          const end = new Date();
+          end.setHours(23, 59, 59, 999);
+          const start = new Date(end);
+          start.setDate(start.getDate() - 44);
+          start.setHours(0, 0, 0, 0);
+          return { from: start.getTime(), to: end.getTime(), label: 'Последние 45 дней' };
+        }
+        return analyticsRange();
+      };
+
+    const range = analyticsRange(),
+      a = periodAnalytics(range.from, range.to),
+      rows = data.students.map((s) => ({ s, ...paymentRowState(s) })),
+      debtTotal = rows.reduce((sum, row) => sum + (+row.debtAmount || 0), 0),
+      debtorsN = rows.filter((row) => row.debtAmount > 0).length,
+      attentionRows = rows.filter((row) => row.kind !== 'ok'),
+      need = rows.filter((row) => row.kind === 'need').length;
+
     $('#analyticsRangeLabel').textContent = range.label;
-    const a = periodAnalytics(range.from, range.to);
-    const debtTotal = data.students.reduce((n, s) => n + finances(s.id).debt, 0),
-      debtorsN = data.students.filter((s) => finances(s.id).debt > 0).length;
     analyticsCard.style.display = data.students.length ? '' : 'none';
+    alerts.style.display = 'none';
+
     const tips = [
-      'Сумма реально пришедших денег в текущем месяце — по дате платежа. Пример: 1 августа родитель заплатил 20 000 ₽ за абонемент — вся сумма попадёт в август.',
-      'Начислено в текущем месяце: для абонемента — полная стоимость по дате оплаты, для разовых занятий — стоимость проведённых уроков по дате занятия.',
-      'Текущая задолженность прямо сейчас. Разовые: сколько родители должны. Абонементы: занятия, проведённые сверх остатка.',
+      'Сколько денег фактически отмечено как полученные в текущем месяце — по дате платежа.',
+      'Сумма, на которую можно опираться: рассчитанные абонементы месяца плюс запланированные и проведённые разовые занятия. Отмены и пропуски без оплаты не учитываются.',
+      'Общий долг прямо сейчас: неоплаченные разовые занятия, неоплаченная часть абонементов текущего месяца и дополнительные долги.',
     ];
     stats.innerHTML = [
-      [money(a.paid), 'Реальный доход за месяц', ''],
-      [money(a.charged), 'Планируемый доход за месяц', ''],
+      [money(a.paid), 'Получено за месяц', 'По фактическим платежам', ''],
+      [money(a.charged), 'Начислено за месяц', 'По расписанию и абонементам', ''],
       [
         money(debtTotal),
-        debtorsN ? `Долги сейчас · ${debtorsN} чел.` : 'Долгов нет',
+        'Долг сейчас',
+        debtorsN ? `${debtorsN} чел. требуют оплаты` : 'Задолженности нет',
         debtTotal ? 'debt-stat' : '',
       ],
     ]
       .map(
         (x, i) =>
-          `<div class="card stat ${x[2]}"><span class="help-tip" tabindex="0" data-tip="${esc(tips[i])}">?</span><div class="value">${x[0]}</div><div class="label">${x[1]}</div></div>`,
+          `<div class="card stat ${x[3]}"><span class="help-tip" tabindex="0" data-tip="${esc(tips[i])}">?</span><div class="value">${x[0]}</div><div class="label">${x[1]}</div><small class="payment-stat-note">${x[2]}</small></div>`,
       )
       .join('');
-    alerts.style.display = 'none';
-    const rows = data.students.map((s) => ({ s, ...paymentState(s) })),
-      groups = [
-        ['need', 'Нужно оплатить'],
-        ['ending', 'Заканчиваются абонементы'],
-      ],
-      need = rows.filter((x) => x.kind === 'need').length,
-      attention = rows.filter((x) => x.kind !== 'ok').length;
+
     badge.textContent = need;
     badge.classList.toggle('show', need > 0);
-    body.innerHTML = attention
+    if (attentionCount) attentionCount.textContent = attentionRows.length;
+    if (allCount) allCount.textContent = rows.length;
+
+    const renderRow = (row, allMode = false) => {
+        const action = row.actionable
+          ? `<button class="btn payment-for" data-payment-student="${row.s.id}">${row.s.payType === 'package' && row.kind === 'ending' ? 'Пополнить' : 'Принять оплату'}</button>`
+          : '';
+        return `<article class="payment-balance-item" data-kind="${row.kind}"><div class="payment-balance-main"><b>${esc(row.s.name)}</b><small>${row.format}</small></div><div class="payment-balance-state">${esc(row.state)}</div>${action || (allMode ? '<span></span>' : '')}</article>`;
+      },
+      groups = [
+        ['need', 'Нужно оплатить'],
+        ['ending', 'Заканчиваются / требуют проверки'],
+      ];
+
+    const expandButton = (key, hiddenCount, expanded = false) =>
+        hiddenCount > 0 || expanded
+          ? `<button class="payments-show-more" type="button" data-payment-expand="${key}" aria-expanded="${expanded}">${expanded ? 'Свернуть список' : `Показать ещё <span>+${hiddenCount}</span>`}</button>`
+          : '',
+      attentionLimit = 6,
+      visibleAttentionRows = paymentsExpanded.attention
+        ? attentionRows
+        : attentionRows.slice(0, attentionLimit);
+    attentionPanel.innerHTML = attentionRows.length
       ? groups
           .map(([kind, title]) => {
-            const list = rows.filter((x) => x.kind === kind);
+            const list = visibleAttentionRows.filter((row) => row.kind === kind),
+              totalCount = attentionRows.filter((row) => row.kind === kind).length;
             return list.length
-              ? `<tr class="payment-group-title"><th colspan="4">${title}</th></tr>${list.map((x) => `<tr class="payment-card-row"><td data-label="Ученик"><b>${esc(x.s.name)}</b></td><td data-label="Формат">${x.format}</td><td data-label="Состояние" class="${kind === 'need' ? 'payment-negative' : 'payment-positive'}"><b>${x.state}</b></td><td class="payment-card-action"><button class="btn payment-for" data-payment-student="${x.s.id}">${x.s.payType === 'package' ? 'Пополнить абонемент' : 'Добавить оплату'}</button></td></tr>`).join('')}`
+              ? `<section class="payment-attention-group"><h3 class="payment-group-heading"><span>${title}</span><span>${totalCount}</span></h3><div class="payment-balance-stack">${list.map((row) => renderRow(row)).join('')}</div></section>`
               : '';
           })
-          .join('')
+          .join('') +
+        expandButton(
+          'attention',
+          attentionRows.length - visibleAttentionRows.length,
+          paymentsExpanded.attention && attentionRows.length > attentionLimit,
+        )
       : rows.length
-        ? '<tr class="payment-empty-row"><td colspan="4">Сейчас оплачивать ничего не нужно</td></tr>'
-        : '<tr class="payment-empty-row"><td colspan="4">Учеников пока нет</td></tr>';
-    // Селектор ученика для истории — сохраняем текущий выбор
+        ? '<div class="payments-empty"><div><b>Сейчас всё оплачено</b>Ничего делать не нужно — можно спокойно закрывать вкладку.</div></div>'
+        : '<div class="payments-empty"><div><b>Учеников пока нет</b>После добавления учеников здесь появятся расчёты.</div></div>';
+
+    const priority = { need: 0, ending: 1, ok: 2 },
+      allRows = [...rows].sort(
+        (aRow, bRow) =>
+          priority[aRow.kind] - priority[bRow.kind] ||
+          String(aRow.s.name || '').localeCompare(String(bRow.s.name || ''), 'ru'),
+      );
+    const allLimit = 8,
+      visibleAllRows = paymentsExpanded.all ? allRows : allRows.slice(0, allLimit);
+    allPanel.innerHTML = allRows.length
+      ? `<div class="payment-balance-stack">${visibleAllRows.map((row) => renderRow(row, true)).join('')}</div>${expandButton('all', allRows.length - visibleAllRows.length, paymentsExpanded.all && allRows.length > allLimit)}`
+      : '<div class="payments-empty"><div><b>Учеников пока нет</b>Здесь появится полный список расчётов.</div></div>';
+
+    const packageStudents = data.students.filter((s) => s.payType === 'package');
+    packageCard.style.display = packageStudents.length ? 'block' : 'none';
+    if (packageStudents.length) {
+      const packageRows = packageStudents.map((s) => ({ s, progress: packageProgress(s) })),
+        total = packageRows.reduce((sum, row) => sum + row.progress.plan.cost, 0);
+      $('#packageMonthLabel').textContent = monthName(now);
+      if (packageMeta)
+        packageMeta.textContent = `${packageStudents.length} чел. · ${money(total)}`;
+      const packageLimit = 6,
+        visiblePackageRows = paymentsExpanded.packages
+          ? packageRows
+          : packageRows.slice(0, packageLimit);
+      packageGrid.innerHTML = visiblePackageRows
+        .map(({ s, progress }) => {
+          const paidText = !progress.plan.lessons
+            ? 'Нет расписания'
+            : progress.missingLessons
+              ? `Оплачено ${Math.min(progress.bought, progress.plan.lessons)}/${progress.plan.lessons}`
+              : 'Оплачено полностью';
+          return `<div class="package-month-item"><div class="package-month-main"><b>${esc(s.name)}</b><small>${progress.plan.lessons ? `${progress.plan.lessons} ${lessonCountWord(progress.plan.lessons)} по регулярному расписанию` : 'Регулярное расписание не заполнено'}</small></div><div class="package-month-progress"><div class="package-month-progress-label"><span>${paidText}</span><span>${progress.percent}%</span></div><div class="package-month-progress-track"><i style="width:${progress.percent}%"></i></div></div><strong>${money(progress.plan.cost)}</strong></div>`;
+        })
+        .join('') +
+        expandButton(
+          'packages',
+          packageRows.length - visiblePackageRows.length,
+          paymentsExpanded.packages && packageRows.length > packageLimit,
+        );
+    }
+
     if (historyStudent) {
       const cur = historyStudent.value;
       historyStudent.innerHTML =
@@ -732,20 +923,34 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
         data.students.map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
       historyStudent.value = cur;
     }
-    const historyFilter = historyStudent?.value || '';
+    const historyFilter = historyStudent?.value || '',
+      selectedHistoryRange = historyRange(),
+      historyAnalytics = periodAnalytics(selectedHistoryRange.from, selectedHistoryRange.to),
+      history = historyAnalytics.pays
+        .filter((p) => !historyFilter || p.studentId === historyFilter)
+        .sort((b, c) => new Date(c.date) - new Date(b.date));
     historyHint.textContent =
-      range.label + (historyFilter ? ` · ${student(historyFilter)?.name || ''}` : '');
-    const history = a.pays
-      .filter((p) => !historyFilter || p.studentId === historyFilter)
-      .sort((b, c) => new Date(c.date) - new Date(b.date));
+      selectedHistoryRange.label + (historyFilter ? ` · ${student(historyFilter)?.name || ''}` : '');
+    const historyLimit = 10,
+      visibleHistory = paymentsExpanded.history ? history : history.slice(0, historyLimit);
     $('#paymentHistory').innerHTML = history.length
-      ? history
-          .map(
-            (p) =>
-              `<div class="row"><div class="grow"><b>${esc(student(p.studentId)?.name || 'Удалённый ученик')}</b><small>${fmtDate(p.date)}${p.packageLessons ? ` · ${p.packageLessons} занятий` : ''}${p.note ? ' · ' + esc(p.note) : ''}</small></div><b class="payment-positive">+${money(p.amount)}</b><button class="icon-btn" data-delete-payment="${p.id}" title="Удалить платёж">×</button></div>`,
-          )
-          .join('')
-      : '<div class="empty">В текущем месяце платежей не было</div>';
+      ? visibleHistory
+          .map((p) => {
+            const owner = student(p.studentId)?.name || 'Удалённый ученик',
+              details = [
+                fmtDate(p.date),
+                p.packageLessons ? `Абонемент · ${p.packageLessons} ${lessonCountWord(+p.packageLessons || 0)}` : '',
+                p.note || '',
+              ].filter(Boolean);
+            return `<article class="payment-history-item"><div class="payment-history-main"><b>${esc(owner)}</b><small>${details.map(esc).join(' · ')}</small></div><b class="payment-history-amount">+${money(p.amount)}</b><button class="icon-btn" type="button" data-delete-payment="${p.id}" title="Удалить платёж" aria-label="Удалить платёж: ${esc(owner)}, ${fmtDate(p.date)}">×</button></article>`;
+          })
+          .join('') +
+        expandButton(
+          'history',
+          history.length - visibleHistory.length,
+          paymentsExpanded.history && history.length > historyLimit,
+        )
+      : '<div class="payments-empty"><div><b>Платежей за этот период нет</b>Попробуйте другой период или другого ученика.</div></div>';
   }
   function renderCalendar() {
     const today = new Date();
@@ -2015,9 +2220,12 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       paymentMonth = f.elements.date.value
         ? new Date(f.elements.date.value + 'T12:00')
         : new Date(),
-      packageLessons = pack ? packagePlan(s, paymentMonth).lessons : 0;
+      packageLessons = pack ? packagePlan(s, paymentMonth).lessons : 0,
+      packageMonthLabel = $('#paymentPackageMonthLabel');
     field.style.display = pack ? 'grid' : 'none';
     field.querySelector('input').required = !!pack;
+    if (packageMonthLabel)
+      packageMonthLabel.textContent = paymentMonth.toLocaleDateString('ru-RU', { month: 'long' });
     if (pack) {
       field.querySelector('input').value = packageLessons;
       f.elements.amount.value = (+s.price || 0) * packageLessons;
@@ -2124,12 +2332,10 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
   };
   async function requestClose() {
     if ($('#onboardingModal').classList.contains('open')) return;
-    const dirty = Object.entries(modalForms).find(
-      ([id, selector]) =>
-        $('#' + id).classList.contains('open') &&
-        modalInitial[id] != null &&
-        formSnapshot(selector) !== modalInitial[id],
-    );
+    const dirty = $$('.modal-wrap.open').find((wrap) => {
+      const form = wrap.querySelector('form');
+      return form && modalInitial[wrap.id] != null && formSnapshot(form) !== modalInitial[wrap.id];
+    });
     if (
       dirty &&
       !(await ask(
@@ -2183,6 +2389,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       const f = $('#paymentForm');
       f.reset();
       f.elements.date.value = localDay();
+      syncPaymentForm();
       open('paymentModal');
     }
   }
@@ -2204,6 +2411,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       f.reset();
       f.elements.studentId.value = paySid;
       f.elements.date.value = localDay();
+      syncPaymentForm();
       open('paymentModal');
     }
   }
@@ -2237,6 +2445,12 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     handleEntityClick(e);
   });
   $('#page-payments').addEventListener('click', (e) => {
+    const expand = e.target.closest('[data-payment-expand]')?.dataset.paymentExpand;
+    if (expand && Object.hasOwn(paymentsExpanded, expand)) {
+      paymentsExpanded[expand] = !paymentsExpanded[expand];
+      renderPaymentsSimple();
+      return;
+    }
     openFromTrigger(e.target.closest('[data-open]')?.dataset.open);
     handleEntityClick(e);
   });
@@ -2347,10 +2561,6 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
   $('#studentForm [name=payType]').addEventListener('change', syncPackageField);
   $('#paymentForm [name=studentId]').addEventListener('change', syncPaymentForm);
   $('#paymentForm [name=date]').addEventListener('change', syncPaymentForm);
-  $('#page-payments').addEventListener('click', (e) => {
-    if (e.target.closest('[data-open="payment"],[data-payment-student]'))
-      setTimeout(syncPaymentForm);
-  });
   $('#paymentModal').addEventListener('input', (e) => {
     if (!e.target.matches('#paymentForm [name=packageLessons]')) return;
     const f = $('#paymentForm'),
@@ -2702,7 +2912,10 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     }
   }
   $('#page-payments').addEventListener('change', (e) => {
-    if (e.target.id === 'paymentHistoryStudent') renderPaymentsSimple();
+    if (['paymentHistoryStudent', 'paymentHistoryPeriod'].includes(e.target.id)) {
+      paymentsExpanded.history = false;
+      renderPaymentsSimple();
+    }
   });
   $('#reportStudent').addEventListener('change', () => {
     $('#reportComment').value = '';
