@@ -25,6 +25,27 @@ export function pruneOldHistory(data, retentionDays = 45, now = Date.now()) {
   });
 }
 
+/**
+ * Переводит закончившиеся планы в 'done'. Мутирующая, но идемпотентная —
+ * повторный вызов на результате ничего не меняет. `now` — точка "сейчас",
+ * `duration(l)` — минуты; по умолчанию берётся из l.duration или 60.
+ */
+export function normalizePastLessons(data, now = Date.now(), duration = (l) => +l.duration || 60) {
+  return mutate(data, (d) => {
+    let changed = 0;
+    for (const l of d.lessons) {
+      if (l.status !== 'planned') continue;
+      const endMs = new Date(l.date).getTime() + duration(l) * 60000;
+      if (endMs < now) {
+        l.status = 'done';
+        if (l.reportFilled == null) l.reportFilled = false;
+        changed++;
+      }
+    }
+    return { lessonsCompleted: changed };
+  });
+}
+
 /** Удаляет ссылки на несуществующих учеников/группы. Именованный аналог inline sweepOrphans. */
 export function sweepOrphans(data) {
   return mutate(data, (d) => {

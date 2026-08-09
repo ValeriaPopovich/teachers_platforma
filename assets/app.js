@@ -2824,6 +2824,8 @@
         ...x,
         id: uid(),
         studentId: studentMap.get(x.studentId) || x.studentId,
+        // FIX §2.4: раньше lessonId не мапился и указывал в никуда.
+        lessonId: x.lessonId ? lessonMap.get(x.lessonId) || x.lessonId : x.lessonId,
       })),
     );
     data.settings.customGoals = [
@@ -2933,9 +2935,23 @@
       save();
       toast('Данные из копии добавлены к имеющимся');
     } else {
+      // Recovery copy: сохраняем текущий data перед replace, чтобы можно было
+      // восстановиться, если пользователь ошибся с файлом (§5.11, спека Этап 4.3).
+      try {
+        localStorage.setItem(
+          'tutorCabinet_recovery',
+          JSON.stringify({
+            savedAt: new Date().toISOString(),
+            reason: 'before-replace-import',
+            data,
+          }),
+        );
+      } catch {
+        /* quota / private mode — recovery best-effort, продолжаем */
+      }
       data = load(JSON.stringify(pendingImport));
       save();
-      toast('Текущие данные заменены копией');
+      toast('Текущие данные заменены копией (recovery-копия сохранена)');
     }
     pendingImport = null;
     closeAll();
