@@ -1,59 +1,82 @@
+import {
+  MAX_BACKUP_BYTES,
+  makeBackup,
+  mergeImported,
+  replaceImported,
+  unwrapBackup,
+  validateBackup,
+  validateBackupSize,
+} from '../src/domain/backup.js';
+import { finances as calculateFinances } from '../src/domain/finances.js';
+import {
+  extendAllSchedules as extendSchedules,
+  generateSchedule as generateRecurringSchedule,
+} from '../src/domain/schedule.js';
+import {
+  normalizePastLessons as completePastLessons,
+  syncFutureGroupBilling as refreshGroupBilling,
+} from '../src/state/maintenance.js';
+import { createBrowserPersistence } from '../src/state/persistence.js';
+import { blankData } from '../src/state/schema.js';
+import { createStore } from '../src/state/store.js';
+import { validateReferential, validateStructural } from '../src/state/validate.js';
+
 (() => {
   const KEY = 'tutorCabinet_v1';
   const RETENTION_DAYS = 45;
   const $ = (s, r = document) => r.querySelector(s),
     $$ = (s, r = document) => [...r.querySelectorAll(s)];
-  const blank = {
-    students: [],
-    groups: [],
-    lessons: [],
-    events: [],
-    payments: [],
-    financeArchive: {},
-    topicLog: {},
-    settings: {
-      tutor: '',
-      theme: 'light',
-      timeZone: 'auto',
-      reminder: 15,
-      sidebarCompact: false,
-      customGoals: [],
-      deletedGoals: [],
+  const blank = blankData();
+  const persistence = createBrowserPersistence({
+    key: KEY,
+    onPersist: (raw) => window.tutorCloud?.queueSave?.(raw),
+  });
+  const loaded = persistence.load();
+  const store = createStore(loaded.ok ? loaded.envelope.data : structuredClone(blank), {
+    validate: (candidate) => {
+      const structural = validateStructural(candidate);
+      if (!structural.ok) return structural;
+      return validateReferential(candidate);
     },
-  };
-  let data = load(),
+  });
+  let persistenceEnabled = loaded.ok;
+  let data = structuredClone(store.getState()),
     activeStudent = null,
     lessonInitial = '',
     pendingImport = null;
-  function load(raw = localStorage.getItem(KEY) || '{}') {
+  if (!loaded.ok)
+    console.error(
+      `Local state rejected at ${loaded.stage}; the last copy was not overwritten.`,
+      loaded.errors,
+    );
+  store.subscribe((nextState, actionName) => {
+    if (!persistenceEnabled) return;
+    const result = persistence.save(nextState);
+    if (!result.ok) console.error(`Persistence rejected action "${actionName}".`, result.errors);
+  });
+  store.subscribe((nextState, actionName) => {
+    data = structuredClone(nextState);
+    if (!actionName.startsWith('silent:')) renderAll();
+  });
+  function commit(actionName, render = true) {
     try {
-      const d = { ...structuredClone(blank), ...JSON.parse(raw) };
-      d.groups = Array.isArray(d.groups) ? d.groups : [];
-      d.events = Array.isArray(d.events) ? d.events : [];
-      d.payments = Array.isArray(d.payments) ? d.payments : [];
-      d.financeArchive =
-        d.financeArchive && typeof d.financeArchive === 'object' ? d.financeArchive : {};
-      d.topicLog = d.topicLog && typeof d.topicLog === 'object' ? d.topicLog : {};
-      d.settings =
-        d.settings && typeof d.settings === 'object' ? d.settings : structuredClone(blank.settings);
-      d.settings.customGoals = Array.isArray(d.settings.customGoals) ? d.settings.customGoals : [];
-      d.settings.deletedGoals = Array.isArray(d.settings.deletedGoals)
-        ? d.settings.deletedGoals
-        : [];
-      return d;
-    } catch {
-      return structuredClone(blank);
+      return store.update(render ? actionName : `silent:${actionName}`, (draft) => {
+        for (const key of Object.keys(draft)) delete draft[key];
+        Object.assign(draft, structuredClone(data));
+      });
+    } catch (error) {
+      data = structuredClone(store.getState());
+      console.error(error);
+      toast('Изменение не сохранено: данные не прошли проверку');
+      return store.getState();
     }
   }
-  function persistLocal() {
-    const raw = JSON.stringify(data);
-    localStorage.setItem(KEY, raw);
-    window.tutorCloud?.queueSave?.(raw);
-    return raw;
+  function persistLocal(actionName = 'background-update') {
+    commit(actionName, false);
+    return JSON.stringify({ meta: { schemaVersion: 1 }, data: store.getState() });
   }
-  function save() {
-    persistLocal();
-    renderAll();
+  function save(actionName = 'ui-update') {
+    commit(actionName, true);
   }
   function uid() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -125,40 +148,7 @@
       .sort((a, b) => new Date(b.date) - new Date(a.date));
   }
   function finances(id) {
-    const s = student(id),
-      cutoff = +s?.billingSince || 0,
-      done = lessonsOf(id).filter(
-        (x) => ['done', 'paid_missed'].includes(x.status) && new Date(x.date).getTime() >= cutoff,
-      ),
-      arch = data.financeArchive[id] || {},
-      balancePayments = data.payments.filter(
-        (p) =>
-          p.studentId === id &&
-          !p.ledgerOnly &&
-          Math.max(+p.createdAt || 0, new Date(p.date).getTime()) >= cutoff,
-      );
-    if (s?.payType === 'package') {
-      const bought =
-          (+arch.packageBought || 0) +
-          balancePayments.reduce((n, p) => n + (+p.packageLessons || +s.packageSize || 0), 0),
-        used = (+arch.packageUsed || 0) + done.filter((x) => x.payment === 'package').length,
-        paid = (+arch.paidAmount || 0) + balancePayments.reduce((n, p) => n + (+p.amount || 0), 0),
-        balanceLessons = bought - used;
-      return {
-        charged: used * (+s.price || 0),
-        paid,
-        balanceLessons,
-        debt: Math.max(0, -balanceLessons) * (+s.price || 0),
-        bought,
-        used,
-        balance: 0,
-      };
-    }
-    const charged =
-        (+arch.singleCharged || 0) +
-        done.filter((x) => x.payment === 'unpaid').reduce((n, x) => n + (+x.amount || 0), 0),
-      paid = (+arch.paidAmount || 0) + balancePayments.reduce((n, p) => n + (+p.amount || 0), 0);
-    return { charged, paid, balance: paid - charged, debt: Math.max(0, charged - paid) };
+    return calculateFinances(data, id);
   }
   function homeworkGrade(l) {
     if (!l) return null;
@@ -375,77 +365,17 @@
   function lessonDuration(l) {
     return +(l.groupId ? group(l.groupId)?.duration : student(l.studentId)?.duration) || 60;
   }
-  // Destructive maintenance is quarantined during Stage 0 and must not run from rendering.
-  function pruneOldHistory() {
-    const cut = new Date();
-    cut.setHours(0, 0, 0, 0);
-    cut.setDate(cut.getDate() - RETENTION_DAYS);
-    let changed = false;
-    // Занятия и платежи храним бессрочно — они нужны для аналитики за произвольные периоды.
-    // Личные события старше 45 дней удаляются, чтобы не засорять календарь.
-    const oldEvents = data.events.filter((ev) => new Date(ev.date) < cut);
-    if (oldEvents.length) {
-      data.events = data.events.filter((ev) => new Date(ev.date) >= cut);
-      changed = true;
-    }
-    if (changed) persistLocal();
-  }
-  function sweepOrphans() {
-    const hasS = (id) => data.students.some((s) => s.id === id),
-      hasG = (id) => data.groups.some((g) => g.id === id);
-    let changed = false;
-    const l0 = data.lessons.length;
-    data.lessons = data.lessons.filter((l) => {
-      if (l.studentId && !hasS(l.studentId)) return false;
-      if (l.groupId && !hasG(l.groupId)) return false;
-      return true;
-    });
-    if (data.lessons.length !== l0) changed = true;
-    const p0 = data.payments.length;
-    data.payments = data.payments.filter((p) => !p.studentId || hasS(p.studentId));
-    if (data.payments.length !== p0) changed = true;
-    Object.keys(data.financeArchive).forEach((id) => {
-      if (!hasS(id)) {
-        delete data.financeArchive[id];
-        changed = true;
-      }
-    });
-    Object.keys(data.topicLog).forEach((id) => {
-      if (!hasS(id)) {
-        delete data.topicLog[id];
-        changed = true;
-      }
-    });
-    data.groups.forEach((g) => {
-      const b = (g.members || []).length;
-      g.members = (g.members || []).filter(hasS);
-      if (g.members.length !== b) changed = true;
-    });
-    const g0 = data.groups.length;
-    data.groups = data.groups.filter((g) => (g.members || []).length);
-    if (data.groups.length !== g0) {
-      const emptyIds = new Set();
-      changed = true;
-      data.lessons = data.lessons.filter(
-        (l) => !l.groupId || data.groups.some((g) => g.id === l.groupId),
-      );
-    }
-    if (changed) persistLocal();
-  }
   function lessonEnded(l) {
     return new Date(l.date).getTime() + lessonDuration(l) * 60000 < Date.now();
   }
   function normalizePastLessons() {
-    let changed = false;
-    data.lessons.forEach((l) => {
-      if (l.status === 'planned' && lessonEnded(l)) {
-        l.status = 'done';
-        if (l.reportFilled == null) l.reportFilled = false;
-        syncPaidLessonHistory(l);
-        changed = true;
-      }
-    });
-    return changed;
+    const result = completePastLessons(data, Date.now(), lessonDuration);
+    if (!result.changes.lessonsCompleted) return false;
+    data = result.data;
+    data.lessons
+      .filter((lesson) => result.changes.completedLessonIds.includes(lesson.id))
+      .forEach(syncPaidLessonHistory);
+    return true;
   }
   function lessonFilled(l) {
     return !!l.reportFilled || !!(l.topics || l.comment || l.homework || l.testDone === 'yes');
@@ -514,7 +444,7 @@
                   : fin.balanceLessons === 0
                     ? 'Закончился'
                     : `${fin.balanceLessons} зан.`;
-            return `<article class="card student-card"><button class="btn student-delete" data-quick-delete-student="${s.id}" title="Удалить ученика" aria-label="Удалить ученика">🗑</button><div class="student-card-main" role="button" tabindex="0" aria-label="Открыть карточку: ${esc(s.name)}" data-student="${s.id}"><div class="student-top"><div><h3>${esc(s.name)}</h3><div class="meta">${esc(s.grade || 'Класс не указан')} · ${scheduleText(s.scheduleSlots)}</div></div></div><div class="student-metrics"><div><b>${m.attendance}%</b><small>Посещение</small></div><div><b>${m.homework == null ? '—' : String(m.homework).replace('.', ',') + '/5'}</b><small>Средняя оценка ДЗ</small></div><div><b class="${(s.payType === 'package' && fin.balanceLessons <= 0) || m.debt ? 'danger-text' : ''}">${s.payType === 'package' ? packageText : m.debt ? money(m.debt) : '✓'}</b><small>${s.payType === 'package' ? 'Абонемент' : m.debt ? 'Долг' : 'Оплачено'}</small></div></div></div></article>`;
+            return `<article class="card student-card"><button class="btn student-delete" data-quick-delete-student="${s.id}" title="Удалить ученика" aria-label="Удалить ученика">🗑</button><div class="student-card-main" role="button" tabindex="0" aria-label="Открыть карточку: ${esc(s.name)}" data-student="${s.id}"><div class="student-top"><div><h3>${esc(s.name)}</h3><div class="meta">${esc(s.grade || 'Класс не указан')} · ${esc(scheduleText(s.scheduleSlots))}</div></div></div><div class="student-metrics"><div><b>${m.attendance}%</b><small>Посещение</small></div><div><b>${m.homework == null ? '—' : String(m.homework).replace('.', ',') + '/5'}</b><small>Средняя оценка ДЗ</small></div><div><b class="${(s.payType === 'package' && fin.balanceLessons <= 0) || m.debt ? 'danger-text' : ''}">${s.payType === 'package' ? packageText : m.debt ? money(m.debt) : '✓'}</b><small>${s.payType === 'package' ? 'Абонемент' : m.debt ? 'Долг' : 'Оплачено'}</small></div></div></div></article>`;
           })
           .join('')
       : `<div class="card empty">Ученики не найдены</div>`;
@@ -535,7 +465,7 @@
       ? list
           .map(
             (g) =>
-              `<article class="card student-card group-card"><button class="btn student-delete" data-quick-delete-group="${g.id}" title="Удалить группу" aria-label="Удалить группу">🗑</button><div class="student-card-main" role="button" tabindex="0" aria-label="Открыть группу: ${esc(g.name)}" data-group="${g.id}"><div class="student-top"><div class="avatar">${initials(g.name)}</div><div><h3>${esc(g.name)}</h3><div class="meta">${esc(g.grade || 'Направление не указано')} · ${scheduleText(g.scheduleSlots)}</div></div></div><div class="student-metrics" style="grid-template-columns:repeat(2,1fr)"><div><b>${g.members?.length || 0}</b><small>Участников</small></div><div><b>${g.duration || 60} мин</b><small>Длительность</small></div></div><div class="member-chips">${(g.members || []).map((id) => `<span class="member-chip">${esc(student(id)?.name || 'Удалён')}</span>`).join('')}</div></div></article>`,
+              `<article class="card student-card group-card"><button class="btn student-delete" data-quick-delete-group="${g.id}" title="Удалить группу" aria-label="Удалить группу">🗑</button><div class="student-card-main" role="button" tabindex="0" aria-label="Открыть группу: ${esc(g.name)}" data-group="${g.id}"><div class="student-top"><div class="avatar">${esc(initials(g.name))}</div><div><h3>${esc(g.name)}</h3><div class="meta">${esc(g.grade || 'Направление не указано')} · ${esc(scheduleText(g.scheduleSlots))}</div></div></div><div class="student-metrics" style="grid-template-columns:repeat(2,1fr)"><div><b>${g.members?.length || 0}</b><small>Участников</small></div><div><b>${+g.duration || 60} мин</b><small>Длительность</small></div></div><div class="member-chips">${(g.members || []).map((id) => `<span class="member-chip">${esc(student(id)?.name || 'Удалён')}</span>`).join('')}</div></div></article>`,
           )
           .join('')
       : '<div class="groups-empty">Групп пока нет</div>';
@@ -966,7 +896,7 @@
           ? `<div class="kpi-line"><span>Осталось в абонементе</span><b class="${fin.balanceLessons <= 0 ? 'danger-text' : ''}">${fin.balanceLessons} зан.</b></div><div class="kpi-line"><span>Использовано занятий</span><b>${fin.used}</b></div>`
           : `<div class="kpi-line"><span>Формат оплаты</span><b>Разовые занятия</b></div><div class="kpi-line"><span>Баланс</span><b class="${fin.balance < 0 ? 'danger-text' : ''}">${fin.balance < 0 ? 'Долг ' + money(-fin.balance) : fin.balance > 0 ? 'Аванс ' + money(fin.balance) : 'Оплачено'}</b></div>`;
     $('#profileBody').innerHTML =
-      `<div class="profile-summary"><div class="avatar">${initials(s.name)}</div><div><h2 style="margin:0">${esc(s.name)}</h2><div class="sub">${esc(s.grade || 'Класс не указан')} · ${esc(s.contact || 'Контакт не указан')}</div></div></div><div class="student-metrics"><div><b>${m.attendance}%</b><small>Посещаемость</small></div><div><b>${m.homework == null ? '—' : String(m.homework).replace('.', ',') + '/5'}</b><small>Средняя оценка ДЗ</small></div><div><b>${tests}</b><small>Проверочных</small></div></div>${financeBlock}<div class="notice"><b>Следующее занятие:</b> ${esc(nextDate)}<br><b>Пометка на следующий урок:</b> ${esc(nextNote)}</div><div class="notice"><b>Цели:</b> ${esc(s.goals || 'не указаны')}<br><b>Заметки:</b> ${esc(s.notes || 'нет')}</div><h3>История занятий</h3>${
+      `<div class="profile-summary"><div class="avatar">${esc(initials(s.name))}</div><div><h2 style="margin:0">${esc(s.name)}</h2><div class="sub">${esc(s.grade || 'Класс не указан')} · ${esc(s.contact || 'Контакт не указан')}</div></div></div><div class="student-metrics"><div><b>${m.attendance}%</b><small>Посещаемость</small></div><div><b>${m.homework == null ? '—' : String(m.homework).replace('.', ',') + '/5'}</b><small>Средняя оценка ДЗ</small></div><div><b>${tests}</b><small>Проверочных</small></div></div>${financeBlock}<div class="notice"><b>Следующее занятие:</b> ${esc(nextDate)}<br><b>Пометка на следующий урок:</b> ${esc(nextNote)}</div><div class="notice"><b>Цели:</b> ${esc(s.goals || 'не указаны')}<br><b>Заметки:</b> ${esc(s.notes || 'нет')}</div><h3>История занятий</h3>${
         ls.length
           ? `<div style="overflow:auto"><table class="mini-table"><thead><tr><th>Дата</th><th>Статус</th><th>Темы / комментарий</th><th>ДЗ</th><th>Проверочная</th><th>Оплата</th></tr></thead><tbody>${ls
               .slice(0, 20)
@@ -1031,12 +961,9 @@
     const deleted = new Set(data.settings.deletedGoals || []),
       unknown = selected.filter(
         (x) => !builtinGoals.includes(x) && !(data.settings.customGoals || []).includes(x),
-      );
-    data.settings.customGoals = [...new Set([...(data.settings.customGoals || []), ...unknown])];
-    const all = [
-      ...builtinGoals.filter((x) => !deleted.has(x)),
-      ...(data.settings.customGoals || []),
-    ];
+      ),
+      customGoals = [...new Set([...(data.settings.customGoals || []), ...unknown])];
+    const all = [...builtinGoals.filter((x) => !deleted.has(x)), ...customGoals];
     $('#goalChips').innerHTML = all
       .map(
         (v) =>
@@ -1456,102 +1383,11 @@
     note.innerHTML = `⚠ Время занято: ${esc([...new Set(found.map((x) => x.name))].join(', '))}. Сохранить всё равно можно, или <button type="button" class="slot-suggestion" data-time="${suggest}">выбрать ближайшее свободное — ${suggest}</button>.`;
     row.append(note);
   }
-  function protectedAuto(l) {
-    return (
-      l.manualEdited ||
-      l.status !== 'planned' ||
-      !!(
-        l.prepNote ||
-        l.nextNote ||
-        l.topics ||
-        l.homework ||
-        l.comment ||
-        l.testDone === 'yes' ||
-        l.reportFilled
-      )
-    );
-  }
   function generateSchedule(type, id, slots, replace = true) {
-    const owner = type === 'group' ? group(id) : student(id),
-      members = type === 'group' ? owner?.members || [] : [id],
-      now = new Date();
-    now.setSeconds(0, 0);
-    if (replace) {
-      const protectedSeries = new Set(
-        data.lessons
-          .filter((l) => l.groupId === id && l.auto && new Date(l.date) >= now && protectedAuto(l))
-          .map((l) => l.seriesId)
-          .filter(Boolean),
-      );
-      data.lessons = data.lessons.filter((l) => {
-        const belongs =
-          l.auto &&
-          new Date(l.date) >= now &&
-          (type === 'group' ? l.groupId === id : !l.groupId && l.studentId === id);
-        if (!belongs) return true;
-        if (type === 'group' && protectedSeries.has(l.seriesId)) return true;
-        return protectedAuto(l);
-      });
-    }
-    for (let offset = 0; offset < 56; offset++) {
-      const d = new Date(now);
-      d.setDate(now.getDate() + offset);
-      for (const slot of slots) {
-        if (d.getDay() !== +slot.day) continue;
-        const [h, m] = slot.time.split(':').map(Number),
-          date = new Date(d);
-        date.setHours(h, m, 0, 0);
-        if (date < now) continue;
-        const iso = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-            .toISOString()
-            .slice(0, 16),
-          seriesId = type === 'group' ? `grp-${id}-${iso}` : null;
-        if (type === 'student') {
-          if (!data.lessons.some((l) => !l.groupId && l.studentId === id && l.date === iso))
-            data.lessons.push({
-              id: uid(),
-              studentId: id,
-              date: iso,
-              status: 'planned',
-              payment: owner?.payType === 'package' ? 'package' : 'unpaid',
-              topics: '',
-              amount: +owner?.price || 0,
-              homework: '',
-              comment: '',
-              auto: true,
-              lessonKind: 'regular',
-            });
-        } else {
-          members.forEach((studentId) => {
-            const member = student(studentId);
-            if (
-              !data.lessons.some(
-                (l) => l.groupId === id && l.studentId === studentId && l.date === iso,
-              )
-            )
-              data.lessons.push({
-                id: uid(),
-                seriesId,
-                groupId: id,
-                studentId,
-                date: iso,
-                status: 'planned',
-                payment: member?.payType === 'package' ? 'package' : 'unpaid',
-                topics: '',
-                amount: +member?.price || 0,
-                homework: '',
-                comment: '',
-                auto: true,
-                lessonKind: 'regular',
-              });
-          });
-        }
-      }
-    }
+    data = generateRecurringSchedule(data, { type, id, slots, replace, uid });
   }
   function extendAllSchedules() {
-    data.students.forEach((s) => generateSchedule('student', s.id, s.scheduleSlots || [], false));
-    data.groups.forEach((g) => generateSchedule('group', g.id, g.scheduleSlots || [], false));
+    data = extendSchedules(data, { uid });
   }
   function reportRow(type, name = '', grade = 3) {
     const row = document.createElement('div');
@@ -1846,15 +1682,9 @@
       });
   }
   function syncFutureGroupBilling() {
-    let changed = false;
-    data.lessons
-      .filter((l) => l.groupId && l.status === 'planned' && new Date(l.date) >= new Date())
-      .forEach((l) => {
-        const before = `${l.amount}|${l.payment}`;
-        applyStudentBilling(l);
-        if (before !== `${l.amount}|${l.payment}`) changed = true;
-      });
-    return changed;
+    const result = refreshGroupBilling(data);
+    data = result.data;
+    return result.changes.lessonsUpdated > 0;
   }
   function syncPaidLessonHistory(l) {
     if (l.groupId) return;
@@ -2122,8 +1952,7 @@
       return;
     closeAll();
   }
-  document.addEventListener('click', (e) => {
-    const openType = e.target.closest('[data-open]')?.dataset.open;
+  function openFromTrigger(openType) {
     if (openType === 'student') {
       const f = $('#studentForm');
       f.reset();
@@ -2167,14 +1996,12 @@
       f.elements.date.value = localDay();
       open('paymentModal');
     }
+  }
+  function handleEntityClick(e) {
     const editLessonId = e.target.closest('[data-edit-lesson]')?.dataset.editLesson;
     if (editLessonId) editLesson(editLessonId);
     const editEventId = e.target.closest('[data-edit-event]')?.dataset.editEvent;
     if (editEventId) editEvent(editEventId);
-    const p =
-      e.target.closest('[data-page]')?.dataset.page ||
-      e.target.closest('[data-page-go]')?.dataset.pageGo;
-    if (p) go(p);
     const sid = e.target.closest('[data-student]')?.dataset.student;
     if (sid && !editLessonId) showProfile(sid);
     const gid = e.target.closest('[data-group]')?.dataset.group;
@@ -2187,19 +2014,44 @@
       f.elements.date.value = localDay();
       open('paymentModal');
     }
-    const suggestion = e.target.closest('.slot-suggestion');
-    if (suggestion) {
-      const row = suggestion.closest('.schedule-slot');
-      $('.slot-time', row).value = suggestion.dataset.time;
-      checkSlotConflict(row);
-    }
-    if (
-      (e.target.matches('[data-close]') || e.target.classList.contains('modal-wrap')) &&
-      !e.target.closest('#appDialog') &&
-      e.target.id !== 'onboardingModal'
-    )
-      requestClose();
+  }
+  $('#nav').addEventListener('click', (e) => {
+    const page = e.target.closest('[data-page]')?.dataset.page;
+    if (page) go(page);
   });
+  $('#page-dashboard').addEventListener('click', (e) => {
+    const page = e.target.closest('[data-page-go]')?.dataset.pageGo;
+    if (page) go(page);
+    handleEntityClick(e);
+  });
+  $('#page-students').addEventListener('click', (e) => {
+    openFromTrigger(e.target.closest('[data-open]')?.dataset.open);
+    handleEntityClick(e);
+  });
+  $('#page-schedule').addEventListener('click', (e) => {
+    openFromTrigger(e.target.closest('[data-open]')?.dataset.open);
+    handleEntityClick(e);
+  });
+  $('#page-payments').addEventListener('click', (e) => {
+    openFromTrigger(e.target.closest('[data-open]')?.dataset.open);
+    handleEntityClick(e);
+  });
+  for (const modalWrap of $$('.modal-wrap')) {
+    modalWrap.addEventListener('click', (e) => {
+      const suggestion = e.target.closest('.slot-suggestion');
+      if (suggestion) {
+        const row = suggestion.closest('.schedule-slot');
+        $('.slot-time', row).value = suggestion.dataset.time;
+        checkSlotConflict(row);
+      }
+      if (
+        (e.target.matches('[data-close]') || e.target.classList.contains('modal-wrap')) &&
+        !e.target.closest('#appDialog') &&
+        e.target.id !== 'onboardingModal'
+      )
+        requestClose();
+    });
+  }
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
     const t = e.target;
@@ -2263,11 +2115,11 @@
   $('#lessonForm [name=status]').addEventListener('change', syncMovedField);
   $('#studentForm [name=payType]').addEventListener('change', syncPackageField);
   $('#paymentForm [name=studentId]').addEventListener('change', syncPaymentForm);
-  document.addEventListener('click', (e) => {
+  $('#page-payments').addEventListener('click', (e) => {
     if (e.target.closest('[data-open="payment"],[data-payment-student]'))
       setTimeout(syncPaymentForm);
   });
-  document.addEventListener('input', (e) => {
+  $('#paymentModal').addEventListener('input', (e) => {
     if (!e.target.matches('#paymentForm [name=packageLessons]')) return;
     const f = $('#paymentForm'),
       s = student(f.elements.studentId.value);
@@ -2307,13 +2159,15 @@
       toast('Своя цель добавлена');
     }
   });
-  document.addEventListener('change', (e) => {
+  $('#studentModal').addEventListener('change', (e) => {
     if (e.target.matches('#goalChips input[type=checkbox]'))
       syncSelectableChips('#goalChips', '.goal-option');
+  });
+  $('#groupModal').addEventListener('change', (e) => {
     if (e.target.matches('#groupMembers input[type=checkbox]'))
       syncSelectableChips('#groupMembers', '.member-chip');
   });
-  document.addEventListener('click', async (e) => {
+  $('#studentModal').addEventListener('click', async (e) => {
     const btn = e.target.closest('[data-remove-goal]');
     if (!btn) return;
     e.preventDefault();
@@ -2351,9 +2205,10 @@
   });
   $('#addStudentSlot').onclick = () => $('#studentScheduleSlots').append(slotRow());
   $('#addGroupSlot').onclick = () => $('#groupScheduleSlots').append(slotRow());
-  document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('remove-slot')) e.target.closest('.schedule-slot').remove();
-  });
+  for (const modal of [$('#studentModal'), $('#groupModal')])
+    modal.addEventListener('click', (e) => {
+      if (e.target.classList.contains('remove-slot')) e.target.closest('.schedule-slot').remove();
+    });
   function toggleTheme() {
     data.settings.theme = data.settings.theme === 'dark' ? 'light' : 'dark';
     save();
@@ -2485,7 +2340,7 @@
     closeAll();
     toast('Ученик полностью удалён');
   }
-  document.addEventListener('click', (e) => {
+  $('#page-students').addEventListener('click', (e) => {
     const id = e.target.closest('[data-quick-delete-student]')?.dataset.quickDeleteStudent;
     if (id) {
       e.preventDefault();
@@ -2510,7 +2365,7 @@
     closeAll();
     toast('Группа удалена');
   }
-  document.addEventListener('click', (e) => {
+  $('#page-students').addEventListener('click', (e) => {
     const id = e.target.closest('[data-quick-delete-group]')?.dataset.quickDeleteGroup;
     if (id) {
       e.preventDefault();
@@ -2529,7 +2384,7 @@
       )
       .join('');
   }
-  document.addEventListener('click', (e) => {
+  $('#page-students').addEventListener('click', (e) => {
     if (e.target.closest('[data-student]')) setTimeout(refreshFullStudentHistory);
   });
   $('#deleteStudent').onclick = () => removeStudent(activeStudent);
@@ -2595,7 +2450,7 @@
     }
   }
   // --- Аналитика на странице «Оплаты» ---
-  document.addEventListener('click', (e) => {
+  $('#page-payments').addEventListener('click', (e) => {
     const tab = e.target.closest('#analyticsTabs .pill');
     if (!tab) return;
     const p = tab.dataset.period;
@@ -2612,7 +2467,7 @@
     }
     renderPaymentsSimple();
   });
-  document.addEventListener('change', (e) => {
+  $('#page-payments').addEventListener('change', (e) => {
     if (e.target.id === 'analyticsFrom') {
       analyticsState.from = e.target.value;
       renderPaymentsSimple();
@@ -2681,13 +2536,13 @@
       inform('Не удалось сохранить PNG. Попробуйте ещё раз.', 'PNG не сохранён', true);
     }
   };
-  document.addEventListener('click', (e) => {
+  $('#page-reports').addEventListener('click', (e) => {
     if (e.target.classList.contains('r-remove')) {
       e.target.closest('.builder-item').remove();
       updateReportCard();
     }
   });
-  document.addEventListener('click', async (e) => {
+  $('#page-payments').addEventListener('click', async (e) => {
     const id = e.target.closest('[data-delete-payment]')?.dataset.deletePayment,
       payment = data.payments.find((p) => p.id === id);
     if (!payment) return;
@@ -2778,10 +2633,11 @@
   });
   function exportData() {
     data.settings.lastBackup = Date.now();
-    persistLocal();
+    if (!window.tutorCloud?.conflict) persistLocal('backup-exported');
+    const backup = makeBackup(data, { appVersion: '2.0.0' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(
-      new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
+      new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' }),
     );
     a.download = 'rezervnaya-kopiya-' + new Date().toISOString().slice(0, 10) + '.json';
     a.click();
@@ -2790,132 +2646,21 @@
   }
   $('#exportBtn').onclick = exportData;
   $('#backupBtn').onclick = exportData;
-  function mergeImported(src) {
-    const studentMap = new Map((src.students || []).map((x) => [x.id, uid()])),
-      groupMap = new Map((src.groups || []).map((x) => [x.id, uid()])),
-      lessonMap = new Map((src.lessons || []).map((x) => [x.id, uid()])),
-      seriesMap = new Map();
-    const mapSeries = (id) => {
-      if (!id) return id;
-      if (!seriesMap.has(id)) seriesMap.set(id, uid());
-      return seriesMap.get(id);
-    };
-    data.students.push(...(src.students || []).map((x) => ({ ...x, id: studentMap.get(x.id) })));
-    data.groups.push(
-      ...(src.groups || []).map((x) => ({
-        ...x,
-        id: groupMap.get(x.id),
-        members: (x.members || []).map((id) => studentMap.get(id) || id),
-      })),
-    );
-    data.lessons.push(
-      ...(src.lessons || []).map((x) => ({
-        ...x,
-        id: lessonMap.get(x.id),
-        studentId: studentMap.get(x.studentId) || x.studentId,
-        groupId: groupMap.get(x.groupId) || x.groupId,
-        seriesId: mapSeries(x.seriesId),
-        movedFrom: lessonMap.get(x.movedFrom) || x.movedFrom,
-      })),
-    );
-    data.events.push(...(src.events || []).map((x) => ({ ...x, id: uid() })));
-    data.payments.push(
-      ...(src.payments || []).map((x) => ({
-        ...x,
-        id: uid(),
-        studentId: studentMap.get(x.studentId) || x.studentId,
-        // FIX §2.4: раньше lessonId не мапился и указывал в никуда.
-        lessonId: x.lessonId ? lessonMap.get(x.lessonId) || x.lessonId : x.lessonId,
-      })),
-    );
-    data.settings.customGoals = [
-      ...new Set([...(data.settings.customGoals || []), ...(src.settings?.customGoals || [])]),
-    ];
-    data.settings.deletedGoals = [
-      ...new Set([...(data.settings.deletedGoals || []), ...(src.settings?.deletedGoals || [])]),
-    ];
-    Object.entries(src.topicLog || {}).forEach(([oldId, list]) => {
-      const id = studentMap.get(oldId) || oldId,
-        cur = data.topicLog[id] || [];
-      data.topicLog[id] = [
-        ...cur,
-        ...(Array.isArray(list)
-          ? list.filter((e) => !cur.some((x) => x.d === e.d && x.t === e.t))
-          : []),
-      ];
-    });
-    Object.entries(src.financeArchive || {}).forEach(([oldId, value]) => {
-      const id = studentMap.get(oldId) || oldId,
-        current = data.financeArchive[id] || {};
-      data.financeArchive[id] = {
-        packageUsed: (+current.packageUsed || 0) + (+value.packageUsed || 0),
-        singleCharged: (+current.singleCharged || 0) + (+value.singleCharged || 0),
-      };
-    });
-  }
-  function validBackup(obj) {
-    if (!obj || !Array.isArray(obj.students) || !Array.isArray(obj.lessons)) return false;
-    for (const key of ['groups', 'events', 'payments'])
-      if (obj[key] != null && !Array.isArray(obj[key])) return false;
-    const ids = new Set();
-    if (
-      obj.students.some(
-        (s) =>
-          !s ||
-          typeof s.id !== 'string' ||
-          !String(s.name || '').trim() ||
-          ids.has(s.id) ||
-          (ids.add(s.id), false),
-      )
-    )
-      return false;
-    if (
-      (obj.groups || []).some(
-        (g) =>
-          !g ||
-          typeof g.id !== 'string' ||
-          !String(g.name || '').trim() ||
-          !Array.isArray(g.members),
-      )
-    )
-      return false;
-    if (
-      obj.lessons.some(
-        (l) =>
-          !l ||
-          typeof l.id !== 'string' ||
-          !l.date ||
-          !Number.isFinite(new Date(l.date).getTime()) ||
-          (!l.studentId && !l.groupId),
-      )
-    )
-      return false;
-    if (
-      (obj.events || []).some(
-        (x) =>
-          !x ||
-          typeof x.id !== 'string' ||
-          !String(x.title || '').trim() ||
-          !Number.isFinite(new Date(x.date).getTime()),
-      )
-    )
-      return false;
-    if (
-      (obj.payments || []).some(
-        (p) =>
-          !p || typeof p.id !== 'string' || !p.studentId || !Number.isFinite(+p.amount) || !p.date,
-      )
-    )
-      return false;
-    return true;
-  }
   $('#importFile').onchange = async (e) => {
     try {
       const file = e.target.files[0];
       if (!file) return;
+      if (!validateBackupSize(file.size)) {
+        inform(
+          `Размер резервной копии не должен превышать ${Math.round(MAX_BACKUP_BYTES / 1024 / 1024)} МБ.`,
+          'Файл слишком большой',
+          true,
+        );
+        return;
+      }
       const obj = JSON.parse(await file.text());
-      if (!validBackup(obj)) throw 0;
-      pendingImport = obj;
+      if (!validateBackup(obj).ok) throw 0;
+      pendingImport = unwrapBackup(obj);
       open('importModal');
     } catch {
       pendingImport = null;
@@ -2927,30 +2672,24 @@
     }
     e.target.value = '';
   };
-  document.addEventListener('click', (e) => {
+  $('#importModal').addEventListener('click', (e) => {
     const mode = e.target.closest('[data-import-mode]')?.dataset.importMode;
     if (!mode || !pendingImport) return;
     if (mode === 'add') {
-      mergeImported(pendingImport);
-      save();
+      data = mergeImported(data, pendingImport, uid);
+      persistenceEnabled = true;
+      save('backup-merge');
       toast('Данные из копии добавлены к имеющимся');
     } else {
-      // Recovery copy: сохраняем текущий data перед replace, чтобы можно было
-      // восстановиться, если пользователь ошибся с файлом (§5.11, спека Этап 4.3).
+      const replacement = replaceImported(data, pendingImport);
       try {
-        localStorage.setItem(
-          'tutorCabinet_recovery',
-          JSON.stringify({
-            savedAt: new Date().toISOString(),
-            reason: 'before-replace-import',
-            data,
-          }),
-        );
+        persistence.saveRecovery(replacement.recovery);
       } catch {
         /* quota / private mode — recovery best-effort, продолжаем */
       }
-      data = load(JSON.stringify(pendingImport));
-      save();
+      data = replacement.nextData;
+      persistenceEnabled = true;
+      save('backup-replace');
       toast('Текущие данные заменены копией (recovery-копия сохранена)');
     }
     pendingImport = null;
@@ -2965,7 +2704,8 @@
       )
     ) {
       data = structuredClone(blank);
-      save();
+      persistenceEnabled = true;
+      save('clear-all');
       closeAll();
       open('onboardingModal');
       toast('Все данные очищены');
@@ -3044,10 +2784,12 @@
       setTimeout(() => toast('Давно не скачивали резервную копию'), 900);
     }
   }
+  const beforeBootstrap = JSON.stringify(data);
   extendAllSchedules();
   normalizePastLessons();
   syncFutureGroupBilling();
-  persistLocal();
+  if (loaded.stage === 'empty' || loaded.needsWrite || JSON.stringify(data) !== beforeBootstrap)
+    persistLocal('bootstrap-maintenance');
   updateReportPeriodName();
   renderAll();
   scheduleReminders();

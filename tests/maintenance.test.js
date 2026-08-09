@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { pruneOldHistory, sweepOrphans } from '../src/state/maintenance.js';
+import { pruneOldHistory, sweepOrphans, syncFutureGroupBilling } from '../src/state/maintenance.js';
 import { blankData } from '../src/state/schema.js';
 
 function seed(overrides = {}) {
@@ -89,5 +89,42 @@ describe('sweepOrphans', () => {
     expect(r.data.groups).toEqual([]);
     expect(r.data.lessons).toEqual([]);
     expect(r.changes.groupsRemoved).toBe(1);
+  });
+});
+
+describe('syncFutureGroupBilling', () => {
+  it('обновляет только будущие плановые групповые занятия и идемпотентна', () => {
+    const now = Date.parse('2026-08-09T10:00:00Z');
+    const data = seed({
+      students: [{ id: 's1', name: 'A', price: 1500, payType: 'package' }],
+      groups: [{ id: 'g1', name: 'G', members: ['s1'] }],
+      lessons: [
+        {
+          id: 'future',
+          groupId: 'g1',
+          studentId: 's1',
+          date: '2026-08-10T10:00:00Z',
+          status: 'planned',
+          amount: 1000,
+          payment: 'unpaid',
+        },
+        {
+          id: 'done',
+          groupId: 'g1',
+          studentId: 's1',
+          date: '2026-08-01T10:00:00Z',
+          status: 'done',
+          amount: 1000,
+          payment: 'unpaid',
+        },
+      ],
+    });
+    const once = syncFutureGroupBilling(data, now);
+    expect(once.data.lessons[0]).toMatchObject({ amount: 1500, payment: 'package' });
+    expect(once.data.lessons[1]).toEqual(data.lessons[1]);
+    expect(once.changes.lessonsUpdated).toBe(1);
+    const twice = syncFutureGroupBilling(once.data, now);
+    expect(twice.data).toEqual(once.data);
+    expect(twice.changes.lessonsUpdated).toBe(0);
   });
 });

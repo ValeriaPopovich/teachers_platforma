@@ -17,6 +17,7 @@ describe('normalizePastLessons', () => {
     expect(r.data.lessons[0].status).toBe('done');
     expect(r.data.lessons[0].reportFilled).toBe(false);
     expect(r.changes.lessonsCompleted).toBe(1);
+    expect(r.changes.completedLessonIds).toEqual(['l1']);
   });
 
   it('planned + будущее → без изменений', () => {

@@ -5,6 +5,7 @@ import {
   validateBackup,
   mergeImported,
   replaceImported,
+  validateBackupSize,
 } from '../src/domain/backup.js';
 import { blankData } from '../src/state/schema.js';
 
@@ -58,6 +59,30 @@ describe('validateBackup', () => {
       lessons: [{ id: 'l1', date: '2026-01-01' }],
     });
     expect(r.ok).toBe(false);
+  });
+
+  it('не пропускает broken references', () => {
+    const r = validateBackup({
+      ...blankData(),
+      students: [{ id: 's1', name: 'A' }],
+      groups: [{ id: 'g1', name: 'G', members: ['missing'] }],
+    });
+    expect(r.ok).toBe(false);
+    expect(r.errors.join(' ')).toMatch(/unknown student/);
+  });
+
+  it('ограничивает размер до 10 МБ', () => {
+    expect(validateBackupSize(10 * 1024 * 1024)).toBe(true);
+    expect(validateBackupSize(10 * 1024 * 1024 + 1)).toBe(false);
+  });
+
+  it('rejects IDs that could break HTML attributes', () => {
+    const r = validateBackup({
+      ...blankData(),
+      students: [{ id: 'bad" onclick="alert(1)', name: 'A' }],
+    });
+    expect(r.ok).toBe(false);
+    expect(r.errors.join(' ')).toMatch(/invalid student/);
   });
 });
 
@@ -142,6 +167,14 @@ describe('mergeImported — remap payment.lessonId (fix §2.4)', () => {
     expect(new Set(ids).size).toBe(ids.length);
     // Импортированный получил новый id, а не 'shared-id'.
     expect(merged.students.at(-1).id).not.toBe('shared-id');
+  });
+
+  it('повторяет uid generation, если генератор столкнулся с существующим ID', () => {
+    const target = { ...blankData(), students: [{ id: 'collision', name: 'exists' }] };
+    const src = { ...blankData(), students: [{ id: 'old', name: 'imported' }] };
+    const values = ['collision', 'unique'];
+    const merged = mergeImported(target, src, () => values.shift());
+    expect(merged.students.map((item) => item.id)).toEqual(['collision', 'unique']);
   });
 });
 

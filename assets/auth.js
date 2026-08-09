@@ -1,3 +1,6 @@
+import { createSupabaseCloudClient } from '../src/cloud/supabase-adapter.js';
+import { initialLoad, saveWithCas, SYNC_STATUS } from '../src/cloud/sync-protocol.js';
+
 (() => {
   const SUPABASE_URL = 'https://rbpxlzwycacrfupsthdn.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_LNR81I5WJ9kWXY4yD18FTw_at6E4uZK';
@@ -7,12 +10,16 @@
   const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
     auth: { persistSession: true, detectSessionInUrl: true, autoRefreshToken: true },
   });
+  const cloudClient = createSupabaseCloudClient(client);
   window.tutorCloud = {
     client,
     user: null,
     profile: null,
     ready: false,
     allowUnownedBootstrap: false,
+    revision: 0,
+    conflict: false,
+    casAvailable: true,
     queueSave: null,
     flushSave: null,
   };
@@ -121,7 +128,12 @@
     status.querySelector('span').textContent = text;
     status.className = 'cloud-status show ' + kind;
     clearTimeout(showSync.timer);
-    if (kind !== 'error') showSync.timer = setTimeout(() => status.classList.remove('show'), 1800);
+    const conflictActions = document.getElementById('cloudConflictActions'),
+      conflictHelp = document.getElementById('cloudConflictHelp');
+    if (conflictActions) conflictActions.hidden = kind !== 'conflict';
+    if (conflictHelp) conflictHelp.hidden = kind !== 'conflict';
+    if (!['error', 'offline', 'conflict'].includes(kind))
+      showSync.timer = setTimeout(() => status.classList.remove('show'), 1800);
   }
   function localOwner() {
     return localStorage.getItem(OWNER_KEY) || '';
@@ -142,6 +154,9 @@
     window.tutorCloud.profile = null;
     window.tutorCloud.ready = false;
     window.tutorCloud.allowUnownedBootstrap = false;
+    window.tutorCloud.revision = 0;
+    window.tutorCloud.conflict = false;
+    window.tutorCloud.casAvailable = true;
   }
   async function pushCloud(raw = localStorage.getItem(STORAGE_KEY)) {
     if (!window.tutorCloud.ready || !window.tutorCloud.user || !raw || raw === lastSaved)
@@ -159,18 +174,32 @@
       showSync('Не удалось сохранить', 'error');
       return false;
     }
-    showSync('Сохраняем…', 'saving');
-    const { error } = await client
-      .from('app_data')
-      .upsert(
-        { user_id: userId, data: parsed, updated_at: new Date().toISOString() },
-        { onConflict: 'user_id' },
-      );
-    if (error) {
-      showSync('Не удалось сохранить', 'error');
-      console.error('Cloud save:', error);
+    if (!window.tutorCloud.casAvailable) {
+      showSync('Изменения пока сохраняются только на этом устройстве', 'error');
       return false;
     }
+    showSync('Сохраняем…', 'saving');
+    const result = await saveWithCas(cloudClient, {
+      userId,
+      nextData: parsed,
+      expectedRevision: window.tutorCloud.revision,
+    });
+    if (result.status === SYNC_STATUS.CONFLICT) {
+      window.tutorCloud.conflict = true;
+      showSync('На другом устройстве есть более свежие изменения', 'conflict');
+      return false;
+    }
+    if (result.status === SYNC_STATUS.OFFLINE) {
+      showSync('Нет сети — изменения сохранены на устройстве', 'offline');
+      return false;
+    }
+    if (result.status !== SYNC_STATUS.SAVED) {
+      showSync('Не удалось сохранить', 'error');
+      console.error('Cloud save:', result.error);
+      return false;
+    }
+    window.tutorCloud.revision = result.newRevision;
+    window.tutorCloud.conflict = false;
     setLocalOwner(userId);
     window.tutorCloud.allowUnownedBootstrap = false;
     lastSaved = raw;
@@ -232,18 +261,34 @@
           : `Доступ закончился ${new Date(profile.access_until).toLocaleDateString('ru-RU')}. Напишите администратору для продления.`;
       return;
     }
-    const { data: cloudRow, error: cloudError } = await client
-      .from('app_data')
-      .select('data,updated_at')
-      .eq('user_id', user.id)
-      .single();
-    if (cloudError) {
+    let cloudLoad = await initialLoad(cloudClient, user.id);
+    if (
+      !cloudLoad.ok &&
+      (cloudLoad.error?.code === '42703' ||
+        /revision|schema_version/i.test(cloudLoad.error?.message))
+    ) {
+      const { data: legacyRow, error: legacyError } = await client
+        .from('app_data')
+        .select('data,updated_at')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (!legacyError) {
+        cloudLoad = {
+          ok: true,
+          data: legacyRow?.data || null,
+          revision: 0,
+          schemaVersion: 1,
+        };
+        window.tutorCloud.casAvailable = false;
+      }
+    }
+    if (!cloudLoad.ok) {
       openingUser = '';
       showMessage('Не удалось загрузить ваши данные. Обновите страницу чуть позже.', true);
-      console.error(cloudError);
+      console.error(cloudLoad.error);
       return;
     }
-    const cloudData = cloudRow?.data && typeof cloudRow.data === 'object' ? cloudRow.data : {};
+    const cloudData = cloudLoad.data && typeof cloudLoad.data === 'object' ? cloudLoad.data : {};
     const hasCloud = Object.keys(cloudData).length > 0;
     const marker = sessionStorage.getItem('tutor_cloud_loaded_user');
     if (hasCloud && marker !== user.id) {
@@ -266,12 +311,14 @@
     }
     sessionStorage.setItem('tutor_cloud_loaded_user', user.id);
     window.tutorCloud.ready = true;
+    window.tutorCloud.revision = cloudLoad.revision;
+    window.tutorCloud.conflict = false;
     window.tutorCloud.allowUnownedBootstrap = !hasCloud && !owner;
     lastSaved = hasCloud ? JSON.stringify(cloudData) : '';
     if (hasCloud) {
       setLocalOwner(user.id);
       pendingRaw = '';
-    } else if (!(await flushCloudSave())) {
+    } else if (window.tutorCloud.casAvailable && !(await flushCloudSave())) {
       openingUser = '';
       return;
     }
@@ -281,7 +328,32 @@
       : 'Без ограничения';
     openingUser = '';
     gate.hidden = true;
+    if (!window.tutorCloud.casAvailable)
+      showSync('Изменения пока сохраняются только на этом устройстве', 'error');
   }
+  document.getElementById('cloudDownloadBackup').addEventListener('click', () => {
+    document.getElementById('backupBtn').click();
+  });
+  document.getElementById('cloudLoadVersion').addEventListener('click', () => {
+    sessionStorage.removeItem('tutor_cloud_loaded_user');
+    location.reload();
+  });
+  document.getElementById('cloudKeepLocal').addEventListener('click', async () => {
+    if (
+      !window.confirm(
+        'Данные, сохранённые на другом устройстве, будут заменены данными с этого устройства. Это нельзя отменить. Продолжить?',
+      )
+    )
+      return;
+    const latest = await initialLoad(cloudClient, window.tutorCloud.user.id);
+    if (!latest.ok) {
+      showSync('Не удалось проверить облачную версию', 'error');
+      return;
+    }
+    window.tutorCloud.revision = latest.revision;
+    window.tutorCloud.conflict = false;
+    await enqueueCloudSave(localStorage.getItem(STORAGE_KEY));
+  });
   document.getElementById('authForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('authEmail').value.trim(),

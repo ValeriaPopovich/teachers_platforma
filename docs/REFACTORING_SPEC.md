@@ -50,16 +50,13 @@
 
 Отображение интерфейса не должно молча удалять или изменять persisted state.
 
-**Статус:** частично устранено на Этапе 0. `renderAll()` больше не вызывает эти функции. При этом полного решения инварианта ещё нет:
-
-- `normalizePastLessons` и `syncFutureGroupBilling` не удалены, а перенесены в bootstrap и в интервал `checkAlerts` (раз в 60 сек) и по-прежнему молча пишут в `localStorage`. Это осознанный промежуточный шаг: превращение их в именованные maintenance operations с точными правилами — задача Этапа 3.
-- `sweepOrphans` и `pruneOldHistory` сейчас не вызываются нигде (мёртвый код). Как следствие, orphan-записи больше не подчищаются автоматически — это изменение поведения относительно `main`. Допустимо до формализации правил на Этапе 3; тогда функции либо оживают как maintenance operation, либо удаляются.
+**Статус:** устранено. `renderAll()` не мутирует state. Bootstrap/таймер вызывают протестированные именованные операции из `src/state/maintenance.js`, после чего результат явно фиксируется через store. Мёртвые inline-копии `sweepOrphans`/`pruneOldHistory` удалены; некорректные ссылки блокируются pipeline/import validation и не подчищаются из render.
 
 ### 2.3. Неатомарная cloud sync
 
 На `main` cloud save выполняет `upsert` полного JSON, а сохранение триггерится через monkey patch `Storage.prototype.setItem`. Debounce не исключает параллельные запросы, а `last-write-wins` может затереть изменения другого устройства или вкладки.
 
-**Статус:** частично устранено на Этапе 0. Monkey patch убран (save идёт только через persistence API), сохранения сериализованы клиентской очередью `saveChain` (одновременно не больше одного запроса). **Не сделано:** серверный atomic compare-and-swap по `revision` — конфликт между устройствами всё ещё не обнаруживается. Это задача Этапа 5.
+**Статус:** клиент устранён: monkey patch убран, сохранения сериализованы, `assets/auth.js` использует CAS-протокол и показывает `offline/error/conflict`. SQL-контракт готов, но read-only проверка live Supabase 2026-08-09 вернула `42703: column app_data.revision does not exist`; до применения миграции legacy cloud data загружаются, а небезопасная запись явно заблокирована.
 
 ### 2.4. Неполная проверка backup
 
@@ -193,8 +190,8 @@ RPC `email_exists` сохраняется как принятое продукт
 - [x] Нет override встроенных Storage API (проверяется stage0-валидатором).
 - [~] RLS-аудит задокументирован — **anon-чтение `app_data`/`profiles` закрыто (проверено REST в `docs/SUPABASE_RLS_AUDIT.md`); осталась одна ручная проверка cross-user policy с двумя тестовыми пользователями (нужен твой доступ к Supabase).**
 - [x] `renderAll()` не выполняет молчаливое удаление orphan-записей и не меняет статусы/финансовые поля (проверяется stage0-валидатором).
-- [x] Оставшиеся молчаливые мутации persisted state (`normalizePastLessons`, `syncFutureGroupBilling` в bootstrap/интервале) отмечены как временные (см. §2.2) — чистые версии готовы в `src/state/maintenance.js`, интеграция в 6.1.
-- [x] Отключение `sweepOrphans`/`pruneOldHistory` зафиксировано как осознанный trade-off (см. §2.2). Чистые именованные версии готовы в `src/state/maintenance.js`.
+- [x] Maintenance запускается именованно через `src/state/maintenance.js`, результат фиксируется store action; render не участвует.
+- [x] Мёртвые inline-копии `sweepOrphans`/`pruneOldHistory` удалены; операции остаются чистыми и протестированными для явного вызова.
 - [x] `pushCloud` при непарсимом raw возвращает `false` и показывает ошибку (хвост Этапа 0 закрыт, проверяется stage0-валидатором).
 
 ### Этап 1 — baseline и инженерная страховка
@@ -363,7 +360,7 @@ store.subscribe(listener);         // опционально — вводить 
 - [x] Pipeline загрузки поддерживает миграции, но сам набор миграций пустой (одна версия — v1). Фреймворк цепочки версий не написан заранее (`src/state/migrations.js`).
 - [x] Любая добавленная миграция идемпотентна (тест «идемпотентно: повторный loadState» в `tests/pipeline.test.js`).
 - [x] Ошибка не перезаписывает последнюю валидную копию (`loadState` возвращает `{ok:false, stage, errors}`, persistence не пишет).
-- [~] Нет прямых `localStorage.setItem` вне persistence/migration bootstrap — **в модулях `src/*` соблюдено; в inline `assets/app.js` legacy-код с прямыми setItem пока остался (заменяется в 6.1 при полном UI-разделении).**
+- [x] В page/UI code нет прямых записей в `localStorage`; versioned envelope и recovery принадлежат `src/state/persistence.js` (`tests/persistence.test.js`).
 - [x] Render-функции не изменяют state (`renderAll` очищен от `pruneOldHistory`/`sweepOrphans`/`normalizePastLessons`/`syncFutureGroupBilling` — проверяется `scripts/validate-stage0.mjs`).
 - [x] Legacy fixture успешно загружается (`tests/pipeline.test.js` — «legacy flat object оборачивается в envelope v1 без изменения содержимого»).
 
@@ -445,16 +442,12 @@ Merge remap-ит:
 
 #### DoD
 
-- [x] Finances, schedule (частично) и backup работают без DOM (`src/domain/`).
+- [x] Finances, полная генерация/расширение schedule и backup работают без DOM (`src/domain/`) и подключены в UI.
 - [x] Результаты fixture совпадают с baseline (parity-тест inline↔module: 6/6 на всех учениках baseline).
-- [x] Merge сохраняет все ссылки, включая `payment.lessonId` (`tests/backup.test.js` + фикс в inline + regression guard `tests/inline-backup-fixes.test.js`).
-- [x] Invalid backup не меняет активные данные (`validateBackup` в `src/domain/backup.js` — до применения; inline-UI: сначала `validBackup(obj)`, только потом `pendingImport`).
+- [x] Merge сохраняет все ссылки, включая `payment.lessonId`, и повторяет генерацию ID при collision (`tests/backup.test.js`).
+- [x] Invalid/слишком большой backup не меняет активные данные; structural+referential validation выполняется до показа import mode.
 - [x] Перед replace существует recovery copy (`localStorage.tutorCabinet_recovery`, regression-тест).
-- [~] Нет raw-вставки импортируемых строк в `innerHTML` — **inline-код в assets/app.js использует `esc()` для отображения имён, но полноценный audit каждого `innerHTML` в app.js не проведён; экранирование идёт через существующую helper-функцию. Систематическая проверка — часть 6.1 при разделении UI-модулей.**
-
-**Отложено на 6.1 (отдельным PR):**
-- Полное извлечение `generateSchedule`/`extendAllSchedules` в чистый модуль — требует Playwright/E2E для UI-workflow создания расписания.
-- Замена inline `finances`/`mergeImported`/`replace` в `assets/app.js` на импорт из `src/domain/` — parity-тесты доказывают эквивалентность, но замена меняет структуру IIFE и всех вызывающих её handlers.
+- [x] Импортируемые IDs/references ограничены безопасным форматом; строки в HTML проходят `esc()`, включая initials и schedule text (regression в `tests/backup.test.js`).
 
 ### Этап 5 — надёжная cloud sync
 
@@ -515,15 +508,15 @@ loading / idle / dirty / saving / saved / offline / error / conflict
 #### DoD
 
 - [x] Save operations сериализованы (`saveChain` в inline + `createSaveQueue` в модуле, тест).
-- [x] Conflict определяется атомарно на сервере — **готова SQL миграция** `supabase/migrations/2026_stage5_add_revision_cas.sql` (RPC `save_app_data` с `WHERE revision = expected`).
+- [~] Atomic server contract готов (`save_app_data` с `WHERE revision = expected`), но live Supabase ещё без колонок: read-only REST-проверка 2026-08-09 получила PostgreSQL `42703`.
 - [x] Клиентский протокол — CAS-логика полностью протестирована (`tests/sync-protocol.test.js`, 10 тестов: SAVED/CONFLICT/OFFLINE/ERROR).
 - [x] Более новая облачная revision не перезаписывается молча (`saveWithCas` возвращает `CONFLICT` при `rowsAffected=0`, автоматическая перезапись запрещена).
-- [~] Offline изменения сохраняются локально — **текущее поведение (уже реализовано):** локальный snapshot остаётся в `localStorage` и отправляется при следующем изменении/`online` (`window.addEventListener('online', flushCloudSave)`). Полноценная offline-очередь из нескольких snapshot'ов — не сейчас (§4).
+- [x] Offline snapshot остаётся локально, статус не маскируется под success, ограниченный повтор запускается на `online`.
 - [x] Logout завершает или отменяет ожидающий save до очистки session runtime (`signOutSafely` → `flushCloudSave` → `signOut` → `resetCloudRuntime`).
 
 **Отложено (нужен ручной шаг, я не могу от твоего имени):**
 - [ ] Применить SQL миграцию через Supabase Dashboard (одна кнопка Run — идемпотентно). См. [`docs/CLOUD_SYNC_SETUP.md`](./CLOUD_SYNC_SETUP.md).
-- [ ] Переключить `assets/auth.js` с `client.from('app_data').upsert(...)` на `client.rpc('save_app_data', ...)` — псевдо-diff в `docs/CLOUD_SYNC_SETUP.md`. Без применённой миграции менять клиент нельзя (RPC ещё не существует → cloud save сломается).
+- [x] `assets/auth.js` переключён на tested CAS protocol. До миграции он безопасно читает legacy row, запрещает обычный `upsert` и показывает постоянную ошибку о необходимости обновить Supabase.
 - [ ] Сценарий с двумя вкладками/браузерами прогнать вручную после включения (пункт 10 в `docs/smoke-checklist.md`).
 
 ### Этап 6 — UI-модули, доступность и выпуск
@@ -540,7 +533,7 @@ loading / idle / dirty / saving / saved / offline / error / conflict
 
 Не требуется единый class-based lifecycle. Достаточно, чтобы модуль страницы владел своими DOM queries, rendering и event handlers и не обращался напрямую к Supabase или `localStorage`.
 
-> **Статус реализации.** Полное page-разделение оставлено на 6.1 — отдельный будущий PR, потому что оно требует переписать 200+ строк inline event-handlers в `assets/app.js` (каждый handler мутирует общий `data`, вызывает 10–15 других глобальных функций и явно рассчитывает на classic-scope). Без Playwright/E2E-набора такой рефактор нельзя проверить безопасно; создание такого набора — отдельная работа (§4 «Не сейчас»). На Этапе 6 сделано то, что реально повышает выпускную готовность без риска: regression-guard тесты на a11y-примитивы (focus-trap, Escape, `aria-live`, отсутствие inline `on*` в HTML), актуализированный smoke-чеклист и release gate.
+> **Статус реализации.** Критичные правила вынесены и подключены как ES Modules; persistence и Supabase отсутствуют в page code. Click/change ownership ограничен соответствующими page/modal roots вместо общего `document`/`.app` handler (`tests/ui-boundaries.test.js`). Полный косметический разнос каждой render-функции по отдельному файлу не требуется DoD: он не добавляет границы данных сверх уже введённых и остаётся возможным отдельным механическим изменением.
 
 #### Минимальная доступность
 
@@ -579,8 +572,8 @@ Selective rendering вводится только там, где это упро
 
 #### DoD
 
-- [~] Нет одного глобального обработчика несвязанных feature areas — **в inline `assets/app.js` остались общие `document.addEventListener('click', ...)`, разделяются в 6.1 (см. блок статуса выше).**
-- [~] Page code не обращается к Supabase и storage напрямую — **в новых модулях `src/*` соблюдено; в inline app.js часть handlers всё ещё пишет в `data`/`localStorage` напрямую. Разделение в 6.1.**
+- [x] Нет общего `document`/`.app` click-handler несвязанных feature areas; handlers привязаны к page/modal owner roots.
+- [x] Page code не обращается к Supabase и не записывает storage напрямую (`tests/ui-boundaries.test.js`).
 - [x] Основные сценарии доступны с клавиатуры (focus-trap по Tab и Escape — существуют, покрыты regression-guard `tests/accessibility-guard.test.js`).
 - [x] Light/dark theme и mobile layout сохранены (CSS вынесен без изменений; browser-smoke: экран входа корректный).
 - [x] PNG-отчёт работает (`html2canvas` подгружается, inline-код не тронут).
@@ -631,17 +624,17 @@ Selective rendering вводится только там, где это упро
 - [x] `index.html` является shell (139 строк, только разметка + ссылки на assets).
 - [x] JavaScript использует содержательные ES Modules (`assets/auth.js`, `assets/app.js` как `type="module"`; чистые модули в `src/`).
 - [x] Domain не зависит от DOM, Supabase и storage (`src/domain/finances.js`, `src/domain/backup.js`, `src/domain/schedule.js`, `src/state/*` — ни одного DOM/localStorage/network вызова).
-- [~] Persistence не запускает rendering — **в новых модулях соблюдено; в inline `assets/app.js` часть `save()` сразу зовёт `renderAll()`. Разделение — 6.1.**
+- [x] Persistence не запускает rendering: store уведомляет persistence и UI независимыми subscribers; `src/state/persistence.js` не знает о DOM.
 - [x] Rendering не изменяет state (`renderAll` очищен, проверяется stage0-валидатором).
 - [x] Нет override browser prototypes (проверяется stage0-валидатором).
 
 ### Надёжность
 
-- [x] Финансовый baseline совпадает (parity-тест inline↔module на всех 5 учениках baseline; 79/79 тестов зелёных).
-- [~] Расписание не создаёт дубли — **чистый `deduplicateLessons` + тесты в `src/domain/schedule.js`. В `assets/app.js` inline-`generateSchedule` уже имел проверку `!data.lessons.some(...)` — сохранено. Полное characterization-покрытие inline-генератора — часть 6.1.**
+- [x] Финансовый baseline совпадает; UI делегирует расчёт `src/domain/finances.js` (99/99 тестов зелёных на момент интеграции).
+- [x] Полные `generateSchedule`/`extendAllSchedules` находятся в чистом модуле, повторный вызов не создаёт дубли и сохраняет protected lessons.
 - [x] Backup merge сохраняет ссылки, включая `payment.lessonId` (fix + тесты + regression guard).
-- [x] Cloud save имеет серверную atomic revision check — **готова**: SQL миграция + клиентский протокол + adapter + 10 тестов. **Требуется ручное включение** (apply migration + переключить `assets/auth.js`, см. `docs/CLOUD_SYNC_SETUP.md`).
-- [~] Offline/error/conflict состояние видно пользователю — **error видно (`showSync` с kind=error); conflict-статус появится после включения CAS (см. выше); offline — текущее поведение (snapshot остаётся в localStorage + `online`-listener).**
+- [~] Cloud CAS полностью готов в репозитории и подключён в клиенте; единственный незакрытый runtime-шаг — применить SQL в live Supabase (проверено: колонок пока нет).
+- [x] Offline/error/conflict состояния видимы и persistent; conflict предлагает загрузить облако или после подтверждения CAS-заменить его локальной копией.
 
 ### Качество выпуска
 
@@ -656,15 +649,10 @@ Selective rendering вводится только там, где это упро
 **Требует твоего ручного действия (я это сделать не могу):**
 1. Cross-user RLS test с двумя тестовыми пользователями Supabase → отметить в `docs/SUPABASE_RLS_AUDIT.md`.
 2. Применить SQL миграцию `supabase/migrations/2026_stage5_add_revision_cas.sql` через Supabase Dashboard.
-3. Скажи «применил» — внесу diff в `assets/auth.js` (переключение на `save_app_data` RPC).
+3. После миграции обновить страницу: клиент уже подключён к `save_app_data` и автоматически выйдет из safe fallback.
 4. Ручной прогон сценария «две вкладки → conflict» из smoke-чеклиста (пункт 10).
 
-**Оставлено на 6.1 (отдельный будущий PR, требует Playwright/E2E):**
-5. Полное извлечение `generateSchedule`/`extendAllSchedules` из inline в `src/domain/schedule.js`.
-6. Замена inline `finances`, `mergeImported`, `replace`, `normalizePastLessons`, `syncFutureGroupBilling` в `assets/app.js` на импорт из готовых модулей `src/domain/*` и `src/state/*` (parity-тесты уже доказали эквивалентность).
-7. Разделение inline `assets/app.js` на page-модули (dashboard/students/schedule/payments/reports/settings) с owner-ownership DOM handlers.
-8. Systematic audit каждого `innerHTML` в `app.js` на raw-вставку импортируемых строк.
-9. Уборка мёртвого кода: `sweepOrphans`/`pruneOldHistory` в `assets/app.js` (после полной замены на именованные maintenance-операции из `src/state/maintenance.js`).
+**Локальный кодовый хвост закрыт:** schedule/domain/backup/maintenance интегрированы, persistence отделён от render, page/modal events имеют владельцев, импортируемые IDs и строки проверены, мёртвые inline maintenance-копии удалены.
 
 ## 9. Критерий остановки
 

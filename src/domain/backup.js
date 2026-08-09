@@ -6,6 +6,19 @@
 //   3. Replace всегда возвращает recovery copy предыдущего data (§5.11).
 //   4. Merge принимает uid-generator, чтобы тест был детерминирован.
 
+import { validateReferential, validateStructural } from '../state/validate.js';
+
+export const MAX_BACKUP_BYTES = 10 * 1024 * 1024;
+const SAFE_ID = /^[A-Za-z0-9._:-]{1,128}$/;
+
+export function isSafeImportedId(value) {
+  return typeof value === 'string' && SAFE_ID.test(value);
+}
+
+export function validateBackupSize(size, maxBytes = MAX_BACKUP_BYTES) {
+  return Number.isFinite(size) && size >= 0 && size <= maxBytes;
+}
+
 /** Создать backup-объект для export. Envelope-совместимый; поле data — как раньше. */
 export function makeBackup(data, { appVersion = 'unknown', now = () => new Date() } = {}) {
   return {
@@ -37,38 +50,68 @@ export function validateBackup(obj) {
   }
   const ids = new Set();
   for (const s of data.students || []) {
-    if (!s || typeof s.id !== 'string' || !String(s.name || '').trim())
+    if (!s || !isSafeImportedId(s.id) || !String(s.name || '').trim())
       errors.push(`invalid student ${s?.id}`);
     else if (ids.has(s.id)) errors.push(`duplicate student id ${s.id}`);
     ids.add(s?.id);
   }
+  for (const collection of ['groups', 'lessons', 'events', 'payments']) {
+    const collectionIds = new Set();
+    for (const item of data[collection] || []) {
+      if (collectionIds.has(item?.id)) errors.push(`duplicate ${collection} id ${item?.id}`);
+      collectionIds.add(item?.id);
+    }
+  }
   for (const g of data.groups || []) {
-    if (!g || typeof g.id !== 'string' || !String(g.name || '').trim() || !Array.isArray(g.members))
+    if (!g || !isSafeImportedId(g.id) || !String(g.name || '').trim() || !Array.isArray(g.members))
       errors.push(`invalid group ${g?.id}`);
+  }
+  for (const owner of [...(data.students || []), ...(data.groups || [])]) {
+    for (const slot of owner?.scheduleSlots || []) {
+      if (
+        !slot ||
+        !Number.isInteger(+slot.day) ||
+        +slot.day < 0 ||
+        +slot.day > 6 ||
+        !/^([01]\d|2[0-3]):[0-5]\d$/.test(String(slot.time || ''))
+      )
+        errors.push(`invalid schedule slot for ${owner?.id}`);
+    }
   }
   for (const l of data.lessons || []) {
     if (
       !l ||
-      typeof l.id !== 'string' ||
+      !isSafeImportedId(l.id) ||
       !l.date ||
       !Number.isFinite(new Date(l.date).getTime()) ||
       (!l.studentId && !l.groupId)
     )
       errors.push(`invalid lesson ${l?.id}`);
+    for (const reference of [l?.studentId, l?.groupId, l?.seriesId, l?.movedFrom]) {
+      if (reference != null && reference !== '' && !isSafeImportedId(reference))
+        errors.push(`unsafe lesson reference ${reference}`);
+    }
   }
   for (const ev of data.events || []) {
     if (
       !ev ||
-      typeof ev.id !== 'string' ||
+      !isSafeImportedId(ev.id) ||
       !String(ev.title || '').trim() ||
       !Number.isFinite(new Date(ev.date).getTime())
     )
       errors.push(`invalid event ${ev?.id}`);
   }
   for (const p of data.payments || []) {
-    if (!p || typeof p.id !== 'string' || !p.studentId || !Number.isFinite(+p.amount) || !p.date)
+    if (!p || !isSafeImportedId(p.id) || !p.studentId || !Number.isFinite(+p.amount) || !p.date)
       errors.push(`invalid payment ${p?.id}`);
+    for (const reference of [p?.studentId, p?.lessonId]) {
+      if (reference != null && reference !== '' && !isSafeImportedId(reference))
+        errors.push(`unsafe payment reference ${reference}`);
+    }
   }
+  const structural = validateStructural(data);
+  const referential = validateReferential(data);
+  errors.push(...structural.errors, ...referential.errors);
   return { ok: errors.length === 0, errors };
 }
 
@@ -83,13 +126,29 @@ export function validateBackup(obj) {
  */
 export function mergeImported(data, src, uid) {
   const next = structuredClone(data);
-  const studentMap = new Map((src.students || []).map((x) => [x.id, uid()]));
-  const groupMap = new Map((src.groups || []).map((x) => [x.id, uid()]));
-  const lessonMap = new Map((src.lessons || []).map((x) => [x.id, uid()]));
+  const usedIds = new Set([
+    ...['students', 'groups', 'lessons', 'events', 'payments'].flatMap((key) =>
+      (next[key] || []).map((item) => item.id),
+    ),
+    ...(next.lessons || []).map((lesson) => lesson.seriesId).filter(Boolean),
+  ]);
+  const nextId = () => {
+    for (let attempts = 0; attempts < 1000; attempts++) {
+      const candidate = uid();
+      if (!usedIds.has(candidate)) {
+        usedIds.add(candidate);
+        return candidate;
+      }
+    }
+    throw new Error('Unable to generate a unique import ID');
+  };
+  const studentMap = new Map((src.students || []).map((x) => [x.id, nextId()]));
+  const groupMap = new Map((src.groups || []).map((x) => [x.id, nextId()]));
+  const lessonMap = new Map((src.lessons || []).map((x) => [x.id, nextId()]));
   const seriesMap = new Map();
   const mapSeries = (id) => {
     if (!id) return id;
-    if (!seriesMap.has(id)) seriesMap.set(id, uid());
+    if (!seriesMap.has(id)) seriesMap.set(id, nextId());
     return seriesMap.get(id);
   };
 
@@ -111,11 +170,11 @@ export function mergeImported(data, src, uid) {
       movedFrom: lessonMap.get(x.movedFrom) || x.movedFrom,
     })),
   );
-  next.events.push(...(src.events || []).map((x) => ({ ...x, id: uid() })));
+  next.events.push(...(src.events || []).map((x) => ({ ...x, id: nextId() })));
   next.payments.push(
     ...(src.payments || []).map((x) => ({
       ...x,
-      id: uid(),
+      id: nextId(),
       studentId: studentMap.get(x.studentId) || x.studentId,
       // FIX §2.4: раньше lessonId оставался старым и указывал в никуда.
       lessonId: x.lessonId ? lessonMap.get(x.lessonId) || x.lessonId : x.lessonId,

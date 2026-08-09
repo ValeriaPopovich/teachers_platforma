@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { deduplicateLessons, timeConflicts } from '../src/domain/schedule.js';
+import {
+  deduplicateLessons,
+  extendAllSchedules,
+  generateSchedule,
+  timeConflicts,
+} from '../src/domain/schedule.js';
+import { blankData } from '../src/state/schema.js';
 
 describe('deduplicateLessons', () => {
   it('убирает дубли по (studentId, groupId, date)', () => {
@@ -55,5 +61,67 @@ describe('timeConflicts', () => {
     expect(
       timeConflicts({ date: '2026-01-01T10:00:00Z' }, { date: '2026-01-01T11:00:00Z' }, 60),
     ).toBe(false);
+  });
+});
+
+describe('generateSchedule', () => {
+  const now = new Date(2026, 7, 9, 9, 0, 0);
+  const seed = () => ({
+    ...blankData(),
+    students: [
+      {
+        id: 's1',
+        name: 'Аня',
+        price: 1000,
+        payType: 'single',
+        scheduleSlots: [{ day: now.getDay(), time: '10:00' }],
+      },
+    ],
+  });
+
+  it('создаёт регулярные занятия и не мутирует вход', () => {
+    const data = seed();
+    let id = 0;
+    const next = generateSchedule(data, {
+      type: 'student',
+      id: 's1',
+      slots: data.students[0].scheduleSlots,
+      now,
+      uid: () => `l${++id}`,
+    });
+    expect(data.lessons).toEqual([]);
+    expect(next.lessons.length).toBe(8);
+    expect(next.lessons[0]).toMatchObject({ studentId: 's1', amount: 1000, auto: true });
+  });
+
+  it('повторное расширение не создаёт дублей', () => {
+    const data = seed();
+    let id = 0;
+    const once = extendAllSchedules(data, { now, uid: () => `l${++id}` });
+    const twice = extendAllSchedules(once, { now, uid: () => `l${++id}` });
+    expect(twice.lessons).toEqual(once.lessons);
+  });
+
+  it('не удаляет вручную отредактированное автоматическое занятие при regenerate', () => {
+    const data = seed();
+    data.lessons.push({
+      id: 'protected',
+      studentId: 's1',
+      date: '2026-08-09T10:00',
+      status: 'planned',
+      auto: true,
+      manualEdited: true,
+    });
+    let id = 0;
+    const next = generateSchedule(data, {
+      type: 'student',
+      id: 's1',
+      slots: data.students[0].scheduleSlots,
+      now,
+      uid: () => `l${++id}`,
+    });
+    expect(next.lessons.filter((lesson) => lesson.date === '2026-08-09T10:00')).toEqual([
+      data.lessons[0],
+    ]);
   });
 });

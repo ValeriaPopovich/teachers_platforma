@@ -17,11 +17,11 @@ export default [
     rules: {},
   },
   {
-    // Legacy inline-код, вынесенный на Этапе 2 без изменений. Строгий lint будет
-    // включаться по мере переноса кусков в src/domain/ на Этапах 3–4.
+    // Browser entry points are ES modules. The remaining UI file is intentionally
+    // migrated incrementally, so unused legacy helpers are not a release blocker.
     files: ['assets/**/*.js'],
     languageOptions: {
-      sourceType: 'script',
+      sourceType: 'module',
       globals: {
         ...globals.browser,
         html2canvas: 'readonly',

@@ -33,6 +33,7 @@ export function pruneOldHistory(data, retentionDays = 45, now = Date.now()) {
 export function normalizePastLessons(data, now = Date.now(), duration = (l) => +l.duration || 60) {
   return mutate(data, (d) => {
     let changed = 0;
+    const completedLessonIds = [];
     for (const l of d.lessons) {
       if (l.status !== 'planned') continue;
       const endMs = new Date(l.date).getTime() + duration(l) * 60000;
@@ -40,9 +41,10 @@ export function normalizePastLessons(data, now = Date.now(), duration = (l) => +
         l.status = 'done';
         if (l.reportFilled == null) l.reportFilled = false;
         changed++;
+        completedLessonIds.push(l.id);
       }
     }
-    return { lessonsCompleted: changed };
+    return { lessonsCompleted: changed, completedLessonIds };
   });
 }
 
@@ -95,5 +97,25 @@ export function sweepOrphans(data) {
       topicRemoved,
       groupsRemoved: groupsBefore - d.groups.length,
     };
+  });
+}
+
+/** Refresh financial defaults of future group lessons from their current student cards. */
+export function syncFutureGroupBilling(data, now = Date.now()) {
+  return mutate(data, (draft) => {
+    let changed = 0;
+    for (const lesson of draft.lessons) {
+      if (!lesson.groupId || lesson.status !== 'planned' || new Date(lesson.date).getTime() < now)
+        continue;
+      const student = draft.students.find((item) => item.id === lesson.studentId);
+      const amount = +student?.price || 0;
+      const payment = student?.payType === 'package' ? 'package' : 'unpaid';
+      if (lesson.amount !== amount || lesson.payment !== payment) {
+        lesson.amount = amount;
+        lesson.payment = payment;
+        changed++;
+      }
+    }
+    return { lessonsUpdated: changed };
   });
 }

@@ -2601,6 +2601,48 @@ body {
 .cloud-status.error {
   color: var(--bad);
 }
+.cloud-status.conflict,
+.cloud-status.offline {
+  max-width: min(720px, calc(100vw - 36px));
+  border-radius: 16px;
+  color: var(--bad);
+}
+.cloud-status.offline {
+  color: var(--warn);
+}
+.cloud-status.conflict i {
+  background: var(--bad);
+}
+.cloud-status.offline i {
+  background: var(--warn);
+}
+#cloudConflictActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+#cloudConflictActions[hidden] {
+  display: none;
+}
+#cloudConflictActions button {
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel2);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.cloud-status-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+#cloudConflictHelp {
+  color: var(--muted);
+  line-height: 1.35;
+}
 .cloud-status i {
   width: 7px;
   height: 7px;
@@ -2625,6 +2667,15 @@ body {
   .cloud-status {
     right: 10px;
     bottom: 82px;
+  }
+  .cloud-status.conflict {
+    left: 10px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  #cloudConflictActions {
+    width: 100%;
+    flex-direction: column;
   }
 }
 .analytics-card .stat {

@@ -37,6 +37,7 @@ CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) прогоняет `
 - План рефакторинга: [`docs/REFACTORING_SPEC.md`](docs/REFACTORING_SPEC.md).
 - Архитектурные решения: [`docs/adr/`](docs/adr/README.md).
 - RLS-аудит: [`docs/SUPABASE_RLS_AUDIT.md`](docs/SUPABASE_RLS_AUDIT.md).
+- Включение atomic cloud save: [`docs/CLOUD_SYNC_SETUP.md`](docs/CLOUD_SYNC_SETUP.md). Пока миграция не применена, legacy cloud data читаются, но cloud write намеренно заблокирован.
 
 ## Deploy
 
@@ -49,6 +50,7 @@ Push в ветку, обслуживающую GitHub Pages. Перед выпу
 - [ ] `npm run lint`, `npm run validate:stage0`, `npm test` — зелёные;
 - [ ] прогнан [smoke-чеклист](docs/smoke-checklist.md), включая пункт про backup replace + recovery, cloud conflict и гейтинг доступа;
 - [ ] проверен вход и reload session; cloud save и reload;
+- [ ] в live Supabase применена CAS-миграция из `supabase/migrations/2026_stage5_add_revision_cas.sql`;
 - [ ] `docs/SUPABASE_RLS_AUDIT.md` не имеет открытых пунктов, критичных для этого выпуска;
 - [ ] PR содержит риск и способ rollback (обычно `git revert HEAD` на соответствующий этап);
 - [ ] после deploy вручную: вход, открытие ученика, сохранение занятия, оплата, reload, backup export.

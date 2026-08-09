@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parse } from 'acorn';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, '..');
@@ -24,7 +25,10 @@ const combined = allScripts.join('\n\n/* --- next script --- */\n\n');
 
 // Каждый script должен парситься.
 for (const [index, source] of allScripts.entries()) {
-  assert.doesNotThrow(() => new Function(source), `Script ${index + 1} must parse`);
+  assert.doesNotThrow(
+    () => parse(source, { ecmaVersion: 'latest', sourceType: 'module' }),
+    `Script ${index + 1} must parse`,
+  );
 }
 
 // Auth перед app, порядок сохранён.

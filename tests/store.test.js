@@ -63,3 +63,17 @@ describe('createStore', () => {
     expect(good).toHaveBeenCalledOnce();
   });
 });
+
+describe('validated store', () => {
+  it('does not activate or notify an invalid draft', () => {
+    const store = createStore(
+      { count: 1 },
+      { validate: (state) => ({ ok: state.count >= 0, errors: ['count below zero'] }) },
+    );
+    const listener = vi.fn();
+    store.subscribe(listener);
+    expect(() => store.update('invalid', (draft) => (draft.count = -1))).toThrow(/rejected/);
+    expect(store.getState()).toEqual({ count: 1 });
+    expect(listener).not.toHaveBeenCalled();
+  });
+});

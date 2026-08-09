@@ -2,7 +2,7 @@
 // сейчас необязательны — persistence и render вызываются явно после update
 // (пока полный renderAll остаётся чистым и не тормозит). Оставлен для будущего.
 
-export function createStore(initialState) {
+export function createStore(initialState, { validate } = {}) {
   let state = initialState;
   const listeners = new Set();
 
@@ -18,6 +18,7 @@ export function createStore(initialState) {
     }
     const draft = structuredClone(state);
     mutator(draft);
+    assertValid(draft, actionName);
     state = draft;
     notify(actionName);
     return state;
@@ -25,6 +26,7 @@ export function createStore(initialState) {
 
   /** replace(nextState): для load/import/replace. Не проходит через mutator. */
   function replace(nextState) {
+    assertValid(nextState, 'replace');
     state = nextState;
     notify('replace');
     return state;
@@ -44,6 +46,14 @@ export function createStore(initialState) {
         // Один плохой listener не роняет остальные.
         console.error(`store listener failed on "${actionName}":`, err);
       }
+    }
+  }
+
+  function assertValid(candidate, actionName) {
+    if (!validate) return;
+    const result = validate(candidate);
+    if (result?.ok === false) {
+      throw new Error(`store rejected "${actionName}": ${result.errors.join('; ')}`);
     }
   }
 
