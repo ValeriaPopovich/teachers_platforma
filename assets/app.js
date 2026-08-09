@@ -1807,8 +1807,19 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
         : '';
     $('#reportNextPackageBuilder').style.display = nextPlan ? '' : 'none';
     $('#paperNextPackageSection').style.display = nextPlan ? '' : 'none';
-    $('#reportNextPackagePreview').textContent = nextPackageText;
-    $('#paperNextPackage').textContent = nextPackageText;
+    const nextPackageEditor = $('#reportNextPackagePreview'),
+      previousAutoText = nextPackageEditor.dataset.autoValue || '',
+      previousStudentId = nextPackageEditor.dataset.studentId || '';
+    if (
+      previousStudentId !== id ||
+      !nextPackageEditor.value.trim() ||
+      nextPackageEditor.value === previousAutoText
+    ) {
+      nextPackageEditor.value = nextPackageText;
+    }
+    nextPackageEditor.dataset.autoValue = nextPackageText;
+    nextPackageEditor.dataset.studentId = id;
+    $('#paperNextPackage').textContent = nextPackageEditor.value.trim() || nextPackageText;
     $('#paperPills').innerHTML =
       `<span class="paper-pill">Педагог: ${esc(tutor)}</span><span class="paper-pill">Ученик: ${esc(s.name)}, ${esc(s.grade || 'класс не указан')}</span><span class="paper-pill">Период: ${esc(period)}</span><span class="paper-pill">Посещено: ${done.length}/${assigned}</span>`;
     const list = (arr, graded) =>
@@ -2952,6 +2963,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
   });
   $('#reportPeriodName').addEventListener('input', updateReportCard);
   $('#reportComment').addEventListener('input', updateReportCard);
+  $('#reportNextPackagePreview').addEventListener('input', updateReportCard);
   $('#addReportTopic').onclick = () => addReportRow('topic');
   $('#addReportTest').onclick = () => addReportRow('test');
   $('#addReportHw').onclick = () => addReportRow('hw');

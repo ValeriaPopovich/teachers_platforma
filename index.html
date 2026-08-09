@@ -10,6 +10,8 @@
   <link rel="stylesheet" href="assets/styles.css">
   <link rel="stylesheet" href="assets/payments-redesign.css">
   <link rel="stylesheet" href="assets/profile-modal.css">
+  <link rel="stylesheet" href="assets/reports-redesign.css">
+  <link rel="stylesheet" href="assets/custom-select.css">
 </head>
 <body>
 <div class="auth-gate" id="authGate" hidden>
@@ -83,17 +85,57 @@
       <div class="topbar"><div><h1>Расписание</h1><div class="sub">Занятия и личные события</div></div><div class="actions"><div class="calendar-view-switch" id="calendarViewSwitch"><button class="pill" data-calendar-view="day" aria-pressed="false">День</button><button class="pill active" data-calendar-view="week" aria-pressed="true">Неделя</button><button class="pill" data-calendar-view="month" aria-pressed="false">Месяц</button></div><button class="btn keep-mobile" data-open="event">+ Своё событие</button><button class="btn primary" data-open="lesson">+ Разовое занятие</button></div></div>
       <div class="card calendar-card"><div class="calendar-days" id="calendar"></div></div>
     </section>
-    <section class="page" id="page-reports">
-      <div class="topbar"><div><h1>Отчёты родителям</h1></div></div>
+    <section class="page reports-page" id="page-reports">
+      <div class="topbar reports-topbar"><div><h1>Отчёты родителям</h1><div class="sub">Настройте содержание отчёта и скачайте готовый результат для родителей</div></div></div>
       <div class="report-builder">
-        <div class="builder-stack">
-          <div class="card"><div class="section-head"><h2>Общая информация</h2><label class="report-include-toggle"><input type="checkbox" data-report-block="general" checked><span class="report-toggle-icon" aria-hidden="true"></span><span class="report-toggle-state">В отчёте</span></label></div><div class="form-grid"><div class="field"><label>Ученик</label><select id="reportStudent"></select></div><div class="field"><label>Период данных</label><select id="reportPeriod"><option value="7">Последние 7 дней</option><option value="30" selected>Последние 30 дней</option><option value="45">Последние 45 дней</option><option value="custom">Свой период (до 45 дней)</option></select></div><div class="field full" id="customPeriodFields" style="display:none"><div class="form-grid"><div class="field"><label>С</label><input type="date" id="reportDateFrom"></div><div class="field"><label>По</label><input type="date" id="reportDateTo"></div></div><div class="notice" id="reportHistoryHint" style="display:none;margin-top:10px;margin-bottom:0"></div></div><div class="field full"><label>Название периода</label><input id="reportPeriodName" placeholder="Август 2026"></div><div class="field full"><label>Комментарий родителю</label><textarea id="reportComment" placeholder="Что получается, над чем работаем..."></textarea></div></div></div>
-          <div class="card"><div class="section-head"><h2>Пройденные темы</h2><div class="report-block-actions"><button class="btn" id="addReportTopic">+ Тема</button><label class="report-include-toggle"><input type="checkbox" data-report-block="topics" checked><span class="report-toggle-icon" aria-hidden="true"></span><span class="report-toggle-state">В отчёте</span></label></div></div><div class="builder-list" id="reportTopics"></div></div>
-          <div class="card"><div class="section-head"><h2>Проверочные работы</h2><div class="report-block-actions"><button class="btn" id="addReportTest">+ Работа</button><label class="report-include-toggle"><input type="checkbox" data-report-block="tests" checked><span class="report-toggle-icon" aria-hidden="true"></span><span class="report-toggle-state">В отчёте</span></label></div></div><div class="builder-list" id="reportTests"></div></div>
-          <div class="card"><div class="section-head"><h2>Домашние задания</h2><div class="report-block-actions"><button class="btn" id="addReportHw">+ Домашка</button><label class="report-include-toggle"><input type="checkbox" data-report-block="hws" checked><span class="report-toggle-icon" aria-hidden="true"></span><span class="report-toggle-state">В отчёте</span></label></div></div><div class="builder-list" id="reportHws"></div></div>
-          <div class="card" id="reportNextPackageBuilder" style="display:none"><div class="section-head"><h2>Информация на следующий месяц</h2><label class="report-include-toggle" id="nextPackageBlockChoice"><input type="checkbox" data-report-block="nextPackage" checked><span class="report-toggle-icon" aria-hidden="true"></span><span class="report-toggle-state">В отчёте</span></label></div><p id="reportNextPackagePreview" class="sub"></p></div>
+        <div class="card reports-editor" aria-label="Настройка отчёта">
+          <div class="reports-editor-head">
+            <div class="reports-editor-title"><h2>Настройка отчёта</h2></div>
+            <label class="report-include-toggle"><input type="checkbox" data-report-block="general" checked><span class="report-toggle-icon" aria-hidden="true"></span><span class="report-toggle-state">В отчёте</span></label>
+          </div>
+          <div class="reports-editor-form">
+            <div class="field"><label for="reportStudent">Ученик</label><select id="reportStudent"></select></div>
+            <div class="field"><label for="reportPeriod">Период данных</label><select id="reportPeriod"><option value="7">Последние 7 дней</option><option value="30" selected>Последние 30 дней</option><option value="45">Последние 45 дней</option><option value="custom">Свой период (до 45 дней)</option></select></div>
+            <div class="field full" id="customPeriodFields" style="display:none"><div class="form-grid"><div class="field"><label for="reportDateFrom">С</label><input type="date" id="reportDateFrom"></div><div class="field"><label for="reportDateTo">По</label><input type="date" id="reportDateTo"></div></div><div class="notice" id="reportHistoryHint" style="display:none;margin-top:10px;margin-bottom:0"></div></div>
+            <input type="hidden" id="reportPeriodName" value="">
+            <div class="field full"><label for="reportComment">Комментарий родителю</label><textarea id="reportComment" placeholder="Что получается, над чем работаем..."></textarea></div>
+          </div>
+          <div class="report-accordion" id="reportAccordion">
+            <section class="report-editor-section is-open" data-report-editor-section="topics">
+              <div class="report-editor-section-head">
+                <button class="report-section-toggle" type="button" aria-expanded="true" aria-controls="reportTopicsPanel"><span class="report-section-chevron" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="m7 4 6 6-6 6"></path></svg></span><span class="report-section-name">Пройденные темы</span><span class="report-section-count" data-report-count="topics">0 тем</span></button>
+                <div class="report-section-actions"><label class="report-include-toggle"><input type="checkbox" data-report-block="topics" checked><span class="report-toggle-icon" aria-hidden="true"></span><span class="report-toggle-state">В отчёте</span></label><button class="report-add-btn" id="addReportTopic" type="button" aria-label="Добавить тему">+</button></div>
+              </div>
+              <div class="report-editor-panel" id="reportTopicsPanel"><div class="builder-list" id="reportTopics"></div><p class="report-editor-empty" data-report-empty="topics"></p></div>
+            </section>
+            <section class="report-editor-section" data-report-editor-section="tests">
+              <div class="report-editor-section-head">
+                <button class="report-section-toggle" type="button" aria-expanded="false" aria-controls="reportTestsPanel"><span class="report-section-chevron" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="m7 4 6 6-6 6"></path></svg></span><span class="report-section-name">Проверочные работы</span><span class="report-section-count" data-report-count="tests">0 работ</span></button>
+                <div class="report-section-actions"><label class="report-include-toggle"><input type="checkbox" data-report-block="tests" checked><span class="report-toggle-icon" aria-hidden="true"></span><span class="report-toggle-state">В отчёте</span></label><button class="report-add-btn" id="addReportTest" type="button" aria-label="Добавить проверочную работу">+</button></div>
+              </div>
+              <div class="report-editor-panel" id="reportTestsPanel" hidden><div class="builder-list" id="reportTests"></div><p class="report-editor-empty" data-report-empty="tests"></p></div>
+            </section>
+            <section class="report-editor-section" data-report-editor-section="hws">
+              <div class="report-editor-section-head">
+                <button class="report-section-toggle" type="button" aria-expanded="false" aria-controls="reportHwsPanel"><span class="report-section-chevron" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="m7 4 6 6-6 6"></path></svg></span><span class="report-section-name">Домашние задания</span><span class="report-section-count" data-report-count="hws">0 записей</span></button>
+                <div class="report-section-actions"><label class="report-include-toggle"><input type="checkbox" data-report-block="hws" checked><span class="report-toggle-icon" aria-hidden="true"></span><span class="report-toggle-state">В отчёте</span></label><button class="report-add-btn" id="addReportHw" type="button" aria-label="Добавить домашнее задание">+</button></div>
+              </div>
+              <div class="report-editor-panel" id="reportHwsPanel" hidden><div class="builder-list" id="reportHws"></div><p class="report-editor-empty" data-report-empty="hws"></p></div>
+            </section>
+            <section class="report-editor-section" id="reportNextPackageBuilder" data-report-editor-section="nextPackage" style="display:none">
+              <div class="report-editor-section-head">
+                <button class="report-section-toggle" type="button" aria-expanded="false" aria-controls="reportNextPackagePanel"><span class="report-section-chevron" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="m7 4 6 6-6 6"></path></svg></span><span class="report-section-name">Информация на следующий месяц</span></button>
+                <div class="report-section-actions"><label class="report-include-toggle" id="nextPackageBlockChoice"><input type="checkbox" data-report-block="nextPackage" checked><span class="report-toggle-icon" aria-hidden="true"></span><span class="report-toggle-state">В отчёте</span></label></div>
+              </div>
+              <div class="report-editor-panel report-next-package-panel" id="reportNextPackagePanel" hidden><label class="report-next-package-label" for="reportNextPackagePreview">Текст для родителя</label><textarea id="reportNextPackagePreview" rows="5" placeholder="Добавьте информацию о плане и стоимости на следующий месяц"></textarea></div>
+            </section>
+          </div>
         </div>
-        <div><div class="report-paper" id="reportCard"><div class="paper-head"><h2>Итоговый отчёт</h2><div class="paper-pills" id="paperPills"><span class="paper-pill">Выберите ученика</span></div></div><div class="paper-body"><div class="paper-section" data-report-section="general"><h3>Общая информация</h3><div id="paperComment" class="report-empty">—</div><div class="ring-box"><div class="ring-css" id="paperRing"><svg viewBox="0 0 128 128" aria-hidden="true"><circle class="ring-track" cx="64" cy="64" r="52"></circle><circle class="ring-value" id="paperRingValue" cx="64" cy="64" r="52"></circle></svg><b id="paperPct">0%</b></div></div></div><div class="paper-section" data-report-section="topics"><h3>Пройденные темы</h3><div id="paperTopics" class="report-empty">—</div></div><div class="paper-section" data-report-section="hws"><h3>Домашние задания</h3><div id="paperHws" class="report-empty">—</div></div><div class="paper-section" data-report-section="tests"><h3>Проверочные работы</h3><div id="paperTests" class="report-empty">—</div></div><div class="paper-section" data-report-section="nextPackage" id="paperNextPackageSection"><h3>Следующий месяц</h3><div id="paperNextPackage"></div></div></div></div><div class="report-tools" style="margin-top:12px"><button class="btn" id="copyReportText">Копировать текст</button><button class="btn" id="saveReportPng">↓ Скачать PNG</button></div></div>
+        <div class="report-preview-column">
+          <div class="report-paper" id="reportCard"><div class="paper-head"><h2>Итоговый отчёт</h2><div class="paper-pills" id="paperPills"><span class="paper-pill">Выберите ученика</span></div></div><div class="paper-body"><div class="paper-section" data-report-section="general"><h3>Общая информация</h3><div id="paperComment" class="report-empty">—</div><div class="ring-box"><div class="ring-css" id="paperRing"><svg viewBox="0 0 128 128" aria-hidden="true"><circle class="ring-track" cx="64" cy="64" r="52"></circle><circle class="ring-value" id="paperRingValue" cx="64" cy="64" r="52"></circle></svg><b id="paperPct">0%</b></div></div></div><div class="paper-section" data-report-section="topics"><h3>Пройденные темы</h3><div id="paperTopics" class="report-empty">—</div></div><div class="paper-section" data-report-section="hws"><h3>Домашние задания</h3><div id="paperHws" class="report-empty">—</div></div><div class="paper-section" data-report-section="tests"><h3>Проверочные работы</h3><div id="paperTests" class="report-empty">—</div></div><div class="paper-section" data-report-section="nextPackage" id="paperNextPackageSection"><h3>Следующий месяц</h3><div id="paperNextPackage"></div></div></div></div>
+          <div class="report-tools-spacer" aria-hidden="true"></div>
+          <div class="report-tools" role="group" aria-label="Действия с готовым отчётом"><button class="btn" id="copyReportText">Копировать текст</button><button class="btn" id="saveReportPng">↓ Скачать PNG</button></div>
+        </div>
       </div>
     </section>
     <section class="page" id="page-settings">
@@ -143,6 +185,8 @@
 <script type="module" src="assets/auth.js"></script>
 <script type="module" src="assets/app.js"></script>
 <script type="module" src="assets/payments-redesign.js"></script>
+<script type="module" src="assets/reports-redesign.js"></script>
+<script type="module" src="assets/custom-select.js"></script>
 <script src="assets/profile-modal.js"></script>
 </body>
 </html>
