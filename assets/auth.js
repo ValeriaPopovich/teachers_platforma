@@ -1,5 +1,6 @@
 import { createSupabaseCloudClient } from '../src/cloud/supabase-adapter.js';
 import { initialLoad, saveWithCas, SYNC_STATUS } from '../src/cloud/sync-protocol.js';
+import { createAuthFlow } from '../src/auth/auth-flow.js';
 
 (() => {
   const SUPABASE_URL = 'https://rbpxlzwycacrfupsthdn.supabase.co';
@@ -11,6 +12,7 @@ import { initialLoad, saveWithCas, SYNC_STATUS } from '../src/cloud/sync-protoco
     auth: { persistSession: true, detectSessionInUrl: true, autoRefreshToken: true },
   });
   const cloudClient = createSupabaseCloudClient(client);
+  const authFlow = createAuthFlow({ storage: sessionStorage, url: location.href });
   window.tutorCloud = {
     client,
     user: null,
@@ -52,7 +54,6 @@ import { initialLoad, saveWithCas, SYNC_STATUS } from '../src/cloud/sync-protoco
     pendingRaw = '',
     saveChain = Promise.resolve(true),
     openingUser = '',
-    recoveryMode = false,
     authMode = 'password';
   function escHtml(s) {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -452,7 +453,7 @@ import { initialLoad, saveWithCas, SYNC_STATUS } from '../src/cloud/sync-protoco
       return;
     }
     showMessage('Пароль сохранён. Открываем платформу…', false, setPwdMessage);
-    recoveryMode = false;
+    authFlow.completeRecovery();
     document.getElementById('authNewPassword').value = '';
     document.getElementById('authNewPassword2').value = '';
     const user = data?.user || (await client.auth.getUser()).data.user;
@@ -468,39 +469,33 @@ import { initialLoad, saveWithCas, SYNC_STATUS } from '../src/cloud/sync-protoco
     location.reload();
   }
   document.getElementById('authSetPasswordCancel').addEventListener('click', async () => {
-    recoveryMode = false;
+    authFlow.completeRecovery();
     await signOutSafely();
   });
   document.getElementById('authOtherAccount').addEventListener('click', signOutSafely);
   document.getElementById('logoutBtn').addEventListener('click', signOutSafely);
   client.auth.onAuthStateChange((event, session) => {
+    authFlow.handleEvent(event);
     if (event === 'PASSWORD_RECOVERY') {
-      recoveryMode = true;
       showView('setpwd');
       return;
     }
     if (event === 'SIGNED_OUT') {
-      recoveryMode = false;
       resetCloudRuntime();
       showView('login');
       return;
     }
+    if (event === 'INITIAL_SESSION' && !session?.user) {
+      showView('login');
+      return;
+    }
     if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
-      if (recoveryMode) {
+      if (authFlow.isRecovery()) {
         showView('setpwd');
         return;
       }
       if (session.user.user_metadata?.password_set) openAccount(session.user);
       else showView('setpwd');
     }
-  });
-  client.auth.getSession().then(({ data }) => {
-    if (!data.session?.user) {
-      showView('login');
-      return;
-    }
-    if (recoveryMode) return;
-    if (data.session.user.user_metadata?.password_set) openAccount(data.session.user);
-    else showView('setpwd');
   });
 })();
