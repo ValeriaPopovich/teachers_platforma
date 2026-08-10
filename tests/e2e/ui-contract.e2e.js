@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test';
 import { blankData, boot, go, persistedData, student } from './helpers.js';
 
-const FIXED_NOW = new Date('2026-08-10T13:00:00+03:00');
+// Keep the same wall-clock time in every environment. The fixture dates are local
+// datetime values, so an explicit offset would shift their relation to "now" in CI.
+const FIXED_NOW = new Date(2026, 7, 10, 13, 0, 0);
 
 async function freezeTime(page) {
   await page.clock.setFixedTime(FIXED_NOW);
