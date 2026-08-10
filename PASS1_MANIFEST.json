@@ -1,0 +1,244 @@
+{
+  "repository": "ValeriaPopovich/teachers_platforma",
+  "base_sha": "53244eb18790bec4cb553c81ef297349854d6cd4",
+  "apply_mode": "overlay",
+  "pass": 1,
+  "completed_stages": [
+    "store-single-source-of-truth",
+    "shared-ui",
+    "bootstrap",
+    "students-module",
+    "schedule-module",
+    "payments-module"
+  ],
+  "next_pass": [
+    "reports-module",
+    "settings-module",
+    "dashboard-extraction",
+    "compatibility-removal",
+    "css-cleanup",
+    "cleanup-docs"
+  ],
+  "files": [
+    {
+      "path": ".refactor-base",
+      "sha256": "c9d691a9634f5a91aaab941445b72f5ce3ebfa0bc04d7ae8ec3a9c0fce085900",
+      "bytes": 41
+    },
+    {
+      "path": "REFACTOR_FLOW.md",
+      "sha256": "3f395ff2fbce872b7bf931b210c90bf46a5b24c6c595a2bfc4d8787aee15a038",
+      "bytes": 9711
+    },
+    {
+      "path": "assets/app.js",
+      "sha256": "85a727d24b270d5bba7d095b7e2aac67db65956839939ae8c8def59616a5a573",
+      "bytes": 129
+    },
+    {
+      "path": "docs/REFACTORING_SPEC_V5_LEAN.md",
+      "sha256": "cbd88f1d11e43860d3348a4d2074cf75940abb5b678868402149315e5f892ccd",
+      "bytes": 26918
+    },
+    {
+      "path": "package.json",
+      "sha256": "389efcb7312b177a107794728a2e2e1a41ac95fccc5389dcb2fa66e629b88545",
+      "bytes": 664
+    },
+    {
+      "path": "src/app/bootstrap.js",
+      "sha256": "589411fdbd07554abf9e417fa9a1b6f23cec0f8ed5fddff7799d722c2db78484",
+      "bytes": 23027
+    },
+    {
+      "path": "src/auth/auth-flow.js",
+      "sha256": "0aa3c0b4fb09dce998b173504de925c9e4965aee317687e486324792834fb61b",
+      "bytes": 1001
+    },
+    {
+      "path": "src/cloud/supabase-adapter.js",
+      "sha256": "223e8d6dd38e0d97bedd7acabe09fc6777012ea989cf48c7134521808bbec23d",
+      "bytes": 740
+    },
+    {
+      "path": "src/cloud/sync-protocol.js",
+      "sha256": "b3b2609876063cec96bbc4bf51534c50c81915a225e73814373fa3ed75d3f7aa",
+      "bytes": 1323
+    },
+    {
+      "path": "src/domain/analytics.js",
+      "sha256": "4bae999a1b2534743d6112d1a6c9d4149da674e7aafe923111524b63f7ba4c3d",
+      "bytes": 2122
+    },
+    {
+      "path": "src/domain/backup.js",
+      "sha256": "f297ba3509dd3f90ab302237dea33564ae998c4280ee97f7f8590868c558fbc9",
+      "bytes": 6062
+    },
+    {
+      "path": "src/domain/finances.js",
+      "sha256": "0b8c3bf7cfac48bb67d47af83a79fb509f8562cb3a245532cdfa01bc55dccdcb",
+      "bytes": 60
+    },
+    {
+      "path": "src/domain/schedule.js",
+      "sha256": "024d2091299c7fc51818c99c08a085086f009dbb50c4e47582e51d5570c84ab2",
+      "bytes": 56
+    },
+    {
+      "path": "src/modules/payments/finances.js",
+      "sha256": "d75f5da48436a70edcc0cf31ddd0d5aa1bb7837cbbf0c310cd9b6af74320735b",
+      "bytes": 2074
+    },
+    {
+      "path": "src/modules/payments/payment-form.view.js",
+      "sha256": "f0377f7b9c5406230e09a36d47140ddffcd7cd3d10fef47966729bc177b2a955",
+      "bytes": 2442
+    },
+    {
+      "path": "src/modules/payments/payments.css",
+      "sha256": "db05d69fa8502cca82604694dcdde5a98b273a4e8ec4fd30e5a8afe7a865ab5c",
+      "bytes": 104
+    },
+    {
+      "path": "src/modules/payments/payments.selectors.js",
+      "sha256": "32fc75a76a79dd606277a91645acc7edca853b17baa4698b77941bba2d3c6fe1",
+      "bytes": 5203
+    },
+    {
+      "path": "src/modules/payments/payments.service.js",
+      "sha256": "7cfae8183168ada792649b1068a2ce90ff67bf4b46f4e003fbaf439544b5dcd8",
+      "bytes": 1855
+    },
+    {
+      "path": "src/modules/payments/payments.view.js",
+      "sha256": "68655f0ad3880c2c784661dc6e36e333820c8ca476f68866eab1c2f577557400",
+      "bytes": 7151
+    },
+    {
+      "path": "src/modules/schedule/lesson-form.view.js",
+      "sha256": "815055afc87fbd47118e172996cbf5605de4bc95b576a6af62f8b73580048dbf",
+      "bytes": 10031
+    },
+    {
+      "path": "src/modules/schedule/schedule.css",
+      "sha256": "6b6866fc1084d964e1e34cd4c3ca827b64510ce3ee7e5664b73d2da7f1f53431",
+      "bytes": 92
+    },
+    {
+      "path": "src/modules/schedule/schedule.domain.js",
+      "sha256": "712a2ab103f6c8d5b4584e527c1e0e1c97196251244adf0ea115bb97266de745",
+      "bytes": 5029
+    },
+    {
+      "path": "src/modules/schedule/schedule.selectors.js",
+      "sha256": "8d30905121c544c89f9cad0d25deb50847989d71884ceb5d56315c62426aa625",
+      "bytes": 4238
+    },
+    {
+      "path": "src/modules/schedule/schedule.service.js",
+      "sha256": "34f2df3ab64f7220edd1799d5906d3d43cc3375d3e2d2d36d26641433a2f59cd",
+      "bytes": 8725
+    },
+    {
+      "path": "src/modules/schedule/schedule.view.js",
+      "sha256": "af93743d77d0115c0fed4dd1fe489ae37cc814e3557bd9ff97994e6297985693",
+      "bytes": 4477
+    },
+    {
+      "path": "src/modules/students/group-form.view.js",
+      "sha256": "88a4a9a115446687e58d62766285f4a26519e61cc0fd228499ccb80d627e7420",
+      "bytes": 3759
+    },
+    {
+      "path": "src/modules/students/profile.view.js",
+      "sha256": "b711eafd0b887afba33a07fb8005c0f686a30ed9e8b954446e540bf1ed266e5d",
+      "bytes": 11429
+    },
+    {
+      "path": "src/modules/students/student-form.view.js",
+      "sha256": "a37acbf246e2a45c3d95cbf7ffc811fc9a13c509efcae756c8ad72e7c76b2503",
+      "bytes": 10354
+    },
+    {
+      "path": "src/modules/students/students.css",
+      "sha256": "4f843094d1a2545b3166e66339f19f98ad2884aa71013a5201bcefb54aae1f56",
+      "bytes": 109
+    },
+    {
+      "path": "src/modules/students/students.selectors.js",
+      "sha256": "76e7ea7fea69c767c2c6b91581451b221625357a61e111000b9c4837a89b2c6f",
+      "bytes": 1798
+    },
+    {
+      "path": "src/modules/students/students.service.js",
+      "sha256": "b4f2c5e736cd54a62a19a2fc6f3144c59bd4a2f8910da7542a078c074c9a6591",
+      "bytes": 7623
+    },
+    {
+      "path": "src/modules/students/students.view.js",
+      "sha256": "3731c173df8ca9039d7008dc334fc04aef40d93703e20520ef308814d90c1537",
+      "bytes": 7676
+    },
+    {
+      "path": "src/shared/dialog.js",
+      "sha256": "f0da19aaead63026b715d7c9e941035a8e913322fc7a0176039157162511c393",
+      "bytes": 2098
+    },
+    {
+      "path": "src/shared/dom.js",
+      "sha256": "12b183583e81ab40696702f1828df663d410b75715e28c50a929876fe5f33861",
+      "bytes": 557
+    },
+    {
+      "path": "src/shared/format.js",
+      "sha256": "3d1c11a5967a9000f12e4595b8f25262fe047adccee12fa8617040951ea45d7e",
+      "bytes": 1331
+    },
+    {
+      "path": "src/shared/modal.js",
+      "sha256": "b6c947e6e9c826c8fbb8f32d74882901a010e898405694b86102ace8baff188f",
+      "bytes": 2939
+    },
+    {
+      "path": "src/shared/toast.js",
+      "sha256": "08e8a3793c02b918abf8eed0f1b74838831e5fd0f45236976391f41bff76d308",
+      "bytes": 347
+    },
+    {
+      "path": "src/state/maintenance.js",
+      "sha256": "91142947c820292e6ddc17789e4b7420b9d7d2c9557afe4c36cd2a89acfbfb9b",
+      "bytes": 4880
+    },
+    {
+      "path": "src/state/migrations.js",
+      "sha256": "4febdf5d6cef48905c4cc82e4811245c0cd9b89d219630ceb7656d8e36dbab9a",
+      "bytes": 1076
+    },
+    {
+      "path": "src/state/persistence.js",
+      "sha256": "b8418f27073de75078e6a6b9da20c5ea9e7db9eecad6abf2d7dc589eb4cb91da",
+      "bytes": 1684
+    },
+    {
+      "path": "src/state/pipeline.js",
+      "sha256": "e05c54d3496e9e1ba8aea1a134654468a5d0fd60e7d5e17da772347a022cc1ad",
+      "bytes": 1546
+    },
+    {
+      "path": "src/state/schema.js",
+      "sha256": "0ffe7659adbf5ef938fa36198212d1da39171ee1047d6b1c2e411b54893b9055",
+      "bytes": 781
+    },
+    {
+      "path": "src/state/store.js",
+      "sha256": "91bcf0bc092593d990b793fb5a89a4dbbcfd3817436e2008c70837bb995e9b70",
+      "bytes": 1192
+    },
+    {
+      "path": "src/state/validate.js",
+      "sha256": "4b53949f035641edc4bf7a5299132b18193c599b68a7a4be6d6d2e6a02f681c3",
+      "bytes": 2793
+    }
+  ]
+}
