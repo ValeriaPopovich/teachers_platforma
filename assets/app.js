@@ -11,7 +11,7 @@ import { periodAnalytics as calculatePeriodAnalytics } from '../src/domain/analy
 import { finances as calculateFinances } from '../src/domain/finances.js';
 import {
   calendarViewRange,
-  countMonthlyRecurringLessons,
+  countMonthlyRecurringLessonsFrom,
   existingLessonOwnerPatch,
   extendAllSchedules as extendSchedules,
   generateSchedule as generateRecurringSchedule,
@@ -1070,11 +1070,11 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     $('#profileBody').innerHTML =
       `<div class="profile-summary"><div class="avatar">${esc(initials(s.name))}</div><div><h2 style="margin:0">${esc(s.name)}</h2><div class="sub">${esc(s.grade || 'Класс не указан')}</div>${lessonUrl ? `<a class="btn profile-lesson-link" href="${esc(lessonUrl)}" target="_blank" rel="noopener">Открыть занятие ↗</a>` : ''}</div></div><div class="profile-contact-grid">${s.contact ? `<div><span>Контакт ученика</span><b>${esc(s.contact)}</b></div>` : ''}${s.parentName ? `<div><span>Имя родителя</span><b>${esc(s.parentName)}</b></div>` : ''}${s.parentContact ? `<div><span>Контакт родителя</span><b>${esc(s.parentContact)}</b></div>` : ''}<div><span>Условия занятий</span><b>${money(s.price)} · ${+s.duration || 60} мин · ${paymentFormat}</b></div></div><div class="student-metrics"><div><b>${m.attendance}%</b><small>Посещаемость</small></div><div><b>${m.homework == null ? '—' : String(m.homework).replace('.', ',') + '/5'}</b><small>Средняя оценка ДЗ</small></div><div><b>${tests}</b><small>Проверочных</small></div></div><div class="notice"><b>Следующее занятие:</b> ${esc(nextDate)}<br><b>Регулярное расписание:</b> ${esc(scheduleText(s.scheduleSlots))}<br><b>Пометка на следующий урок:</b> ${esc(nextNote)}</div><div class="notice"><b>Цели:</b> ${esc(s.goals || 'не указаны')}<br><b>Заметки:</b> ${esc(s.notes || 'нет')}</div><h3>История занятий</h3>${
         ls.length
-          ? `<div style="overflow:auto"><table class="mini-table"><thead><tr><th>Дата</th><th>Статус</th><th>Темы / комментарий</th><th>ДЗ</th><th>Проверочная</th></tr></thead><tbody>${ls
+          ? `<div style="overflow:auto"><table class="mini-table"><thead><tr><th>Дата</th><th>Статус</th><th>Темы / комментарий</th><th>ДЗ</th><th>Проверочная</th><th aria-label="Действия"></th></tr></thead><tbody>${ls
               .slice(0, 20)
               .map((l) => {
                 const grade = homeworkGrade(l);
-                return `<tr><td>${fmtDate(l.date, true)}</td><td>${statusName(l.status)}</td><td>${esc(l.topics || '—')}<br><span class="sub">${esc(l.comment || '')}</span></td><td>${l.homework ? `${esc(l.homework)}${grade == null ? '' : `<br><b>Оценка ${grade}</b>`}` : grade == null ? '—' : 'Оценка ' + grade}</td><td>${l.testDone === 'yes' ? `${esc(l.testName || 'Работа')}: ${esc(l.testScore || '—')}/${esc(l.testMax || '—')}` : '—'}</td></tr>`;
+                return `<tr><td>${fmtDate(l.date, true)}</td><td>${statusName(l.status)}</td><td>${esc(l.topics || '—')}<br><span class="sub">${esc(l.comment || '')}</span></td><td>${l.homework ? `${esc(l.homework)}${grade == null ? '' : `<br><b>Оценка ${grade}</b>`}` : grade == null ? '—' : 'Оценка ' + grade}</td><td>${l.testDone === 'yes' ? `${esc(l.testName || 'Работа')}: ${esc(l.testScore || '—')}/${esc(l.testMax || '—')}` : '—'}</td><td><button class="icon-btn" type="button" data-delete-history-lesson="${l.id}" title="Удалить занятие" aria-label="Удалить занятие ${esc(fmtDate(l.date, true))}">×</button></td></tr>`;
               })
               .join('')}</tbody></table></div>`
           : '<div class="empty">Занятий пока нет</div>'
@@ -1096,7 +1096,9 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       input = f.elements.packageSize,
       now = new Date(),
       slots = getSlots('#studentScheduleSlots'),
-      count = countMonthlyRecurringLessons(slots, now);
+      current = f.elements.id.value ? student(f.elements.id.value) : null,
+      start = Math.max(+current?.createdAt || 0, +current?.billingSince || 0, current ? 0 : Date.now()),
+      count = countMonthlyRecurringLessonsFrom(slots, now, start);
     input.disabled = !on;
     if (!on) return;
     input.value = count;
@@ -1911,14 +1913,20 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     o.price = +o.price || 0;
     o.duration = +o.duration || 60;
     o.scheduleSlots = getSlots('#studentScheduleSlots');
-    o.packageSize = o.payType === 'package' ? countMonthlyRecurringLessons(o.scheduleSlots) : 0;
+    const before = o.id ? student(o.id) : null,
+      formatChanged = !!before && before.payType !== o.payType,
+      startedAt = before && !formatChanged
+        ? Math.max(+before.createdAt || 0, +before.billingSince || 0)
+        : Date.now();
+    o.packageSize =
+      o.payType === 'package'
+        ? countMonthlyRecurringLessonsFrom(o.scheduleSlots, new Date(), startedAt)
+        : 0;
     const own = ownSlotConflict(o.scheduleSlots, o.duration),
       conflicts = recurringConflicts(o.scheduleSlots, o.duration, 'student', o.id),
       warnings = [];
     if (own) warnings.push(`занятия ${own} пересекаются между собой`);
     if (conflicts.length) warnings.push(`время пересекается с: ${conflicts.join(', ')}`);
-    const before = o.id ? student(o.id) : null,
-      formatChanged = !!before && before.payType !== o.payType;
     if (formatChanged) {
       const proceed = await ask(
         'Старые занятия и платежи останутся в истории, но новый баланс начнёт считаться с момента смены формата.',
@@ -1934,7 +1942,8 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       data.students[i] = { ...data.students[i], ...o };
     } else {
       o.id = uid();
-      o.createdAt = Date.now();
+      o.createdAt = startedAt;
+      o.billingSince = startedAt;
       data.students.push(o);
     }
     generateSchedule('student', o.id, o.scheduleSlots);
@@ -2845,12 +2854,26 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     body.innerHTML = ls
       .map(
         (l) =>
-          `<tr><td>${fmtDate(l.date, true)}</td><td>${statusName(l.status)}</td><td>${esc(l.topics || '—')}<br><span class="sub">${esc(l.comment || '')}</span></td><td>${l.homework ? `${esc(l.homework)}${homeworkGrade(l) == null ? '' : `<br><b>Оценка ${homeworkGrade(l)}</b>`}` : homeworkGrade(l) == null ? '—' : `Оценка ${homeworkGrade(l)}`}</td><td>${l.testDone === 'yes' ? `${esc(l.testName || 'Работа')}: ${esc(l.testScore || '—')}/${esc(l.testMax || '—')}` : '—'}</td></tr>`,
+          `<tr><td>${fmtDate(l.date, true)}</td><td>${statusName(l.status)}</td><td>${esc(l.topics || '—')}<br><span class="sub">${esc(l.comment || '')}</span></td><td>${l.homework ? `${esc(l.homework)}${homeworkGrade(l) == null ? '' : `<br><b>Оценка ${homeworkGrade(l)}</b>`}` : homeworkGrade(l) == null ? '—' : `Оценка ${homeworkGrade(l)}`}</td><td>${l.testDone === 'yes' ? `${esc(l.testName || 'Работа')}: ${esc(l.testScore || '—')}/${esc(l.testMax || '—')}` : '—'}</td><td><button class="icon-btn" type="button" data-delete-history-lesson="${l.id}" title="Удалить занятие" aria-label="Удалить занятие ${esc(fmtDate(l.date, true))}">×</button></td></tr>`,
       )
       .join('');
   }
   $('#page-students').addEventListener('click', (e) => {
     if (e.target.closest('[data-student]')) setTimeout(refreshFullStudentHistory);
+  });
+  $('#profileBody').addEventListener('click', async (e) => {
+    const id = e.target.closest('[data-delete-history-lesson]')?.dataset.deleteHistoryLesson,
+      lesson = data.lessons.find((item) => item.id === id);
+    if (!lesson) return;
+    const detail = `${fmtDate(lesson.date, true)}. Начисления и показатели ученика будут пересчитаны.`;
+    if (!(await ask(detail, 'Удалить занятие из истории?', 'Удалить'))) return;
+    const removed = lesson.groupId ? groupLessonRecords(lesson) : [lesson],
+      removedIds = new Set(removed.map((item) => item.id));
+    data.lessons = data.lessons.filter((item) => !removedIds.has(item.id));
+    data.payments = data.payments.filter((payment) => !removedIds.has(payment.lessonId));
+    save();
+    showProfile(activeStudent);
+    toast('Занятие удалено из истории');
   });
   $('#deleteStudent').onclick = () => removeStudent(activeStudent);
   $('#deleteGroup').onclick = () => removeGroup($('#groupForm [name=id]').value);

@@ -90,6 +90,12 @@ export function countMonthlyRecurringLessons(slots = [], date = new Date()) {
   return monthlyRecurringDates(slots, date).length;
 }
 
+/** Число регулярных занятий месяца, которые начинаются не раньше указанного момента. */
+export function countMonthlyRecurringLessonsFrom(slots = [], date = new Date(), fromMs = 0) {
+  return monthlyRecurringDates(slots, date).filter((lessonDate) => lessonDate.getTime() >= +fromMs)
+    .length;
+}
+
 export function isProtectedAutomaticLesson(lesson) {
   return (
     lesson.manualEdited ||

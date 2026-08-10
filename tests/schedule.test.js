@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   calendarViewRange,
   countMonthlyRecurringLessons,
+  countMonthlyRecurringLessonsFrom,
   deduplicateLessons,
   existingLessonOwnerPatch,
   extendAllSchedules,
@@ -40,6 +41,19 @@ describe('monthlyRecurringDates', () => {
       [22, 16, 30],
       [29, 16, 30],
     ]);
+  });
+});
+
+describe('countMonthlyRecurringLessonsFrom', () => {
+  it('считает первый абонемент только с момента добавления ученика', () => {
+    const slots = [{ day: 1, time: '16:00' }];
+    expect(
+      countMonthlyRecurringLessonsFrom(
+        slots,
+        new Date(2026, 7, 1),
+        new Date(2026, 7, 20, 12, 0).getTime(),
+      ),
+    ).toBe(2);
   });
 });
 
