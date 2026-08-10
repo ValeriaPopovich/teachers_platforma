@@ -116,6 +116,59 @@ describe('periodAnalytics', () => {
     expect(result.byStudent.s1.charged).toBe(7200);
   });
 
+  it('добавляет разовое занятие из абонемента к стоимости месяца', () => {
+    const result = periodAnalytics(
+      {
+        students: [
+          { id: 's1', payType: 'package', price: 1800, scheduleSlots: [{ day: 1, time: '16:00' }] },
+        ],
+        payments: [],
+        lessons: [
+          {
+            id: 'oneoff',
+            studentId: 's1',
+            date: '2026-08-20T17:00',
+            status: 'done',
+            lessonKind: 'oneoff',
+            payment: 'package',
+            amount: 1800,
+          },
+        ],
+        settings: {},
+      },
+      from,
+      to,
+    );
+    expect(result.charged).toBe(10800);
+    expect(result.byStudent.s1.charged).toBe(10800);
+  });
+
+  it('не добавляет отменённое разовое занятие к стоимости абонемента', () => {
+    const result = periodAnalytics(
+      {
+        students: [
+          { id: 's1', payType: 'package', price: 1800, scheduleSlots: [{ day: 1, time: '16:00' }] },
+        ],
+        payments: [],
+        lessons: [
+          {
+            id: 'cancelled-oneoff',
+            studentId: 's1',
+            date: '2026-08-20T17:00',
+            status: 'cancelled',
+            lessonKind: 'oneoff',
+            payment: 'package',
+            amount: 1800,
+          },
+        ],
+        settings: {},
+      },
+      from,
+      to,
+    );
+    expect(result.charged).toBe(9000);
+  });
+
   it('включает запланированные разовые занятия в начисления месяца', () => {
     const result = periodAnalytics(
       {

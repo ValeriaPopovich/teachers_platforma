@@ -2603,24 +2603,29 @@ body {
 }
 .day .event--planned {
   border-left-color: var(--brand2);
+  background: rgba(239, 79, 145, 0.1);
   background: color-mix(in srgb, var(--brand2) 10%, var(--panel));
 }
 .day .event--unconfirmed {
   border-left-color: var(--warn);
+  background: rgba(231, 154, 37, 0.12);
   background: color-mix(in srgb, var(--warn) 12%, var(--panel));
 }
 .day .event--done {
   border-left-color: var(--ok);
+  background: rgba(44, 166, 111, 0.1);
   background: color-mix(in srgb, var(--ok) 10%, var(--panel));
 }
 .day .event--missed,
 .day .event--paid_missed {
   border-left-color: var(--warn);
+  background: rgba(231, 154, 37, 0.1);
   background: color-mix(in srgb, var(--warn) 10%, var(--panel));
 }
 .day .event--moved {
   border-left-color: var(--warn);
   border-left-style: dashed;
+  background: rgba(231, 154, 37, 0.08);
   background: color-mix(in srgb, var(--warn) 8%, var(--panel));
 }
 .day .event--cancelled {
@@ -3329,6 +3334,10 @@ body {
 
 /* На телефоне неделя и месяц — вертикальные списки читаемых карточек. */
 @media (max-width: 820px) {
+  #page-reports .report-tools.is-fixed {
+    bottom: calc(84px + env(safe-area-inset-bottom)) !important;
+    z-index: 19;
+  }
   #page-schedule .calendar-card {
     overflow: visible;
     padding: 0;

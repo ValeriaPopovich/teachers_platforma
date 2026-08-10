@@ -645,11 +645,27 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
   function packagePlan(s, date = new Date()) {
     const start = Math.max(+s.createdAt || 0, +s.billingSince || 0),
       exclusions = new Set(data.settings.scheduleExclusions || []),
-      dates = monthlyRecurringDates(s.scheduleSlots || [], date).filter(
+      regularDates = monthlyRecurringDates(s.scheduleSlots || [], date).filter(
         (lessonDate) =>
           lessonDate.getTime() >= start &&
           !exclusions.has(recurringScheduleKey('student', s.id, lessonDate)),
       ),
+      oneoffDates = data.lessons
+        .filter((lesson) => {
+          const lessonDate = new Date(lesson.date);
+          return (
+            lesson.studentId === s.id &&
+            !lesson.groupId &&
+            lesson.lessonKind === 'oneoff' &&
+            lesson.payment === 'package' &&
+            ['planned', 'unconfirmed', 'done', 'paid_missed'].includes(lesson.status) &&
+            lessonDate.getTime() >= start &&
+            lessonDate.getFullYear() === date.getFullYear() &&
+            lessonDate.getMonth() === date.getMonth()
+          );
+        })
+        .map((lesson) => new Date(lesson.date)),
+      dates = [...regularDates, ...oneoffDates].sort((a, b) => a - b),
       lessons = dates.length;
     return { lessons, dates, cost: lessons * (+s.price || 0) };
   }
