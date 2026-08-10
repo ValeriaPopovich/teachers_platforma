@@ -1,4 +1,4 @@
-import { monthlyRecurringDates } from './schedule.js';
+import { monthlyRecurringDates, recurringScheduleKey } from './schedule.js';
 
 /** Аналитика оплат и начислений за выбранный период. */
 export function periodAnalytics(data, fromMs, toMs) {
@@ -20,8 +20,12 @@ export function periodAnalytics(data, fromMs, toMs) {
       .filter((student) => student.payType === 'package')
       .reduce((sum, student) => {
         const start = Math.max(+student.createdAt || 0, +student.billingSince || 0),
+          exclusions = new Set(data.settings?.scheduleExclusions || []),
           dates = monthlyRecurringDates(student.scheduleSlots || [], new Date(fromMs)).filter(
-            (date) => inRange(date.getTime()) && date.getTime() >= start,
+            (date) =>
+              inRange(date.getTime()) &&
+              date.getTime() >= start &&
+              !exclusions.has(recurringScheduleKey('student', student.id, date)),
           );
         return sum + dates.length * (+student.price || 0);
       }, 0),
@@ -46,8 +50,12 @@ export function periodAnalytics(data, fromMs, toMs) {
   for (const student of data.students || []) {
     if (student.payType !== 'package') continue;
     const start = Math.max(+student.createdAt || 0, +student.billingSince || 0),
+      exclusions = new Set(data.settings?.scheduleExclusions || []),
       dates = monthlyRecurringDates(student.scheduleSlots || [], new Date(fromMs)).filter(
-        (date) => inRange(date.getTime()) && date.getTime() >= start,
+        (date) =>
+          inRange(date.getTime()) &&
+          date.getTime() >= start &&
+          !exclusions.has(recurringScheduleKey('student', student.id, date)),
       );
     byStudent[student.id] ||= { paid: 0, charged: 0, lessons: 0 };
     byStudent[student.id].charged += dates.length * (+student.price || 0);

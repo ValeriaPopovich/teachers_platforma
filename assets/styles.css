@@ -1201,11 +1201,14 @@ body {
   min-width: 735px;
 }
 #page-schedule .day.past-day {
-  background: color-mix(in srgb, var(--panel2) 72%, var(--bg));
-  opacity: 0.58;
+  background: color-mix(in srgb, var(--panel2) 78%, var(--bg));
+  opacity: 0.7;
 }
 #page-schedule .day.past-day .event {
-  filter: grayscale(0.35);
+  filter: grayscale(0.2);
+}
+#page-schedule .day:not(.past-day):not(.outside-month) {
+  background: var(--panel);
 }
 .students-empty {
   grid-column: 1 / -1;
@@ -1432,6 +1435,31 @@ body {
     display: block;
     margin-bottom: 6px;
     font-size: 11px;
+  }
+}
+
+/* На телефоне месяц читается как вертикальный список дней, без широкой сетки. */
+@media (max-width: 820px) {
+  #page-schedule #calendar[data-calendar-view='month'] {
+    display: block !important;
+    min-width: 0 !important;
+  }
+  #page-schedule #calendar[data-calendar-view='month'] .calendar-weekday,
+  #page-schedule #calendar[data-calendar-view='month'] .day.outside-month {
+    display: none !important;
+  }
+  #page-schedule #calendar[data-calendar-view='month'] .day {
+    display: block;
+    min-height: 64px;
+    margin-bottom: 9px;
+    padding: 12px;
+    border-radius: 14px;
+  }
+  #page-schedule #calendar[data-calendar-view='month'] .day .date {
+    font-size: 13px;
+  }
+  #page-schedule #calendar[data-calendar-view='month'] .mobile-weekday {
+    display: inline !important;
   }
 }
 @media (max-width: 380px) {
@@ -2003,6 +2031,10 @@ body {
 #page-schedule #calendar[data-calendar-view='day'] {
   grid-template-columns: minmax(0, 1fr) !important;
   min-width: 0 !important;
+}
+#page-schedule #calendar[data-calendar-view='month'] .day.outside-month {
+  opacity: 0.5;
+  background: var(--panel2);
 }
 .profile-lesson-link {
   display: inline-flex;

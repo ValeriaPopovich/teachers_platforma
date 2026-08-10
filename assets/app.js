@@ -16,6 +16,7 @@ import {
   extendAllSchedules as extendSchedules,
   generateSchedule as generateRecurringSchedule,
   monthlyRecurringDates,
+  recurringScheduleKey,
 } from '../src/domain/schedule.js';
 import {
   normalizePastLessons as completePastLessons,
@@ -49,7 +50,11 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
   let data = structuredClone(store.getState()),
     activeStudent = null,
     lessonInitial = '',
-    calendarView = 'week',
+    calendarView = ['day', 'week', 'month'].includes(
+      sessionStorage.getItem('tutorCabinet_calendarView'),
+    )
+      ? sessionStorage.getItem('tutorCabinet_calendarView')
+      : 'week',
     paymentsExpanded = { attention: false, all: false, packages: false, history: false },
     pendingImport = null;
   if (!loaded.ok)
@@ -323,6 +328,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
   function go(page) {
     $$('.page').forEach((x) => x.classList.toggle('active', x.id === 'page-' + page));
     $$('#nav button').forEach((x) => x.classList.toggle('active', x.dataset.page === page));
+    sessionStorage.setItem('tutorCabinet_activePage', page);
     renderAll();
     scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -640,8 +646,11 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
   }
   function packagePlan(s, date = new Date()) {
     const start = Math.max(+s.createdAt || 0, +s.billingSince || 0),
+      exclusions = new Set(data.settings.scheduleExclusions || []),
       dates = monthlyRecurringDates(s.scheduleSlots || [], date).filter(
-        (lessonDate) => lessonDate.getTime() >= start,
+        (lessonDate) =>
+          lessonDate.getTime() >= start &&
+          !exclusions.has(recurringScheduleKey('student', s.id, lessonDate)),
       ),
       lessons = dates.length;
     return { lessons, dates, cost: lessons * (+s.price || 0) };
@@ -961,6 +970,11 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
           ? [today.toLocaleDateString('ru-RU', { weekday: 'short' })]
           : ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
       heads = weekdayHeads.map((x) => `<div class="calendar-weekday">${x}</div>`).join('');
+    $$('#calendarViewSwitch .pill').forEach((button) => {
+      const active = button.dataset.calendarView === calendarView;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
     $('#calendar').dataset.calendarView = calendarView;
     $('#calendar').innerHTML =
       heads +
@@ -982,8 +996,9 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
             })),
           items = [...lessons, ...own].sort((a, b) => a.date.localeCompare(b.date)),
           weekday = d.toLocaleDateString('ru-RU', { weekday: 'long' }),
-          past = d < today;
-        return `<div class="day ${ds === localDay(today) ? 'today' : ''} ${past ? 'past-day' : ''} ${items.length ? 'has-events' : ''}"><div class="date"><span class="mobile-weekday">${weekday},&nbsp;</span>${d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}</div>${items.map((x) => x.html).join('')}</div>`;
+          past = d < today,
+          outsideMonth = calendarView === 'month' && d.getMonth() !== today.getMonth();
+        return `<div class="day ${ds === localDay(today) ? 'today' : ''} ${past ? 'past-day' : ''} ${outsideMonth ? 'outside-month' : ''} ${items.length ? 'has-events' : ''}"><div class="date"><span class="mobile-weekday">${weekday},&nbsp;</span>${d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}</div>${items.map((x) => x.html).join('')}</div>`;
       }).join('');
     requestAnimationFrame(() => {
       const card = $('#calendar')?.closest('.calendar-card');
@@ -2475,6 +2490,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     const view = e.target.closest('#calendarViewSwitch [data-calendar-view]')?.dataset.calendarView;
     if (view) {
       calendarView = view;
+      sessionStorage.setItem('tutorCabinet_calendarView', view);
       $$('#calendarViewSwitch .pill').forEach((button) =>
         button.classList.toggle('active', button.dataset.calendarView === view),
       );
@@ -2890,6 +2906,15 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     closeAll();
     editLesson(id);
   }
+  function rememberRecurringExclusion(lesson) {
+    if (!lesson || (!lesson.auto && lesson.lessonKind !== 'regular')) return;
+    const type = lesson.groupId ? 'group' : 'student',
+      ownerId = lesson.groupId || lesson.studentId,
+      key = recurringScheduleKey(type, ownerId, lesson.date);
+    data.settings.scheduleExclusions = [
+      ...new Set([...(data.settings.scheduleExclusions || []), key]),
+    ];
+  }
   $('#profileBody').addEventListener('click', async (e) => {
     const editId = e.target.closest('[data-edit-history-lesson]')?.dataset.editHistoryLesson;
     if (editId && !e.target.closest('[data-delete-history-lesson]')) {
@@ -2901,6 +2926,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     if (!lesson) return;
     const detail = `${fmtDate(lesson.date, true)}. Начисления и показатели ученика будут пересчитаны.`;
     if (!(await ask(detail, 'Удалить занятие из истории?', 'Удалить'))) return;
+    rememberRecurringExclusion(lesson);
     const removed = lesson.groupId ? groupLessonRecords(lesson) : [lesson],
       removedIds = new Set(removed.map((item) => item.id));
     data.lessons = data.lessons.filter((item) => !removedIds.has(item.id));
@@ -2929,6 +2955,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
         'Удалить',
       ))
     ) {
+      rememberRecurringExclusion(l);
       const removed = l.groupId ? groupLessonRecords(l) : [l],
         removedIds = removed.map((x) => x.id),
         removedIdSet = new Set(removedIds);
@@ -3352,7 +3379,10 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     input.min = localDay(reportMinDate);
     input.max = reportMax;
   }
-  renderAll();
+  const savedPage = sessionStorage.getItem('tutorCabinet_activePage'),
+    availablePages = new Set($$('#nav [data-page]').map((item) => item.dataset.page));
+  if (savedPage && availablePages.has(savedPage)) go(savedPage);
+  else renderAll();
   scheduleReminders();
   setInterval(updateClock, 30000);
   maybeRemindBackup();

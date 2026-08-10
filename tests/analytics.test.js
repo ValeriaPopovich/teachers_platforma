@@ -99,6 +99,23 @@ describe('periodAnalytics', () => {
     expect(result.charged).toBe(3600);
   });
 
+  it('не начисляет удалённое повторение регулярного занятия', () => {
+    const result = periodAnalytics(
+      {
+        students: [
+          { id: 's1', payType: 'package', price: 1800, scheduleSlots: [{ day: 1, time: '16:00' }] },
+        ],
+        payments: [],
+        lessons: [],
+        settings: { scheduleExclusions: ['student|s1|2026-08-03T16:00'] },
+      },
+      from,
+      to,
+    );
+    expect(result.charged).toBe(7200);
+    expect(result.byStudent.s1.charged).toBe(7200);
+  });
+
   it('включает запланированные разовые занятия в начисления месяца', () => {
     const result = periodAnalytics(
       {

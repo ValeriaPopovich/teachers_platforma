@@ -58,10 +58,18 @@ export function existingLessonOwnerPatch(lesson, { type, id }) {
 export function calendarViewRange(view, now = new Date()) {
   const start = new Date(now);
   start.setHours(0, 0, 0, 0);
-  if (view !== 'day') start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+  if (view === 'month') {
+    start.setDate(1);
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    end.setHours(0, 0, 0, 0);
+    end.setDate(end.getDate() + ((7 - end.getDay()) % 7));
+    return { start, days: Math.round((end - start) / 864e5) + 1 };
+  }
+  if (view === 'week') start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
   return {
     start,
-    days: view === 'day' ? 1 : view === 'month' ? 35 : 7,
+    days: view === 'day' ? 1 : 7,
   };
 }
 
@@ -116,6 +124,12 @@ function localDateTime(date) {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 }
 
+/** Устойчивый ключ исключения одного повторения из регулярного расписания. */
+export function recurringScheduleKey(type, id, date) {
+  const value = date instanceof Date ? date : new Date(date);
+  return `${type}|${id}|${localDateTime(value)}`;
+}
+
 /** Generate the next eight weeks of recurring lessons without DOM or storage access. */
 export function generateSchedule(data, { type, id, slots, replace = true, now = new Date(), uid }) {
   const next = structuredClone(data);
@@ -124,7 +138,8 @@ export function generateSchedule(data, { type, id, slots, replace = true, now = 
       ? next.groups.find((item) => item.id === id)
       : next.students.find((item) => item.id === id);
   const members = type === 'group' ? owner?.members || [] : [id];
-  const start = new Date(now);
+  const start = new Date(now),
+    exclusions = new Set(next.settings?.scheduleExclusions || []);
   start.setSeconds(0, 0);
 
   if (replace) {
@@ -161,6 +176,7 @@ export function generateSchedule(data, { type, id, slots, replace = true, now = 
       date.setHours(hours, minutes, 0, 0);
       if (date < start) continue;
       const iso = localDateTime(date);
+      if (exclusions.has(recurringScheduleKey(type, id, date))) continue;
       const seriesId = type === 'group' ? `grp-${id}-${iso}` : undefined;
       for (const studentId of members) {
         if (

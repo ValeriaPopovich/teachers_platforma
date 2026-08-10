@@ -187,6 +187,14 @@ export function mergeImported(data, src, uid) {
   next.settings.deletedGoals = [
     ...new Set([...(next.settings.deletedGoals || []), ...(src.settings?.deletedGoals || [])]),
   ];
+  const importedExclusions = (src.settings?.scheduleExclusions || []).map((key) => {
+    const [type, oldId, date] = String(key).split('|');
+    const id = type === 'group' ? groupMap.get(oldId) || oldId : studentMap.get(oldId) || oldId;
+    return `${type}|${id}|${date}`;
+  });
+  next.settings.scheduleExclusions = [
+    ...new Set([...(next.settings.scheduleExclusions || []), ...importedExclusions]),
+  ];
 
   for (const [oldId, list] of Object.entries(src.topicLog || {})) {
     const id = studentMap.get(oldId) || oldId;
