@@ -1,15 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { readSource } from './helpers/read-source.js';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-const repo = path.resolve(here, '..');
-const read = (file) => fs.readFileSync(path.join(repo, file), 'utf8');
-const html = read('index.html');
-const bootstrap = read('src/app/bootstrap.js');
-const modal = read('src/shared/modal.js');
-const auth = read('assets/auth.js');
+const html = readSource('index.html');
+const bootstrap = readSource('src/app/bootstrap.js');
+const modal = readSource('src/shared/modal.js');
+const auth = readSource('assets/auth.js');
 
 describe('accessibility — сохраняющие инварианты', () => {
   it('нет inline event handlers в HTML', () => {
@@ -29,7 +24,7 @@ describe('accessibility — сохраняющие инварианты', () => 
   });
 
   it('Escape закрывает открытую модалку через modal manager', () => {
-    expect(bootstrap).toMatch(/event\.key===['"]Escape['"]/);
+    expect(bootstrap).toMatch(/event\.key\s*===\s*['"]Escape['"]/);
     expect(bootstrap).toMatch(/modal\.requestClose\(\)/);
   });
 

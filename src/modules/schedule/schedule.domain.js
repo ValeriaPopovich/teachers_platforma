@@ -18,7 +18,10 @@ export function timeConflicts(a, b, durationMinutes) {
 
 export function existingLessonOwnerPatch(lesson, { type, id }) {
   if (!lesson || !id) return null;
-  if (lesson.groupId) return type === 'g' && id === lesson.groupId ? { groupId: lesson.groupId, seriesId: lesson.seriesId } : null;
+  if (lesson.groupId)
+    return type === 'g' && id === lesson.groupId
+      ? { groupId: lesson.groupId, seriesId: lesson.seriesId }
+      : null;
   return type === 's' ? { studentId: id } : null;
 }
 
@@ -36,19 +39,37 @@ export function monthlyRecurringDates(slots = [], date = new Date()) {
   const dates = [];
   for (let day = 1; day <= days; day += 1) {
     const weekday = new Date(year, month, day).getDay();
-    slots.filter((slot) => +slot.day === weekday).forEach((slot) => {
-      const [hours = 0, minutes = 0] = String(slot.time || '00:00').split(':').map(Number);
-      dates.push(new Date(year, month, day, hours, minutes));
-    });
+    slots
+      .filter((slot) => +slot.day === weekday)
+      .forEach((slot) => {
+        const [hours = 0, minutes = 0] = String(slot.time || '00:00')
+          .split(':')
+          .map(Number);
+        dates.push(new Date(year, month, day, hours, minutes));
+      });
   }
   return dates.sort((a, b) => a - b);
 }
 
-export const countMonthlyRecurringLessons = (slots = [], date = new Date()) => monthlyRecurringDates(slots, date).length;
-export const countMonthlyRecurringLessonsFrom = (slots = [], date = new Date(), fromMs = 0) => monthlyRecurringDates(slots, date).filter((lessonDate) => lessonDate.getTime() >= +fromMs).length;
+export const countMonthlyRecurringLessons = (slots = [], date = new Date()) =>
+  monthlyRecurringDates(slots, date).length;
+export const countMonthlyRecurringLessonsFrom = (slots = [], date = new Date(), fromMs = 0) =>
+  monthlyRecurringDates(slots, date).filter((lessonDate) => lessonDate.getTime() >= +fromMs).length;
 
 export function isProtectedAutomaticLesson(lesson) {
-  return lesson.manualEdited || lesson.status !== 'planned' || !!(lesson.prepNote || lesson.nextNote || lesson.topics || lesson.homework || lesson.comment || lesson.testDone === 'yes' || lesson.reportFilled);
+  return (
+    lesson.manualEdited ||
+    lesson.status !== 'planned' ||
+    !!(
+      lesson.prepNote ||
+      lesson.nextNote ||
+      lesson.topics ||
+      lesson.homework ||
+      lesson.comment ||
+      lesson.testDone === 'yes' ||
+      lesson.reportFilled
+    )
+  );
 }
 
 function localDateTime(date) {
@@ -57,14 +78,31 @@ function localDateTime(date) {
 
 export function generateSchedule(data, { type, id, slots, replace = true, now = new Date(), uid }) {
   const next = structuredClone(data);
-  const owner = type === 'group' ? next.groups.find((item) => item.id === id) : next.students.find((item) => item.id === id);
+  const owner =
+    type === 'group'
+      ? next.groups.find((item) => item.id === id)
+      : next.students.find((item) => item.id === id);
   const members = type === 'group' ? owner?.members || [] : [id];
   const start = new Date(now);
   start.setSeconds(0, 0);
   if (replace) {
-    const protectedSeries = new Set(next.lessons.filter((lesson) => lesson.groupId === id && lesson.auto && new Date(lesson.date) >= start && isProtectedAutomaticLesson(lesson)).map((lesson) => lesson.seriesId).filter(Boolean));
+    const protectedSeries = new Set(
+      next.lessons
+        .filter(
+          (lesson) =>
+            lesson.groupId === id &&
+            lesson.auto &&
+            new Date(lesson.date) >= start &&
+            isProtectedAutomaticLesson(lesson),
+        )
+        .map((lesson) => lesson.seriesId)
+        .filter(Boolean),
+    );
     next.lessons = next.lessons.filter((lesson) => {
-      const belongs = lesson.auto && new Date(lesson.date) >= start && (type === 'group' ? lesson.groupId === id : !lesson.groupId && lesson.studentId === id);
+      const belongs =
+        lesson.auto &&
+        new Date(lesson.date) >= start &&
+        (type === 'group' ? lesson.groupId === id : !lesson.groupId && lesson.studentId === id);
       if (!belongs) return true;
       if (type === 'group' && protectedSeries.has(lesson.seriesId)) return true;
       return isProtectedAutomaticLesson(lesson);
@@ -82,9 +120,30 @@ export function generateSchedule(data, { type, id, slots, replace = true, now = 
       const iso = localDateTime(date);
       const seriesId = type === 'group' ? `grp-${id}-${iso}` : undefined;
       for (const studentId of members) {
-        if (next.lessons.some((lesson) => (type === 'group' ? lesson.groupId === id : !lesson.groupId) && lesson.studentId === studentId && lesson.date === iso)) continue;
+        if (
+          next.lessons.some(
+            (lesson) =>
+              (type === 'group' ? lesson.groupId === id : !lesson.groupId) &&
+              lesson.studentId === studentId &&
+              lesson.date === iso,
+          )
+        )
+          continue;
         const student = next.students.find((item) => item.id === studentId);
-        next.lessons.push({ id: uid(), ...(seriesId ? { seriesId, groupId: id } : {}), studentId, date: iso, status: 'planned', payment: student?.payType === 'package' ? 'package' : 'unpaid', topics: '', amount: +student?.price || 0, homework: '', comment: '', auto: true, lessonKind: 'regular' });
+        next.lessons.push({
+          id: uid(),
+          ...(seriesId ? { seriesId, groupId: id } : {}),
+          studentId,
+          date: iso,
+          status: 'planned',
+          payment: student?.payType === 'package' ? 'package' : 'unpaid',
+          topics: '',
+          amount: +student?.price || 0,
+          homework: '',
+          comment: '',
+          auto: true,
+          lessonKind: 'regular',
+        });
       }
     }
   }
@@ -93,7 +152,23 @@ export function generateSchedule(data, { type, id, slots, replace = true, now = 
 
 export function extendAllSchedules(data, { now = new Date(), uid }) {
   let next = structuredClone(data);
-  for (const student of next.students) next = generateSchedule(next, { type: 'student', id: student.id, slots: student.scheduleSlots || [], replace: false, now, uid });
-  for (const group of next.groups) next = generateSchedule(next, { type: 'group', id: group.id, slots: group.scheduleSlots || [], replace: false, now, uid });
+  for (const student of next.students)
+    next = generateSchedule(next, {
+      type: 'student',
+      id: student.id,
+      slots: student.scheduleSlots || [],
+      replace: false,
+      now,
+      uid,
+    });
+  for (const group of next.groups)
+    next = generateSchedule(next, {
+      type: 'group',
+      id: group.id,
+      slots: group.scheduleSlots || [],
+      replace: false,
+      now,
+      uid,
+    });
   return next;
 }

@@ -13,7 +13,8 @@ export function createPaymentsService({ store, uid, now = () => Date.now() }) {
       createdAt: input.createdAt || now(),
       billingType: student.payType === 'package' ? 'package' : 'single',
     };
-    if (student.payType === 'package') payment.packageLessons = Math.max(1, +input.packageLessons || 0);
+    if (student.payType === 'package')
+      payment.packageLessons = Math.max(1, +input.packageLessons || 0);
     store.update(input.id ? 'payments:update' : 'payments:record', (draft) => {
       if (input.id) {
         const index = draft.payments.findIndex((item) => item.id === input.id);

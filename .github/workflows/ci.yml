@@ -16,8 +16,14 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm install
+      - name: Formatting
+        run: npm run format:check
       - name: Lint
         run: npm run lint
+      - name: Compiled styles
+        run: npm run styles:check
+      - name: Dependency architecture
+        run: npm run refactor:check
       - name: Stage 0 validation
         run: npm run validate:stage0
       - name: Unit, integration and architecture tests

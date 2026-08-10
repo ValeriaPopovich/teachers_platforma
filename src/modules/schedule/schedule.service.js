@@ -12,9 +12,19 @@ function syncLinkedPayment(draft, lesson, { paid, amount, uid, now }) {
       existing.date = String(lesson.date).slice(0, 10);
       existing.billingType = 'single';
     } else {
-      draft.payments.push({ id: uid(), studentId: lesson.studentId, amount: +amount || +lesson.amount || 0, date: String(lesson.date).slice(0, 10), createdAt: now(), billingType: 'single', lessonId: lesson.id, note: 'Оплата занятия' });
+      draft.payments.push({
+        id: uid(),
+        studentId: lesson.studentId,
+        amount: +amount || +lesson.amount || 0,
+        date: String(lesson.date).slice(0, 10),
+        createdAt: now(),
+        billingType: 'single',
+        lessonId: lesson.id,
+        note: 'Оплата занятия',
+      });
     }
-    for (const duplicate of linked.slice(1)) draft.payments = draft.payments.filter((payment) => payment.id !== duplicate.id);
+    for (const duplicate of linked.slice(1))
+      draft.payments = draft.payments.filter((payment) => payment.id !== duplicate.id);
   } else {
     if (lesson.payment === 'paid') lesson.payment = 'unpaid';
     draft.payments = draft.payments.filter((payment) => payment.lessonId !== lesson.id);
@@ -24,7 +34,12 @@ function syncLinkedPayment(draft, lesson, { paid, amount, uid, now }) {
 function applyPreviousHomeworkGrade(draft, studentId, currentDate, grade) {
   if (!grade) return;
   const previous = draft.lessons
-    .filter((lesson) => lesson.studentId === studentId && lesson.status === 'done' && new Date(lesson.date) < new Date(currentDate))
+    .filter(
+      (lesson) =>
+        lesson.studentId === studentId &&
+        lesson.status === 'done' &&
+        new Date(lesson.date) < new Date(currentDate),
+    )
     .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
   if (previous) previous.homeworkResult = +grade;
 }
@@ -32,7 +47,12 @@ function applyPreviousHomeworkGrade(draft, studentId, currentDate, grade) {
 function carryNextNote(draft, studentId, currentDate, note) {
   if (!note) return;
   const next = draft.lessons
-    .filter((lesson) => lesson.studentId === studentId && lesson.status === 'planned' && new Date(lesson.date) > new Date(currentDate))
+    .filter(
+      (lesson) =>
+        lesson.studentId === studentId &&
+        lesson.status === 'planned' &&
+        new Date(lesson.date) > new Date(currentDate),
+    )
     .sort((a, b) => new Date(a.date) - new Date(b.date))[0];
   if (next) next.prepNote = note;
 }
@@ -62,22 +82,38 @@ function baseLesson(input, student, ownerPatch, id) {
 export function createScheduleService({ store, uid, now = () => Date.now() }) {
   function saveLesson(input) {
     const [targetType, targetId] = String(input.targetId || '').split(':');
-    if (!targetId || !input.date) return { ok: false, code: 'REQUIRED', message: 'Выберите ученика или группу и дату занятия.' };
+    if (!targetId || !input.date)
+      return {
+        ok: false,
+        code: 'REQUIRED',
+        message: 'Выберите ученика или группу и дату занятия.',
+      };
     const state = store.getState();
-    const existing = input.id ? state.lessons.find((lesson) => lesson.id === input.id || lesson.seriesId === input.id) : null;
+    const existing = input.id
+      ? state.lessons.find((lesson) => lesson.id === input.id || lesson.seriesId === input.id)
+      : null;
     if (existing && !existingLessonOwnerPatch(existing, { type: targetType, id: targetId })) {
-      return { ok: false, code: 'OWNER_CHANGE', message: 'Групповое занятие нельзя превратить в индивидуальное и наоборот. Создайте новое занятие.' };
+      return {
+        ok: false,
+        code: 'OWNER_CHANGE',
+        message:
+          'Групповое занятие нельзя превратить в индивидуальное и наоборот. Создайте новое занятие.',
+      };
     }
     const group = targetType === 'g' ? state.groups.find((item) => item.id === targetId) : null;
     const student = targetType === 's' ? state.students.find((item) => item.id === targetId) : null;
-    if (!group && !student) return { ok: false, code: 'OWNER_NOT_FOUND', message: 'Ученик или группа не найдены.' };
+    if (!group && !student)
+      return { ok: false, code: 'OWNER_NOT_FOUND', message: 'Ученик или группа не найдены.' };
     const members = group ? group.members || [] : [student.id];
-    if (!members.length) return { ok: false, code: 'EMPTY_GROUP', message: 'В группе нет учеников.' };
+    if (!members.length)
+      return { ok: false, code: 'EMPTY_GROUP', message: 'В группе нет учеников.' };
     const attendance = new Set(input.attendance || members);
 
     store.update(existing ? 'schedule:lesson-update' : 'schedule:lesson-create', (draft) => {
       const oldRecords = existing ? groupLessonRecords(draft, existing) : [];
-      const seriesId = group ? existing?.seriesId || `grp-${group.id}-${input.date}-${uid()}` : undefined;
+      const seriesId = group
+        ? existing?.seriesId || `grp-${group.id}-${input.date}-${uid()}`
+        : undefined;
       const oldByStudent = new Map(oldRecords.map((lesson) => [lesson.studentId, lesson]));
       const recordIds = new Set(oldRecords.map((lesson) => lesson.id));
       if (existing) draft.lessons = draft.lessons.filter((lesson) => !recordIds.has(lesson.id));
@@ -88,17 +124,42 @@ export function createScheduleService({ store, uid, now = () => Date.now() }) {
         if (!member) continue;
         const old = oldByStudent.get(studentId);
         const ownerPatch = group ? { groupId: group.id, seriesId } : {};
-        const lesson = { ...(old || {}), ...baseLesson(input, member, ownerPatch, old?.id || (existing && !group ? existing.id : uid())) };
+        const lesson = {
+          ...(old || {}),
+          ...baseLesson(
+            input,
+            member,
+            ownerPatch,
+            old?.id || (existing && !group ? existing.id : uid()),
+          ),
+        };
         if (group && ['done', 'missed', 'paid_missed'].includes(input.status)) {
-          lesson.status = attendance.has(studentId) ? 'done' : member.payType === 'package' ? 'paid_missed' : 'missed';
+          lesson.status = attendance.has(studentId)
+            ? 'done'
+            : member.payType === 'package'
+              ? 'paid_missed'
+              : 'missed';
         }
         if (member.payType === 'package') {
           const oneoff = (input.lessonKind || 'oneoff') === 'oneoff';
-          if (oneoff && input.packageOneoffBilling === 'extra_paid') syncLinkedPayment(draft, lesson, { paid: true, amount: lesson.amount, uid, now });
-          else if (oneoff && input.packageOneoffBilling === 'extra_unpaid') { lesson.payment = 'unpaid'; draft.payments = draft.payments.filter((payment) => payment.lessonId !== lesson.id); }
-          else { lesson.payment = 'package'; draft.payments = draft.payments.filter((payment) => payment.lessonId !== lesson.id); }
-        } else syncLinkedPayment(draft, lesson, { paid: input.lessonPaymentChoice === 'paid', amount: lesson.amount, uid, now });
-        if (input.previousHomework === 'yes') applyPreviousHomeworkGrade(draft, studentId, input.date, input.homeworkGrade);
+          if (oneoff && input.packageOneoffBilling === 'extra_paid')
+            syncLinkedPayment(draft, lesson, { paid: true, amount: lesson.amount, uid, now });
+          else if (oneoff && input.packageOneoffBilling === 'extra_unpaid') {
+            lesson.payment = 'unpaid';
+            draft.payments = draft.payments.filter((payment) => payment.lessonId !== lesson.id);
+          } else {
+            lesson.payment = 'package';
+            draft.payments = draft.payments.filter((payment) => payment.lessonId !== lesson.id);
+          }
+        } else
+          syncLinkedPayment(draft, lesson, {
+            paid: input.lessonPaymentChoice === 'paid',
+            amount: lesson.amount,
+            uid,
+            now,
+          });
+        if (input.previousHomework === 'yes')
+          applyPreviousHomeworkGrade(draft, studentId, input.date, input.homeworkGrade);
         carryNextNote(draft, studentId, input.date, input.nextNote);
         created.push(lesson);
       }
@@ -145,8 +206,15 @@ export function createScheduleService({ store, uid, now = () => Date.now() }) {
   }
 
   function saveEvent(input) {
-    if (!String(input.title || '').trim() || !input.date) return { ok: false, code: 'REQUIRED', message: 'Введите название и дату события.' };
-    const event = { id: input.id || uid(), title: String(input.title).trim(), date: input.date, duration: +input.duration || 60, note: input.note || '' };
+    if (!String(input.title || '').trim() || !input.date)
+      return { ok: false, code: 'REQUIRED', message: 'Введите название и дату события.' };
+    const event = {
+      id: input.id || uid(),
+      title: String(input.title).trim(),
+      date: input.date,
+      duration: +input.duration || 60,
+      note: input.note || '',
+    };
     store.update(input.id ? 'schedule:event-update' : 'schedule:event-create', (draft) => {
       if (input.id) {
         const index = draft.events.findIndex((item) => item.id === input.id);
@@ -157,8 +225,11 @@ export function createScheduleService({ store, uid, now = () => Date.now() }) {
   }
 
   function removeEvent(id) {
-    if (!store.getState().events.some((event) => event.id === id)) return { ok: false, code: 'NOT_FOUND' };
-    store.update('schedule:event-remove', (draft) => { draft.events = draft.events.filter((event) => event.id !== id); });
+    if (!store.getState().events.some((event) => event.id === id))
+      return { ok: false, code: 'NOT_FOUND' };
+    store.update('schedule:event-remove', (draft) => {
+      draft.events = draft.events.filter((event) => event.id !== id);
+    });
     return { ok: true };
   }
 

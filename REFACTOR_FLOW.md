@@ -854,3 +854,13 @@ If all checks are green, commit Part 3 on `refactor/v5-lean-domain-modules`. Do 
 ## Continuation point
 
 After Part 3 is committed and CI is green, the refactor branch is ready for a full manual smoke against real auth/cloud behavior and then a deliberate PR/merge decision. Future work such as Supabase JSON normalization is separate from this architecture pass.
+
+## Stage 19 — SCSS and refactoring toolchain
+
+- SCSS sources live in `styles/core`, `styles/components` and `styles/features` with one entry at `styles/entries/main.scss`.
+- Feature partials use Sass nesting under one feature root instead of repeating `#page-*` selectors.
+- `npm run styles:build` generates the single `assets/styles.css` deploy artifact consumed directly by GitHub Pages; legacy module CSS outputs stay deleted.
+- `npm run styles:check` verifies that committed CSS is fresh without modifying the worktree.
+- Stylelint validates SCSS, while ESLint and Prettier cover JavaScript and configuration files.
+- Knip reports unused files and dependencies; dependency-cruiser enforces module boundaries and rejects circular dependencies.
+- `npm run check` provides the local non-browser quality gate. Critical Playwright E2E remains a separate command because it requires Chromium.

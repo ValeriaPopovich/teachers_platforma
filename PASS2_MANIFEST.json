@@ -90,9 +90,5 @@
     "load module-owned students/payments/reports/settings CSS",
     "remove profile/payments/reports progressive-enhancement scripts"
   ],
-  "not_in_scope": [
-    "new E2E test infrastructure",
-    "database normalization",
-    "Supabase CAS rewrite"
-  ]
+  "not_in_scope": ["new E2E test infrastructure", "database normalization", "Supabase CAS rewrite"]
 }

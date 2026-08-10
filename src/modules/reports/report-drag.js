@@ -1,7 +1,16 @@
 const sectionConfig = {
-  topics: { list: '#reportTopics', empty: 'Темы появятся из проведённых занятий или их можно добавить вручную.' },
-  tests: { list: '#reportTests', empty: 'Проверочных за период пока нет. При необходимости добавьте работу вручную.' },
-  hws: { list: '#reportHws', empty: 'Домашних заданий с оценкой за период пока нет. Их можно добавить вручную.' },
+  topics: {
+    list: '#reportTopics',
+    empty: 'Темы появятся из проведённых занятий или их можно добавить вручную.',
+  },
+  tests: {
+    list: '#reportTests',
+    empty: 'Проверочных за период пока нет. При необходимости добавьте работу вручную.',
+  },
+  hws: {
+    list: '#reportHws',
+    empty: 'Домашних заданий с оценкой за период пока нет. Их можно добавить вручную.',
+  },
 };
 
 function plural(value, forms) {
@@ -70,7 +79,9 @@ export function createReportInteractions({ page, onRowsChanged }) {
   }
 
   function finishDrag() {
-    page.querySelectorAll('.builder-item.is-dragging, .builder-item.is-drag-over').forEach((row) => row.classList.remove('is-dragging', 'is-drag-over'));
+    page
+      .querySelectorAll('.builder-item.is-dragging, .builder-item.is-drag-over')
+      .forEach((row) => row.classList.remove('is-dragging', 'is-drag-over'));
     draggedRow = null;
   }
 
@@ -93,19 +104,36 @@ export function createReportInteractions({ page, onRowsChanged }) {
 
   page.addEventListener('dragover', (event) => {
     const target = event.target.closest('.builder-item');
-    if (!draggedRow || !target || target === draggedRow || target.parentElement !== draggedRow.parentElement) return;
+    if (
+      !draggedRow ||
+      !target ||
+      target === draggedRow ||
+      target.parentElement !== draggedRow.parentElement
+    )
+      return;
     event.preventDefault();
-    page.querySelectorAll('.builder-item.is-drag-over').forEach((row) => row.classList.remove('is-drag-over'));
+    page
+      .querySelectorAll('.builder-item.is-drag-over')
+      .forEach((row) => row.classList.remove('is-drag-over'));
     target.classList.add('is-drag-over');
     event.dataTransfer.dropEffect = 'move';
   });
 
   page.addEventListener('drop', (event) => {
     const target = event.target.closest('.builder-item');
-    if (!draggedRow || !target || target === draggedRow || target.parentElement !== draggedRow.parentElement) return;
+    if (
+      !draggedRow ||
+      !target ||
+      target === draggedRow ||
+      target.parentElement !== draggedRow.parentElement
+    )
+      return;
     event.preventDefault();
     const box = target.getBoundingClientRect();
-    target.parentElement.insertBefore(draggedRow, event.clientY < box.top + box.height / 2 ? target : target.nextSibling);
+    target.parentElement.insertBefore(
+      draggedRow,
+      event.clientY < box.top + box.height / 2 ? target : target.nextSibling,
+    );
     finishDrag();
     syncAll();
     onRowsChanged?.();
@@ -127,7 +155,12 @@ export function createReportInteractions({ page, onRowsChanged }) {
     page.style.setProperty('--report-tools-left', `${Math.round(left)}px`);
     page.style.setProperty('--report-tools-width', `${Math.round(width)}px`);
     tools.classList.add('is-fixed');
-    requestAnimationFrame(() => page.style.setProperty('--reports-tools-height', `${Math.ceil(tools.getBoundingClientRect().height)}px`));
+    requestAnimationFrame(() =>
+      page.style.setProperty(
+        '--reports-tools-height',
+        `${Math.ceil(tools.getBoundingClientRect().height)}px`,
+      ),
+    );
   }
 
   function syncActionBar() {
@@ -137,7 +170,8 @@ export function createReportInteractions({ page, onRowsChanged }) {
 
   window.addEventListener('resize', syncActionBar, { passive: true });
   window.addEventListener('orientationchange', syncActionBar, { passive: true });
-  if ('ResizeObserver' in window && previewColumn) new ResizeObserver(syncActionBar).observe(previewColumn);
+  if ('ResizeObserver' in window && previewColumn)
+    new ResizeObserver(syncActionBar).observe(previewColumn);
 
   return { syncAll, syncList, syncActionBar, openSection };
 }

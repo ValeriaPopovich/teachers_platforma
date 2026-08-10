@@ -6,9 +6,12 @@ export function localDay(value = new Date()) {
 
 export function formatDate(value, full = false) {
   if (!value) return '—';
-  return new Date(value).toLocaleString('ru-RU', full
-    ? { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }
-    : { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return new Date(value).toLocaleString(
+    'ru-RU',
+    full
+      ? { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }
+      : { day: '2-digit', month: '2-digit', year: 'numeric' },
+  );
 }
 
 export function formatTime(value) {
@@ -20,11 +23,21 @@ export function money(value) {
 }
 
 export function initials(name = '') {
-  return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || '?';
+  return (
+    name
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part[0])
+      .join('')
+      .toUpperCase() || '?'
+  );
 }
 
 export function monthName(date = new Date()) {
-  return date.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' }).replace(/^./, (x) => x.toUpperCase());
+  return date
+    .toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })
+    .replace(/^./, (x) => x.toUpperCase());
 }
 
 export function lessonCountWord(count) {

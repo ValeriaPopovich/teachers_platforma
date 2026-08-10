@@ -4,7 +4,9 @@ export const getStudentById = (state, id) => state.students.find((student) => st
 export const getGroupById = (state, id) => state.groups.find((group) => group.id === id);
 
 export function getStudentLessons(state, id) {
-  return state.lessons.filter((lesson) => lesson.studentId === id).sort((a, b) => new Date(b.date) - new Date(a.date));
+  return state.lessons
+    .filter((lesson) => lesson.studentId === id)
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
 }
 
 export function homeworkGrade(lesson) {
@@ -14,7 +16,8 @@ export function homeworkGrade(lesson) {
     const value = +raw || 0;
     return value > 0 ? Math.max(1, Math.min(5, value > 5 ? Math.round(value / 20) : value)) : null;
   }
-  if (+lesson.homeworkPercent > 0) return Math.max(1, Math.min(5, Math.round(+lesson.homeworkPercent / 20)));
+  if (+lesson.homeworkPercent > 0)
+    return Math.max(1, Math.min(5, Math.round(+lesson.homeworkPercent / 20)));
   return null;
 }
 
@@ -29,7 +32,9 @@ export function getStudentMetrics(state, id) {
     done: done.length,
     miss: missed.length,
     attendance: completed ? Math.round((done.length / completed) * 100) : 100,
-    homework: homework.length ? Math.round((homework.reduce((sum, value) => sum + value, 0) / homework.length) * 10) / 10 : null,
+    homework: homework.length
+      ? Math.round((homework.reduce((sum, value) => sum + value, 0) / homework.length) * 10) / 10
+      : null,
     debt: finance.debt,
     pack: finance.used || 0,
   };
@@ -37,5 +42,7 @@ export function getStudentMetrics(state, id) {
 
 export function scheduleText(slots = []) {
   const days = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-  return slots.length ? slots.map((slot) => `${days[slot.day]} ${slot.time}`).join(', ') : 'Без расписания';
+  return slots.length
+    ? slots.map((slot) => `${days[slot.day]} ${slot.time}`).join(', ')
+    : 'Без расписания';
 }

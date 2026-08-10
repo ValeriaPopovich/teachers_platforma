@@ -41,7 +41,11 @@ test('lesson lifecycle: create, reopen with locked owner and persist', async ({ 
 
   const stored = await persistedData(page);
   expect(stored.lessons).toHaveLength(1);
-  expect(stored.lessons[0]).toMatchObject({ studentId: 's-e2e', status: 'done', topics: 'Квадратные уравнения' });
+  expect(stored.lessons[0]).toMatchObject({
+    studentId: 's-e2e',
+    status: 'done',
+    topics: 'Квадратные уравнения',
+  });
 
   await page.locator('#calendar [data-lesson]').first().click();
   await expect(page.locator('#lessonForm [name="targetId"]')).toBeDisabled();
@@ -67,20 +71,26 @@ test('single payment: record payment and keep it after reload', async ({ page })
   await page.reload();
   const stored = await persistedData(page);
   expect(stored.payments).toHaveLength(1);
-  expect(stored.payments[0]).toMatchObject({ studentId: 's-e2e', amount: 2400, billingType: 'single' });
+  expect(stored.payments[0]).toMatchObject({
+    studentId: 's-e2e',
+    amount: 2400,
+    billingType: 'single',
+  });
 });
 
 test('package billing: schedule determines lesson count and amount', async ({ page }) => {
   const data = blankData();
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-  data.students.push(student({
-    payType: 'package',
-    price: 800,
-    createdAt: monthStart,
-    billingSince: monthStart,
-    scheduleSlots: [{ day: now.getDay(), time: '17:00' }],
-  }));
+  data.students.push(
+    student({
+      payType: 'package',
+      price: 800,
+      createdAt: monthStart,
+      billingSince: monthStart,
+      scheduleSlots: [{ day: now.getDay(), time: '17:00' }],
+    }),
+  );
   await boot(page, data);
   await go(page, 'payments');
   await page.locator('#page-payments [data-open="payment"]').click();
@@ -94,7 +104,11 @@ test('package billing: schedule determines lesson count and amount', async ({ pa
   await page.locator('#paymentForm button[type="submit"]').click();
 
   const stored = await persistedData(page);
-  expect(stored.payments[0]).toMatchObject({ billingType: 'package', packageLessons: lessons, amount });
+  expect(stored.payments[0]).toMatchObject({
+    billingType: 'package',
+    packageLessons: lessons,
+    amount,
+  });
 });
 
 test('reports: builder changes update preview and copy text', async ({ page }) => {

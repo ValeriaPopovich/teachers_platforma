@@ -1,7 +1,13 @@
 import { $, escapeHtml } from '../../shared/dom.js';
 import { formatDate, money, monthName } from '../../shared/format.js';
 import { createPaymentFormView } from './payment-form.view.js';
-import { getMonthlyPaymentSummary, getPackageMonthRows, getPaymentAttentionRows, getPaymentHistory, getPaymentRows } from './payments.selectors.js';
+import {
+  getMonthlyPaymentSummary,
+  getPackageMonthRows,
+  getPaymentAttentionRows,
+  getPaymentHistory,
+  getPaymentRows,
+} from './payments.selectors.js';
 
 const LIST_LIMITS = { attention: 6, all: 8, packages: 6, history: 10 };
 
@@ -13,10 +19,18 @@ function expandButton(key, total, visible, expanded) {
 
 function paymentStateMarkup(row) {
   const { student } = row;
-  const stateText = row.kind === 'ok' ? row.label : row.amountDue > 0 ? `${row.label} · ${money(row.amountDue)}` : row.label;
-  const detail = student.payType === 'package' && row.progress
-    ? `${row.progress.used} использовано · ${row.progress.bought} куплено · ${row.progress.remaining} осталось`
-    : row.finance.balance > 0 ? `Аванс ${money(row.finance.balance)}` : `Начислено ${money(row.finance.charged)} · оплачено ${money(row.finance.paid)}`;
+  const stateText =
+    row.kind === 'ok'
+      ? row.label
+      : row.amountDue > 0
+        ? `${row.label} · ${money(row.amountDue)}`
+        : row.label;
+  const detail =
+    student.payType === 'package' && row.progress
+      ? `${row.progress.used} использовано · ${row.progress.bought} куплено · ${row.progress.remaining} осталось`
+      : row.finance.balance > 0
+        ? `Аванс ${money(row.finance.balance)}`
+        : `Начислено ${money(row.finance.charged)} · оплачено ${money(row.finance.paid)}`;
   return `<article class="payment-balance-item" data-kind="${row.kind}" data-payment-student="${student.id}"><div class="payment-balance-main"><b>${escapeHtml(student.name)}</b><small>${escapeHtml(student.payType === 'package' ? 'Абонемент' : 'Разовые занятия')}</small></div><div class="payment-balance-state"><b>${escapeHtml(stateText)}</b><small>${escapeHtml(detail)}</small></div><button class="btn payment-row-action" type="button" data-payment-for="${student.id}">Принять оплату</button></article>`;
 }
 
@@ -46,7 +60,12 @@ export function createPaymentsView({ store, service, modal, dialog, toast }) {
       [money(summary.debt), 'Нужно получить', summary.debt ? 'debt-stat' : ''],
       [summary.attention, 'Требуют внимания', summary.attention ? 'debt-stat' : ''],
       [summary.payments, 'Платежей', ''],
-    ].map(([value, label, extra]) => `<div class="stat ${extra}"><span class="value">${value}</span><span class="label">${label}</span></div>`).join('');
+    ]
+      .map(
+        ([value, label, extra]) =>
+          `<div class="stat ${extra}"><span class="value">${value}</span><span class="label">${label}</span></div>`,
+      )
+      .join('');
     $('#paymentAttentionCount').textContent = attention.length;
     $('#paymentAllCount').textContent = allRows.length;
 
@@ -66,19 +85,31 @@ export function createPaymentsView({ store, service, modal, dialog, toast }) {
     $('#paymentAllTab').tabIndex = currentView === 'all' ? 0 : -1;
 
     const badge = $('#paymentNavBadge');
-    if (badge) { badge.textContent = attention.length || ''; badge.style.display = attention.length ? '' : 'none'; }
+    if (badge) {
+      badge.textContent = attention.length || '';
+      badge.style.display = attention.length ? '' : 'none';
+    }
 
     const packageCard = $('#packageMonthCard');
     packageCard.style.display = packageRows.length ? '' : 'none';
     $('#packageMonthLabel').textContent = monthName(now);
-    if ($('#packageMonthMeta')) $('#packageMonthMeta').textContent = packageRows.length ? `${packageRows.length} абонем.` : '';
+    if ($('#packageMonthMeta'))
+      $('#packageMonthMeta').textContent = packageRows.length
+        ? `${packageRows.length} абонем.`
+        : '';
     const visiblePackages = visibleRows(packageRows, 'packages', expanded);
-    $('#packageMonthGrid').innerHTML = visiblePackages.map(({ student, progress }) => {
-      const bought = progress?.bought || 0;
-      const used = progress?.used || 0;
-      const percent = bought ? Math.max(0, Math.min(100, Math.round((used / bought) * 100))) : 0;
-      return `<article class="package-month-item"><div class="package-month-main"><b>${escapeHtml(student.name)}</b><small>${progress?.planned || 0} занятий по плану</small></div><div class="package-month-progress"><div class="package-month-progress-label"><span>Использовано / куплено</span><b>${used}/${bought}</b></div><div class="package-month-progress-track"><i style="width:${percent}%"></i></div></div><button class="btn" type="button" data-payment-for="${student.id}">Оплата</button></article>`;
-    }).join('') + expandButton('packages', packageRows.length, visiblePackages.length, expanded.packages);
+    $('#packageMonthGrid').innerHTML =
+      visiblePackages
+        .map(({ student, progress }) => {
+          const bought = progress?.bought || 0;
+          const used = progress?.used || 0;
+          const percent = bought
+            ? Math.max(0, Math.min(100, Math.round((used / bought) * 100)))
+            : 0;
+          return `<article class="package-month-item"><div class="package-month-main"><b>${escapeHtml(student.name)}</b><small>${progress?.planned || 0} занятий по плану</small></div><div class="package-month-progress"><div class="package-month-progress-label"><span>Использовано / куплено</span><b>${used}/${bought}</b></div><div class="package-month-progress-track"><i style="width:${percent}%"></i></div></div><button class="btn" type="button" data-payment-for="${student.id}">Оплата</button></article>`;
+        })
+        .join('') +
+      expandButton('packages', packageRows.length, visiblePackages.length, expanded.packages);
 
     const historySelect = $('#paymentHistoryStudent');
     if (historySelect) {
@@ -86,13 +117,17 @@ export function createPaymentsView({ store, service, modal, dialog, toast }) {
       historySelect.innerHTML = `<option value="">Все ученики</option>${state.students.map((student) => `<option value="${student.id}">${escapeHtml(student.name)}</option>`).join('')}`;
       historySelect.value = current;
     }
-    $('#paymentHistoryHint').textContent = historyDays === 45 ? 'За последние 45 дней' : 'За текущий месяц';
+    $('#paymentHistoryHint').textContent =
+      historyDays === 45 ? 'За последние 45 дней' : 'За текущий месяц';
     const visibleHistory = visibleRows(history, 'history', expanded);
     $('#paymentHistory').innerHTML = history.length
-      ? visibleHistory.map((payment) => {
-        const student = state.students.find((item) => item.id === payment.studentId);
-        return `<article class="payment-history-item"><div class="payment-history-main"><b>${escapeHtml(student?.name || 'Удалённый ученик')}</b><small>${formatDate(payment.date)}${payment.note ? ` · ${escapeHtml(payment.note)}` : ''}</small></div><strong class="payment-history-amount">${money(payment.amount)}</strong><button class="icon-btn" type="button" data-delete-payment="${payment.id}" aria-label="Удалить платёж">×</button></article>`;
-      }).join('') + expandButton('history', history.length, visibleHistory.length, expanded.history)
+      ? visibleHistory
+          .map((payment) => {
+            const student = state.students.find((item) => item.id === payment.studentId);
+            return `<article class="payment-history-item"><div class="payment-history-main"><b>${escapeHtml(student?.name || 'Удалённый ученик')}</b><small>${formatDate(payment.date)}${payment.note ? ` · ${escapeHtml(payment.note)}` : ''}</small></div><strong class="payment-history-amount">${money(payment.amount)}</strong><button class="icon-btn" type="button" data-delete-payment="${payment.id}" aria-label="Удалить платёж">×</button></article>`;
+          })
+          .join('') +
+        expandButton('history', history.length, visibleHistory.length, expanded.history)
       : '<div class="payments-empty"><div><b>Платежей за выбранный период нет</b><span>Попробуйте другой период или ученика.</span></div></div>';
   }
 
@@ -107,7 +142,14 @@ export function createPaymentsView({ store, service, modal, dialog, toast }) {
   $('.payments-tabs')?.addEventListener('keydown', (event) => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
     event.preventDefault();
-    const next = event.key === 'Home' ? 'attention' : event.key === 'End' ? 'all' : currentView === 'attention' ? 'all' : 'attention';
+    const next =
+      event.key === 'Home'
+        ? 'attention'
+        : event.key === 'End'
+          ? 'all'
+          : currentView === 'attention'
+            ? 'all'
+            : 'attention';
     switchView(next, true);
   });
   $('#paymentHistoryPeriod')?.addEventListener('change', render);
@@ -122,7 +164,7 @@ export function createPaymentsView({ store, service, modal, dialog, toast }) {
     const studentId = event.target.closest('[data-payment-for]')?.dataset.paymentFor;
     if (studentId) paymentForm.open(studentId);
     const paymentId = event.target.closest('[data-delete-payment]')?.dataset.deletePayment;
-    if (paymentId && await dialog.ask('Удалить этот платёж?', 'Удаление платежа', 'Удалить')) {
+    if (paymentId && (await dialog.ask('Удалить этот платёж?', 'Удаление платежа', 'Удалить'))) {
       const result = service.removePayment(paymentId);
       if (result.ok) toast('Платёж удалён');
     }

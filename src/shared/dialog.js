@@ -19,7 +19,14 @@ export function createDialog(root = document) {
     if (event.target === wrap) finish(false);
   });
 
-  function show({ title = 'Сообщение', message = '', confirmText = 'Хорошо', cancelText = 'Отмена', danger = false, confirmOnly = false } = {}) {
+  function show({
+    title = 'Сообщение',
+    message = '',
+    confirmText = 'Хорошо',
+    cancelText = 'Отмена',
+    danger = false,
+    confirmOnly = false,
+  } = {}) {
     if (resolveCurrent) resolveCurrent(false);
     if (!wrap || !card || !confirmButton || !cancelButton) return Promise.resolve(false);
     card.scrollTop = 0;
@@ -34,13 +41,17 @@ export function createDialog(root = document) {
     card.classList.toggle('danger-dialog', danger);
     wrap.classList.add('open');
     requestAnimationFrame(() => (danger && !confirmOnly ? cancelButton : confirmButton).focus());
-    return new Promise((resolve) => { resolveCurrent = resolve; });
+    return new Promise((resolve) => {
+      resolveCurrent = resolve;
+    });
   }
 
   return {
     show,
-    ask: (message, title = 'Подтверждение', confirmText = 'Продолжить') => show({ title, message, confirmText, danger: true }),
-    inform: (message, title = 'Обратите внимание', danger = false) => show({ title, message, confirmOnly: true, danger }),
+    ask: (message, title = 'Подтверждение', confirmText = 'Продолжить') =>
+      show({ title, message, confirmText, danger: true }),
+    inform: (message, title = 'Обратите внимание', danger = false) =>
+      show({ title, message, confirmOnly: true, danger }),
     finish,
   };
 }

@@ -1,8 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 
-const view = readFileSync(new URL('../src/modules/students/profile.view.js', import.meta.url), 'utf8');
-const css = readFileSync(new URL('../src/modules/students/students.css', import.meta.url), 'utf8');
+const view = readFileSync(
+  new URL('../src/modules/students/profile.view.js', import.meta.url),
+  'utf8',
+);
+const css = readFileSync(new URL('../styles/features/_students.scss', import.meta.url), 'utf8');
 
 describe('student profile final ownership contract', () => {
   test('profile is rendered directly by the students module', () => {
@@ -12,7 +15,7 @@ describe('student profile final ownership contract', () => {
   });
 
   test('preserves archived topics after lesson history', () => {
-    expect(view).toContain("state.topicLog[id]?.length");
+    expect(view).toContain('state.topicLog[id]?.length');
     expect(view).toContain('Ранее пройденные темы (архив)');
   });
 
@@ -23,9 +26,9 @@ describe('student profile final ownership contract', () => {
   });
 
   test('has desktop/tablet/mobile responsive profile styles', () => {
-    expect(css).toContain('@media (max-width: 980px)');
-    expect(css).toContain('@media (max-width: 720px)');
-    expect(css).toContain('@media (max-width: 460px)');
+    expect(css).toMatch(/@media \((?:max-width:\s*980px|width\s*<=\s*980px)\)/);
+    expect(css).toMatch(/@media \((?:max-width:\s*720px|width\s*<=\s*720px)\)/);
+    expect(css).toMatch(/@media \((?:max-width:\s*460px|width\s*<=\s*460px)\)/);
     expect(css).toContain('100dvh');
   });
 

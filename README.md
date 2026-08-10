@@ -4,7 +4,7 @@
 
 ## Запуск приложения
 
-Это статический сайт — сборка не нужна. Открыть `index.html` через static-сервер; в проде приложение хостится на GitHub Pages.
+Это статический сайт: единственный production-файл `assets/styles.css` генерируется из SCSS и хранится в репозитории для GitHub Pages. Открыть `index.html` через static-сервер.
 
 Основной browser entry после архитектурного рефакторинга:
 
@@ -55,7 +55,10 @@ dashboard -> src/modules/dashboard/
 
 ```bash
 npm install
+npm run styles:build
 npm run lint
+npm run format:check
+npm run refactor:check
 npm run validate:stage0
 npm test
 npm run test:architecture
@@ -63,12 +66,17 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-`npm test` запускает Vitest unit/integration/source-contract suites и lightweight architecture guards. `npm run test:e2e` запускает только критические Chromium E2E flows.
+SCSS-исходники находятся в `styles/`: `core/`, `components/`, `features/` и единая точка входа `entries/main.scss`. Feature partials используют Sass nesting под единственным корневым селектором страницы или модального окна. После изменения SCSS выполните `npm run styles:build`; для разработки доступен `npm run styles:watch`. Не редактируйте `assets/styles.css` вручную.
+
+`npm run lint` запускает ESLint и Stylelint. `npm run refactor:check` проверяет неиспользуемые файлы/зависимости через Knip и архитектурные связи через dependency-cruiser. `npm test` запускает Vitest unit/integration/source-contract suites и lightweight architecture guards. `npm run test:e2e` запускает только критические Chromium E2E flows.
 
 CI (`.github/workflows/ci.yml`) на каждый push/PR выполняет:
 
 ```text
 lint
+Prettier check
+SCSS build freshness
+dependency architecture and unused-code audit
 Stage 0 validation
 unit/integration + architecture guards
 critical Playwright E2E
@@ -115,6 +123,8 @@ Push в ветку, обслуживающую GitHub Pages, только пос
 Перед production deploy:
 
 - [ ] `npm run lint` — зелёный;
+- [ ] `npm run format:check` и `npm run styles:check` — зелёные;
+- [ ] `npm run refactor:check` — зелёный;
 - [ ] `npm run validate:stage0` — зелёный;
 - [ ] `npm test` — зелёный, включая architecture guards;
 - [ ] `npm run test:e2e` — зелёный;

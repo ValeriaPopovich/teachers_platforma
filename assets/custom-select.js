@@ -11,7 +11,8 @@
     const wrapper = select.closest('.custom-select');
     const trigger = wrapper?.querySelector('.custom-select-trigger');
     if (!trigger) return;
-    trigger.querySelector('.custom-select-value').textContent = select.selectedOptions[0]?.textContent || '';
+    trigger.querySelector('.custom-select-value').textContent =
+      select.selectedOptions[0]?.textContent || '';
     trigger.disabled = select.disabled;
     trigger.setAttribute('aria-expanded', String(openSelect === select));
   }
@@ -38,7 +39,10 @@
     const viewportGap = 8;
     const desiredWidth = Math.max(rect.width, 180);
     const width = Math.min(desiredWidth, window.innerWidth - viewportGap * 2);
-    const left = Math.min(Math.max(viewportGap, rect.left), window.innerWidth - width - viewportGap);
+    const left = Math.min(
+      Math.max(viewportGap, rect.left),
+      window.innerWidth - width - viewportGap,
+    );
     const below = window.innerHeight - rect.bottom - gap;
     const above = rect.top - gap;
     const openAbove = below < 180 && above > below;
@@ -46,7 +50,9 @@
     popover.style.width = `${Math.round(width)}px`;
     popover.style.left = `${Math.round(left)}px`;
     popover.style.top = openAbove ? 'auto' : `${Math.round(rect.bottom + gap)}px`;
-    popover.style.bottom = openAbove ? `${Math.round(window.innerHeight - rect.top + gap)}px` : 'auto';
+    popover.style.bottom = openAbove
+      ? `${Math.round(window.innerHeight - rect.top + gap)}px`
+      : 'auto';
     popover.style.maxHeight = `${Math.max(120, Math.floor((openAbove ? above : below) - viewportGap))}px`;
   }
 
@@ -85,7 +91,10 @@
     popover.className = 'custom-select-popover';
     popover.id = `${trigger.id}-listbox`;
     popover.setAttribute('role', 'listbox');
-    popover.setAttribute('aria-label', select.getAttribute('aria-label') || select.name || 'Выберите значение');
+    popover.setAttribute(
+      'aria-label',
+      select.getAttribute('aria-label') || select.name || 'Выберите значение',
+    );
 
     [...select.options].forEach((option) => {
       const item = document.createElement('button');
@@ -103,7 +112,10 @@
     document.body.append(popover);
     positionPopover(select);
     const items = enabledOptions(select);
-    activeIndex = Math.max(0, items.findIndex((option) => option.selected));
+    activeIndex = Math.max(
+      0,
+      items.findIndex((option) => option.selected),
+    );
     setActive(activeIndex);
   }
 
@@ -121,7 +133,8 @@
     trigger.id = `custom-select-${Math.random().toString(36).slice(2, 10)}`;
     trigger.setAttribute('aria-haspopup', 'listbox');
     trigger.setAttribute('aria-expanded', 'false');
-    trigger.innerHTML = '<span class="custom-select-value"></span><span class="custom-select-chevron" aria-hidden="true"></span>';
+    trigger.innerHTML =
+      '<span class="custom-select-value"></span><span class="custom-select-chevron" aria-hidden="true"></span>';
     wrapper.append(trigger);
 
     trigger.addEventListener('click', () => {
@@ -129,7 +142,8 @@
       open(select);
     });
     trigger.addEventListener('keydown', (event) => {
-      if (['ArrowDown', 'ArrowUp', 'Home', 'End', 'Enter', ' '].includes(event.key)) event.preventDefault();
+      if (['ArrowDown', 'ArrowUp', 'Home', 'End', 'Enter', ' '].includes(event.key))
+        event.preventDefault();
       if (!openSelect && ['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(event.key)) open(select);
       if (openSelect !== select) return;
       const items = [...popover.querySelectorAll('.custom-select-option:not(:disabled)')];
@@ -162,11 +176,18 @@
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && openSelect) close({ focus: true });
   });
-  window.addEventListener('resize', () => openSelect && positionPopover(openSelect), { passive: true });
-  window.addEventListener('scroll', () => openSelect && positionPopover(openSelect), { passive: true, capture: true });
+  window.addEventListener('resize', () => openSelect && positionPopover(openSelect), {
+    passive: true,
+  });
+  window.addEventListener('scroll', () => openSelect && positionPopover(openSelect), {
+    passive: true,
+    capture: true,
+  });
 
   new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => mutation.addedNodes.forEach((node) => node.nodeType === 1 && enhanceAll(node)));
+    mutations.forEach((mutation) =>
+      mutation.addedNodes.forEach((node) => node.nodeType === 1 && enhanceAll(node)),
+    );
   }).observe(document.body, { childList: true, subtree: true });
 
   enhanceAll();

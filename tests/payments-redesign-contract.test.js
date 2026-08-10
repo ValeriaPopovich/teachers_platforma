@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 const html = readFileSync('index.html', 'utf8');
 const view = readFileSync('src/modules/payments/payments.view.js', 'utf8');
 const form = readFileSync('src/modules/payments/payment-form.view.js', 'utf8');
-const css = readFileSync('src/modules/payments/payments.css', 'utf8');
+const css = readFileSync('styles/features/_payments.scss', 'utf8');
 
 function paymentSection() {
   const start = html.indexOf('<section class="page payments-page" id="page-payments"');
@@ -14,13 +14,28 @@ function paymentSection() {
 
 describe('payments final module contract', () => {
   it('preserves business-critical payment DOM ids', () => {
-    for (const id of ['page-payments', 'analyticsCard', 'analyticsRangeLabel', 'paymentStats', 'packageAlerts', 'packageMonthCard', 'packageMonthLabel', 'packageMonthGrid', 'paymentBalances', 'paymentHistoryStudent', 'paymentHistory', 'paymentModal', 'paymentForm']) {
+    for (const id of [
+      'page-payments',
+      'analyticsCard',
+      'analyticsRangeLabel',
+      'paymentStats',
+      'packageAlerts',
+      'packageMonthCard',
+      'packageMonthLabel',
+      'packageMonthGrid',
+      'paymentBalances',
+      'paymentHistoryStudent',
+      'paymentHistory',
+      'paymentModal',
+      'paymentForm',
+    ]) {
       expect(html).toContain(`id="${id}"`);
     }
   });
 
   it('loads module-owned stylesheet and no legacy enhancement script', () => {
-    expect(html).toContain('src/modules/payments/payments.css');
+    expect(html).toContain('assets/styles.css');
+    expect(html).not.toContain('src/modules/payments/payments.css');
     expect(html).not.toContain('assets/payments-redesign.css');
     expect(html).not.toContain('assets/payments-redesign.js');
   });
@@ -56,7 +71,9 @@ describe('payments final module contract', () => {
   });
 
   it('limits long lists and lets the user reveal the rest', () => {
-    expect(view).toContain("const LIST_LIMITS = { attention: 6, all: 8, packages: 6, history: 10 }");
+    expect(view).toContain(
+      'const LIST_LIMITS = { attention: 6, all: 8, packages: 6, history: 10 }',
+    );
     expect(view).toContain('data-payment-expand=');
     expect(view).toContain('Object.hasOwn(expanded, expand)');
     expect(css).toContain('.payments-show-more');
@@ -67,8 +84,8 @@ describe('payments final module contract', () => {
   });
 
   it('keeps responsive payment layouts', () => {
-    expect(css).toContain('@media (max-width: 767px)');
-    expect(css).toContain('@media (max-width: 479px)');
+    expect(css).toMatch(/@media \((?:max-width:\s*767px|width\s*<=\s*767px)\)/);
+    expect(css).toMatch(/@media \((?:max-width:\s*479px|width\s*<=\s*479px)\)/);
     expect(css).toContain('.payments-primary-action');
     expect(css).toContain('position: fixed');
   });

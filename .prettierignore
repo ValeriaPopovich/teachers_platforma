@@ -1,5 +1,8 @@
 node_modules
 coverage
+assets/*.css
+playwright-report
+test-results
 index.html
 # Markdown/docs форматируем вручную — Prettier только для кода (js/json/yml/css)
 *.md

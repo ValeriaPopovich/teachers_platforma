@@ -7,12 +7,19 @@ export function createPaymentFormView({ store, service, modal, dialog, toast }) 
   if (!form) return {};
 
   function fillStudents(selected = '') {
-    form.elements.studentId.innerHTML = `<option value="">Выберите...</option>${store.getState().students.map((student) => `<option value="${student.id}">${escapeHtml(student.name)}</option>`).join('')}`;
+    form.elements.studentId.innerHTML = `<option value="">Выберите...</option>${store
+      .getState()
+      .students.map(
+        (student) => `<option value="${student.id}">${escapeHtml(student.name)}</option>`,
+      )
+      .join('')}`;
     form.elements.studentId.value = selected;
   }
 
   function syncPackage() {
-    const student = store.getState().students.find((item) => item.id === form.elements.studentId.value);
+    const student = store
+      .getState()
+      .students.find((item) => item.id === form.elements.studentId.value);
     const date = new Date(`${form.elements.date.value || localDay()}T12:00`);
     const packageField = $('#paymentPackageField');
     const isPackage = student?.payType === 'package';
@@ -38,14 +45,22 @@ export function createPaymentFormView({ store, service, modal, dialog, toast }) 
     event.preventDefault();
     const input = Object.fromEntries(new FormData(form));
     const result = service.recordPayment(input);
-    if (!result.ok) { dialog.inform(result.message || 'Не удалось сохранить оплату.', 'Проверьте данные', true); return; }
-    modal.closeAll(); toast(`Оплата ${money(result.value.amount)} сохранена`);
+    if (!result.ok) {
+      dialog.inform(result.message || 'Не удалось сохранить оплату.', 'Проверьте данные', true);
+      return;
+    }
+    modal.closeAll();
+    toast(`Оплата ${money(result.value.amount)} сохранена`);
   });
   form.elements.studentId.addEventListener('change', syncPackage);
   form.elements.date.addEventListener('change', syncPackage);
   form.elements.packageLessons.addEventListener('input', () => {
-    const student = store.getState().students.find((item) => item.id === form.elements.studentId.value);
-    if (student?.payType === 'package') form.elements.amount.value = (+form.elements.packageLessons.value || 0) * (+student.price || 0);
+    const student = store
+      .getState()
+      .students.find((item) => item.id === form.elements.studentId.value);
+    if (student?.payType === 'package')
+      form.elements.amount.value =
+        (+form.elements.packageLessons.value || 0) * (+student.price || 0);
   });
 
   return { open, syncPackage };

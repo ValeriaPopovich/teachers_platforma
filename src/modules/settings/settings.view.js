@@ -1,6 +1,11 @@
 import { $ } from '../../shared/dom.js';
 
-export function createSettingsView({ store, service, toast, getAccount = () => window.tutorCloud }) {
+export function createSettingsView({
+  store,
+  service,
+  toast,
+  getAccount = () => window.tutorCloud,
+}) {
   let bound = false;
 
   function render() {
@@ -11,12 +16,17 @@ export function createSettingsView({ store, service, toast, getAccount = () => w
     if ($('#settingTutor')) $('#settingTutor').value = settings.tutor || '';
     if ($('#settingReminder')) $('#settingReminder').value = String(settings.reminder ?? 15);
     const themeButton = $('#themeBtn');
-    if (themeButton?.firstChild) themeButton.firstChild.textContent = settings.theme === 'dark' ? '☀ ' : '☾ ';
+    if (themeButton?.firstChild)
+      themeButton.firstChild.textContent = settings.theme === 'dark' ? '☀ ' : '☾ ';
 
     const cloud = getAccount?.() || {};
     const profile = cloud.profile;
-    if ($('#accountEmail') && cloud.user) $('#accountEmail').textContent = profile?.email || cloud.user.email || '—';
-    if ($('#accountAccess') && profile) $('#accountAccess').textContent = profile.access_until ? `до ${new Date(profile.access_until).toLocaleDateString('ru-RU')}` : 'Без ограничения';
+    if ($('#accountEmail') && cloud.user)
+      $('#accountEmail').textContent = profile?.email || cloud.user.email || '—';
+    if ($('#accountAccess') && profile)
+      $('#accountAccess').textContent = profile.access_until
+        ? `до ${new Date(profile.access_until).toLocaleDateString('ru-RU')}`
+        : 'Без ограничения';
   }
 
   function bind() {
@@ -26,7 +36,10 @@ export function createSettingsView({ store, service, toast, getAccount = () => w
     $('#profileThemeBtn')?.addEventListener('click', service.toggleTheme);
     $('#sidebarToggle')?.addEventListener('click', service.toggleSidebar);
     $('#saveSettings')?.addEventListener('click', () => {
-      service.save({ tutor: $('#settingTutor')?.value || '', reminder: $('#settingReminder')?.value || 0 });
+      service.save({
+        tutor: $('#settingTutor')?.value || '',
+        reminder: $('#settingReminder')?.value || 0,
+      });
       toast('Настройки сохранены');
     });
   }

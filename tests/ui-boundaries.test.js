@@ -1,21 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { readSource } from './helpers/read-source.js';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-const repo = path.resolve(here, '..');
-const read = (file) => fs.readFileSync(path.join(repo, file), 'utf8');
-const html = read('index.html');
-const scheduleView = read('src/modules/schedule/schedule.view.js');
-const lessonForm = read('src/modules/schedule/lesson-form.view.js');
-const modal = read('src/shared/modal.js');
-const bootstrap = read('src/app/bootstrap.js');
+const html = readSource('index.html');
+const scheduleView = readSource('src/modules/schedule/schedule.view.js');
+const lessonForm = readSource('src/modules/schedule/lesson-form.view.js');
+const modal = readSource('src/shared/modal.js');
+const bootstrap = readSource('src/app/bootstrap.js');
 
 describe('UI ownership and interaction boundaries', () => {
   it('calendar views are ordered day, week, month and week is the default', () => {
     const switchMarkup = html.match(/<div class="calendar-view-switch"[\s\S]*?<\/div>/)?.[0] || '';
-    expect(switchMarkup).toMatch(/data-calendar-view="day"[\s\S]*data-calendar-view="week"[\s\S]*data-calendar-view="month"/);
+    expect(switchMarkup).toMatch(
+      /data-calendar-view="day"[\s\S]*data-calendar-view="week"[\s\S]*data-calendar-view="month"/,
+    );
     expect(scheduleView).toContain("let calendarView = 'week'");
   });
 

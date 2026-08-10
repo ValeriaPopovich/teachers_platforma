@@ -1,0 +1,7 @@
+@use '../core/application';
+@use '../features/payments';
+@use '../features/students';
+@use '../features/reports';
+@use '../features/schedule';
+@use '../features/settings';
+@use '../components/custom-select';

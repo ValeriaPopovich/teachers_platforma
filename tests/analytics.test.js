@@ -136,9 +136,30 @@ describe('periodAnalytics', () => {
         students: [{ id: 's1', payType: 'single', price: 1800 }],
         payments: [],
         lessons: [
-          { id: 'l1', studentId: 's1', date: '2026-08-10T17:00', status: 'cancelled', payment: 'unpaid', amount: 1800 },
-          { id: 'l2', studentId: 's1', date: '2026-08-12T17:00', status: 'missed', payment: 'unpaid', amount: 1800 },
-          { id: 'l3', studentId: 's1', date: '2026-08-14T17:00', status: 'planned', payment: 'not_charged', amount: 1800 },
+          {
+            id: 'l1',
+            studentId: 's1',
+            date: '2026-08-10T17:00',
+            status: 'cancelled',
+            payment: 'unpaid',
+            amount: 1800,
+          },
+          {
+            id: 'l2',
+            studentId: 's1',
+            date: '2026-08-12T17:00',
+            status: 'missed',
+            payment: 'unpaid',
+            amount: 1800,
+          },
+          {
+            id: 'l3',
+            studentId: 's1',
+            date: '2026-08-14T17:00',
+            status: 'planned',
+            payment: 'not_charged',
+            amount: 1800,
+          },
         ],
       },
       from,
@@ -146,5 +167,4 @@ describe('periodAnalytics', () => {
     );
     expect(result.charged).toBe(0);
   });
-
 });

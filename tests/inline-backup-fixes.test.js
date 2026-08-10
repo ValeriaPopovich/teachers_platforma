@@ -8,8 +8,12 @@ const bootstrap = fs.readFileSync(path.resolve(here, '../src/app/bootstrap.js'),
 
 describe('bootstrap — backup application orchestration', () => {
   it('merge delegates ID remapping to the tested backup module', () => {
-    expect(bootstrap).toMatch(/import \{[^}]*mergeImported[^}]*\} from ['"]\.\.\/domain\/backup\.js['"]/s);
-    expect(bootstrap).toContain("store.replace(mergeImported(store.getState(), pendingImport, uid), 'backup:merge')");
+    expect(bootstrap).toMatch(
+      /import \{[^}]*mergeImported[^}]*\} from ['"]\.\.\/domain\/backup\.js['"]/s,
+    );
+    expect(bootstrap).toContain(
+      "store.replace(mergeImported(store.getState(), pendingImport, uid), 'backup:merge')",
+    );
   });
 
   it('replace saves recovery before replacing store data', () => {

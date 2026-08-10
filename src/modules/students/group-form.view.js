@@ -7,7 +7,9 @@ function syncMemberChips() {
   const box = $('#groupMembers');
   if (!box) return;
   const items = [...box.children];
-  items.forEach((item) => item.classList.toggle('selected', !!item.querySelector('input')?.checked));
+  items.forEach((item) =>
+    item.classList.toggle('selected', !!item.querySelector('input')?.checked),
+  );
   items.filter((item) => item.querySelector('input')?.checked).forEach((item) => box.append(item));
   items.filter((item) => !item.querySelector('input')?.checked).forEach((item) => box.append(item));
 }
@@ -15,13 +17,22 @@ function syncMemberChips() {
 export function createGroupFormView({ store, service, modal, dialog, toast }) {
   const form = $('#groupForm');
   function fillMemberOptions() {
-    $('#groupMembers').innerHTML = store.getState().students.map((student) => `<label class="member-chip"><input type="checkbox" name="members" value="${student.id}">${student.name}</label>`).join('');
+    $('#groupMembers').innerHTML = store
+      .getState()
+      .students.map(
+        (student) =>
+          `<label class="member-chip"><input type="checkbox" name="members" value="${student.id}">${student.name}</label>`,
+      )
+      .join('');
   }
   if (!form) return { openNew() {}, openEdit() {} };
 
   function openNew() {
     if (!store.getState().students.length) {
-      dialog.inform('Сначала добавьте хотя бы одного ученика — участников группы вы будете выбирать из своих учеников.', 'Нет учеников');
+      dialog.inform(
+        'Сначала добавьте хотя бы одного ученика — участников группы вы будете выбирать из своих учеников.',
+        'Нет учеников',
+      );
       return;
     }
     form.reset();
@@ -38,8 +49,12 @@ export function createGroupFormView({ store, service, modal, dialog, toast }) {
     if (!group) return;
     form.reset();
     fillMemberOptions();
-    Object.keys(group).forEach((key) => { if (form.elements[key] && key !== 'members') form.elements[key].value = group[key] ?? ''; });
-    $$('#groupMembers input').forEach((input) => { input.checked = (group.members || []).includes(input.value); });
+    Object.keys(group).forEach((key) => {
+      if (form.elements[key] && key !== 'members') form.elements[key].value = group[key] ?? '';
+    });
+    $$('#groupMembers input').forEach((input) => {
+      input.checked = (group.members || []).includes(input.value);
+    });
     syncMemberChips();
     setSlots('#groupScheduleSlots', group.scheduleSlots || [], false);
     $('#deleteGroup').style.display = 'inline-block';
@@ -55,19 +70,35 @@ export function createGroupFormView({ store, service, modal, dialog, toast }) {
     input.duration = +input.duration || 60;
     input.scheduleSlots = getSlots('#groupScheduleSlots');
     const own = ownSlotConflict(input.scheduleSlots, input.duration);
-    const conflicts = recurringConflicts(store.getState(), input.scheduleSlots, input.duration, 'group', input.id);
-    const warnings = [own ? `занятия ${own} пересекаются между собой` : '', conflicts.length ? `расписание пересекается с: ${conflicts.join(', ')}` : ''].filter(Boolean);
+    const conflicts = recurringConflicts(
+      store.getState(),
+      input.scheduleSlots,
+      input.duration,
+      'group',
+      input.id,
+    );
+    const warnings = [
+      own ? `занятия ${own} пересекаются между собой` : '',
+      conflicts.length ? `расписание пересекается с: ${conflicts.join(', ')}` : '',
+    ].filter(Boolean);
     const result = service.saveGroup(input);
     if (!result.ok) {
       dialog.inform(result.message || 'Не удалось сохранить группу.', 'Проверьте данные', true);
       return;
     }
     modal.closeAll();
-    toast(warnings.length ? `Сохранено. Внимание: ${warnings.join('; ')}` : 'Группа и расписание на 8 недель сохранены');
+    toast(
+      warnings.length
+        ? `Сохранено. Внимание: ${warnings.join('; ')}`
+        : 'Группа и расписание на 8 недель сохранены',
+    );
   });
 
   $('#addGroupSlot').addEventListener('click', () => $('#groupScheduleSlots').append(slotRow()));
-  $('#groupScheduleSlots').addEventListener('click', (event) => { if (event.target.classList.contains('remove-slot')) event.target.closest('.schedule-slot').remove(); });
+  $('#groupScheduleSlots').addEventListener('click', (event) => {
+    if (event.target.classList.contains('remove-slot'))
+      event.target.closest('.schedule-slot').remove();
+  });
   $('#groupMembers').addEventListener('change', syncMemberChips);
 
   return { openNew, openEdit };

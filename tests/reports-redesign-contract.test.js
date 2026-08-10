@@ -7,13 +7,33 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const html = read('index.html');
 const view = read('src/modules/reports/reports.view.js');
 const interactions = read('src/modules/reports/report-drag.js');
-const css = read('src/modules/reports/reports.css');
+const css = read('styles/features/_reports.scss');
 
 const countId = (id) => (html.match(new RegExp(`id=["']${id}["']`, 'g')) || []).length;
 
 describe('reports final module contract', () => {
   it('keeps report data-binding ids exactly once', () => {
-    ['reportStudent', 'reportPeriod', 'customPeriodFields', 'reportDateFrom', 'reportDateTo', 'reportComment', 'addReportTopic', 'addReportTest', 'addReportHw', 'reportTopics', 'reportTests', 'reportHws', 'reportNextPackagePreview', 'reportCard', 'paperTopics', 'paperHws', 'paperTests', 'copyReportText', 'saveReportPng'].forEach((id) => expect(countId(id), id).toBe(1));
+    [
+      'reportStudent',
+      'reportPeriod',
+      'customPeriodFields',
+      'reportDateFrom',
+      'reportDateTo',
+      'reportComment',
+      'addReportTopic',
+      'addReportTest',
+      'addReportHw',
+      'reportTopics',
+      'reportTests',
+      'reportHws',
+      'reportNextPackagePreview',
+      'reportCard',
+      'paperTopics',
+      'paperHws',
+      'paperTests',
+      'copyReportText',
+      'saveReportPng',
+    ].forEach((id) => expect(countId(id), id).toBe(1));
   });
 
   it('owns builder, preview, copy and PNG export in reports.view.js', () => {
@@ -33,7 +53,9 @@ describe('reports final module contract', () => {
   });
 
   it('keeps report inclusion switches connected to preview sections', () => {
-    ['general', 'topics', 'tests', 'hws', 'nextPackage'].forEach((block) => expect(html).toContain(`data-report-block="${block}"`));
+    ['general', 'topics', 'tests', 'hws', 'nextPackage'].forEach((block) =>
+      expect(html).toContain(`data-report-block="${block}"`),
+    );
     expect(view).toContain("$$('[data-report-block]').forEach");
     expect(view).toContain('checkbox.checked');
   });
@@ -42,7 +64,9 @@ describe('reports final module contract', () => {
     expect(html).toContain('<textarea id="reportNextPackagePreview"');
     expect(view).toContain('nextEditor.dataset.autoValue = auto');
     expect(view).toContain('nextEditor.dataset.studentId = id');
-    expect(view).toContain("$('#reportNextPackagePreview')?.addEventListener('input', renderPaper)");
+    expect(view).toContain(
+      "$('#reportNextPackagePreview')?.addEventListener('input', renderPaper)",
+    );
   });
 
   it('keeps semantic accordion and fixed action-bar behavior', () => {
@@ -54,7 +78,8 @@ describe('reports final module contract', () => {
   });
 
   it('uses module-owned CSS and no legacy report enhancer', () => {
-    expect(html).toContain('src/modules/reports/reports.css');
+    expect(html).toContain('assets/styles.css');
+    expect(html).not.toContain('src/modules/reports/reports.css');
     expect(html).not.toContain('assets/reports-redesign.js');
     expect(html).not.toContain('assets/reports-redesign.css');
   });

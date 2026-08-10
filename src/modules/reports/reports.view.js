@@ -13,7 +13,9 @@ export function createReportsView({ store, toast, dialog }) {
   let interactions;
 
   function builderValues(selector) {
-    return $$(`${selector} .r-name`).map((input) => input.value.trim()).filter(Boolean);
+    return $$(`${selector} .r-name`)
+      .map((input) => input.value.trim())
+      .filter(Boolean);
   }
 
   function boundsFromForm() {
@@ -29,7 +31,10 @@ export function createReportsView({ store, toast, dialog }) {
   }
 
   function resetEmptyStudent() {
-    ['#reportTopics', '#reportTests', '#reportHws'].forEach((selector) => { const list = $(selector); if (list) list.innerHTML = ''; });
+    ['#reportTopics', '#reportTests', '#reportHws'].forEach((selector) => {
+      const list = $(selector);
+      if (list) list.innerHTML = '';
+    });
     const comment = $('#reportComment');
     if (comment) comment.value = '';
     const pills = $('#paperPills');
@@ -38,15 +43,26 @@ export function createReportsView({ store, toast, dialog }) {
     if (paperComment) paperComment.textContent = '—';
     ['#paperTopics', '#paperHws', '#paperTests'].forEach((selector) => {
       const target = $(selector);
-      if (target) { target.className = 'report-empty'; target.textContent = '—'; }
+      if (target) {
+        target.className = 'report-empty';
+        target.textContent = '—';
+      }
     });
     if ($('#paperPct')) $('#paperPct').textContent = '0%';
     const ring = $('#paperRingValue');
-    if (ring) { ring.style.stroke = ''; ring.style.strokeDasharray = '326.726'; ring.style.strokeDashoffset = '326.726'; }
+    if (ring) {
+      ring.style.stroke = '';
+      ring.style.strokeDasharray = '326.726';
+      ring.style.strokeDashoffset = '326.726';
+    }
     if ($('#reportNextPackageBuilder')) $('#reportNextPackageBuilder').style.display = 'none';
     if ($('#paperNextPackageSection')) $('#paperNextPackageSection').style.display = 'none';
     const editor = $('#reportNextPackagePreview');
-    if (editor) { editor.value = ''; delete editor.dataset.autoValue; delete editor.dataset.studentId; }
+    if (editor) {
+      editor.value = '';
+      delete editor.dataset.autoValue;
+      delete editor.dataset.studentId;
+    }
     interactions?.syncAll();
   }
 
@@ -54,14 +70,22 @@ export function createReportsView({ store, toast, dialog }) {
     const target = $(selector);
     if (!target) return;
     target.className = values.length ? '' : 'report-empty';
-    target.innerHTML = values.length ? `<ul>${values.map((value) => `<li>${escapeHtml(value)}</li>`).join('')}</ul>` : '—';
+    target.innerHTML = values.length
+      ? `<ul>${values.map((value) => `<li>${escapeHtml(value)}</li>`).join('')}</ul>`
+      : '—';
   }
 
   function renderPaper() {
     const { student, progressPercent } = sourceFromForm();
-    if (!student) { resetEmptyStudent(); return; }
-    if ($('#paperPills')) $('#paperPills').innerHTML = `<span class="paper-pill">${escapeHtml(student.name)}</span><span class="paper-pill">${escapeHtml($('#reportPeriod')?.selectedOptions?.[0]?.textContent || '')}</span>`;
-    if ($('#paperComment')) $('#paperComment').textContent = $('#reportComment')?.value.trim() || '—';
+    if (!student) {
+      resetEmptyStudent();
+      return;
+    }
+    if ($('#paperPills'))
+      $('#paperPills').innerHTML =
+        `<span class="paper-pill">${escapeHtml(student.name)}</span><span class="paper-pill">${escapeHtml($('#reportPeriod')?.selectedOptions?.[0]?.textContent || '')}</span>`;
+    if ($('#paperComment'))
+      $('#paperComment').textContent = $('#reportComment')?.value.trim() || '—';
     renderList('#paperTopics', builderValues('#reportTopics'));
     renderList('#paperTests', builderValues('#reportTests'));
     renderList('#paperHws', builderValues('#reportHws'));
@@ -74,7 +98,8 @@ export function createReportsView({ store, toast, dialog }) {
     }
     const next = $('#reportNextPackagePreview')?.value.trim() || '';
     if ($('#paperNextPackage')) $('#paperNextPackage').textContent = next || '—';
-    if ($('#paperNextPackageSection')) $('#paperNextPackageSection').style.display = student.payType === 'package' ? '' : 'none';
+    if ($('#paperNextPackageSection'))
+      $('#paperNextPackageSection').style.display = student.payType === 'package' ? '' : 'none';
     $$('[data-report-block]').forEach((checkbox) => {
       const section = $(`[data-report-section="${checkbox.dataset.reportBlock}"]`);
       if (section) section.style.display = checkbox.checked ? '' : 'none';
@@ -83,13 +108,17 @@ export function createReportsView({ store, toast, dialog }) {
 
   function fillBuilder() {
     const id = $('#reportStudent')?.value || '';
-    if (!id) { resetEmptyStudent(); return; }
+    if (!id) {
+      resetEmptyStudent();
+      return;
+    }
     const source = sourceFromForm();
     if ($('#reportTopics')) $('#reportTopics').innerHTML = source.topics.map(rowEditor).join('');
     if ($('#reportTests')) $('#reportTests').innerHTML = source.tests.map(rowEditor).join('');
     if ($('#reportHws')) $('#reportHws').innerHTML = source.homeworks.map(rowEditor).join('');
     const nextBuilder = $('#reportNextPackageBuilder');
-    if (nextBuilder) nextBuilder.style.display = source.student?.payType === 'package' ? '' : 'none';
+    if (nextBuilder)
+      nextBuilder.style.display = source.student?.payType === 'package' ? '' : 'none';
     const nextEditor = $('#reportNextPackagePreview');
     if (source.student?.payType === 'package' && nextEditor) {
       const auto = getNextPackageSummary(store.getState(), id);
@@ -118,16 +147,31 @@ export function createReportsView({ store, toast, dialog }) {
   }
 
   async function copyText() {
-    const student = store.getState().students.find((item) => item.id === $('#reportStudent')?.value);
-    if (!student) { toast('Сначала выберите ученика'); return; }
+    const student = store
+      .getState()
+      .students.find((item) => item.id === $('#reportStudent')?.value);
+    if (!student) {
+      toast('Сначала выберите ученика');
+      return;
+    }
     const sections = [];
-    if ($('[data-report-block="general"]')?.checked) sections.push(`Комментарий: ${$('#reportComment')?.value.trim() || '—'}`);
-    if ($('[data-report-block="topics"]')?.checked) sections.push(`Темы: ${builderValues('#reportTopics').join('; ') || '—'}`);
-    if ($('[data-report-block="hws"]')?.checked) sections.push(`Домашние задания: ${builderValues('#reportHws').join('; ') || '—'}`);
-    if ($('[data-report-block="tests"]')?.checked) sections.push(`Проверочные: ${builderValues('#reportTests').join('; ') || '—'}`);
-    if ($('[data-report-block="nextPackage"]')?.checked && $('#reportNextPackagePreview')?.value.trim()) sections.push(`Следующий месяц: ${$('#reportNextPackagePreview').value.trim()}`);
+    if ($('[data-report-block="general"]')?.checked)
+      sections.push(`Комментарий: ${$('#reportComment')?.value.trim() || '—'}`);
+    if ($('[data-report-block="topics"]')?.checked)
+      sections.push(`Темы: ${builderValues('#reportTopics').join('; ') || '—'}`);
+    if ($('[data-report-block="hws"]')?.checked)
+      sections.push(`Домашние задания: ${builderValues('#reportHws').join('; ') || '—'}`);
+    if ($('[data-report-block="tests"]')?.checked)
+      sections.push(`Проверочные: ${builderValues('#reportTests').join('; ') || '—'}`);
+    if (
+      $('[data-report-block="nextPackage"]')?.checked &&
+      $('#reportNextPackagePreview')?.value.trim()
+    )
+      sections.push(`Следующий месяц: ${$('#reportNextPackagePreview').value.trim()}`);
     try {
-      await navigator.clipboard.writeText(`Отчёт по ученику ${student.name}\n\n${sections.join('\n\n')}`);
+      await navigator.clipboard.writeText(
+        `Отчёт по ученику ${student.name}\n\n${sections.join('\n\n')}`,
+      );
       toast('Текст отчёта скопирован');
     } catch (error) {
       console.error(error);
@@ -136,9 +180,15 @@ export function createReportsView({ store, toast, dialog }) {
   }
 
   async function savePng() {
-    if (!$('#reportStudent')?.value) { toast('Сначала выберите ученика'); return; }
+    if (!$('#reportStudent')?.value) {
+      toast('Сначала выберите ученика');
+      return;
+    }
     try {
-      const canvas = await window.html2canvas($('#reportCard'), { scale: 2, backgroundColor: null });
+      const canvas = await window.html2canvas($('#reportCard'), {
+        scale: 2,
+        backgroundColor: null,
+      });
       const link = document.createElement('a');
       link.download = `report-${localDay()}.png`;
       link.href = canvas.toDataURL('image/png');
@@ -156,10 +206,14 @@ export function createReportsView({ store, toast, dialog }) {
     interactions = createReportInteractions({ page, onRowsChanged: renderPaper });
     $('#reportStudent')?.addEventListener('change', fillBuilder);
     $('#reportPeriod')?.addEventListener('change', () => {
-      if ($('#customPeriodFields')) $('#customPeriodFields').style.display = $('#reportPeriod').value === 'custom' ? 'block' : 'none';
+      if ($('#customPeriodFields'))
+        $('#customPeriodFields').style.display =
+          $('#reportPeriod').value === 'custom' ? 'block' : 'none';
       fillBuilder();
     });
-    ['#reportDateFrom', '#reportDateTo'].forEach((selector) => $(selector)?.addEventListener('change', fillBuilder));
+    ['#reportDateFrom', '#reportDateTo'].forEach((selector) =>
+      $(selector)?.addEventListener('change', fillBuilder),
+    );
     $('#reportComment')?.addEventListener('input', renderPaper);
     $('#reportNextPackagePreview')?.addEventListener('input', renderPaper);
     page.addEventListener('input', (event) => {
@@ -178,8 +232,10 @@ export function createReportsView({ store, toast, dialog }) {
       }
       const add = event.target.closest('#addReportTopic, #addReportTest, #addReportHw');
       if (!add) return;
-      const kind = add.id === 'addReportTopic' ? 'topics' : add.id === 'addReportTest' ? 'tests' : 'hws';
-      const selector = kind === 'topics' ? '#reportTopics' : kind === 'tests' ? '#reportTests' : '#reportHws';
+      const kind =
+        add.id === 'addReportTopic' ? 'topics' : add.id === 'addReportTest' ? 'tests' : 'hws';
+      const selector =
+        kind === 'topics' ? '#reportTopics' : kind === 'tests' ? '#reportTests' : '#reportHws';
       const list = $(selector);
       if (!list) return;
       list.insertAdjacentHTML('beforeend', rowEditor(''));

@@ -72,13 +72,19 @@ export async function boot(page, data = blankData()) {
   });
   await page.route('https://fonts.googleapis.com/**', (route) => route.abort());
   await page.route('https://fonts.gstatic.com/**', (route) => route.abort());
-  await page.addInitScript(({ key, state }) => {
-    if (localStorage.getItem(key) !== null) return;
-    localStorage.setItem(key, JSON.stringify({
-      meta: { schemaVersion: 1, updatedAt: new Date().toISOString() },
-      data: state,
-    }));
-  }, { key: STORAGE_KEY, state: data });
+  await page.addInitScript(
+    ({ key, state }) => {
+      if (localStorage.getItem(key) !== null) return;
+      localStorage.setItem(
+        key,
+        JSON.stringify({
+          meta: { schemaVersion: 1, updatedAt: new Date().toISOString() },
+          data: state,
+        }),
+      );
+    },
+    { key: STORAGE_KEY, state: data },
+  );
   await page.goto('/');
   await expect(page.locator('#page-dashboard')).toHaveClass(/active/);
   await expect(page.locator('#onboardingModal')).not.toHaveClass(/open/);

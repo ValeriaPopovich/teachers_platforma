@@ -57,7 +57,14 @@ describe('Lean Domain Modules architecture guards', () => {
   it('bootstrap remains composition/application glue instead of a feature God Object', () => {
     const bootstrap = read('src/app/bootstrap.js');
     expect(Buffer.byteLength(bootstrap, 'utf8')).toBeLessThan(18_000);
-    for (const legacyOwner of ['renderStudents', 'renderGroups', 'renderCalendar', 'renderPaymentsSimple', 'renderReportOptions', 'applySettings']) {
+    for (const legacyOwner of [
+      'renderStudents',
+      'renderGroups',
+      'renderCalendar',
+      'renderPaymentsSimple',
+      'renderReportOptions',
+      'applySettings',
+    ]) {
       expect(bootstrap).not.toMatch(new RegExp(`function\\s+${legacyOwner}\\b`));
     }
     expect(bootstrap).not.toMatch(/let\s+data\s*=\s*structuredClone\(store\.getState\(\)\)/);
@@ -67,6 +74,33 @@ describe('Lean Domain Modules architecture guards', () => {
   it('modules do not reintroduce MutationObserver as a rendering architecture', () => {
     for (const file of moduleFiles) {
       expect(read(file), file).not.toContain('MutationObserver');
+    }
+  });
+
+  it('SCSS remains the single style source with one deploy bundle and one feature root', () => {
+    const html = read('index.html');
+    const localStylesheets = [...html.matchAll(/href=["']([^"']+\.css)["']/g)].map(
+      (match) => match[1],
+    );
+    expect(localStylesheets).toEqual(['assets/styles.css']);
+
+    for (const file of [
+      'assets/custom-select.css',
+      'src/modules/payments/payments.css',
+      'src/modules/reports/reports.css',
+      'src/modules/schedule/schedule.css',
+      'src/modules/settings/settings.css',
+      'src/modules/students/students.css',
+    ]) {
+      expect(fs.existsSync(path.join(root, file)), file).toBe(false);
+    }
+
+    for (const [file, selector] of [
+      ['styles/features/_payments.scss', '#page-payments'],
+      ['styles/features/_reports.scss', '#page-reports'],
+      ['styles/features/_students.scss', '#profileModal'],
+    ]) {
+      expect(read(file).split(selector), file).toHaveLength(2);
     }
   });
 });
