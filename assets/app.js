@@ -473,10 +473,14 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
               parent = [s.parentName, s.parentContact].filter(Boolean).join(' · '),
               packageText =
                 fin.balanceLessons < 0
-                  ? `Долг ${Math.abs(fin.balanceLessons)} зан.`
-                  : fin.balanceLessons === 0
-                    ? 'Закончился'
-                    : `${fin.balanceLessons} зан.`;
+                  ? `Долг ${money(Math.ceil(Math.abs(fin.balanceLessons) * (+s.price || 0)))}`
+                  : !fin.bought
+                    ? 'Не оплачено'
+                    : fin.wholeLessons === 0 && fin.creditAmount
+                      ? `Аванс ${money(fin.creditAmount)}`
+                      : fin.wholeLessons === 0
+                        ? '0 занятий'
+                        : `${fin.wholeLessons} зан.`;
             return `<article class="card student-card"><button class="btn student-delete" data-quick-delete-student="${s.id}" title="Удалить ученика" aria-label="Удалить ученика">🗑</button><div class="student-card-main" role="button" tabindex="0" aria-label="Открыть карточку: ${esc(s.name)}" data-student="${s.id}"><div class="student-top"><div><h3>${esc(s.name)}</h3><div class="meta">${esc(s.grade || 'Класс не указан')} · ${esc(scheduleText(s.scheduleSlots))}</div></div></div><div class="student-card-details">${s.contact ? `<div><span>Контакт ученика</span><b>${esc(s.contact)}</b></div>` : ''}${parent ? `<div><span>Родитель</span><b>${esc(parent)}</b></div>` : ''}<div><span>Условия занятий</span><b>${money(s.price)} · ${+s.duration || 60} мин · ${s.payType === 'package' ? 'абонемент' : 'разовая оплата'}</b></div>${s.goals ? `<div><span>Цели</span><b>${esc(s.goals)}</b></div>` : ''}${s.notes ? `<div class="student-card-notes"><span>Заметки</span><b>${esc(s.notes)}</b></div>` : ''}${lessonUrl ? `<a class="student-lesson-link" href="${esc(lessonUrl)}" target="_blank" rel="noopener">↗ Открыть ссылку на занятие</a>` : ''}</div><div class="student-metrics"><div><b>${m.attendance}%</b><small>Посещение</small></div><div><b>${m.homework == null ? '—' : String(m.homework).replace('.', ',') + '/5'}</b><small>Средняя оценка ДЗ</small></div><div><b class="${(s.payType === 'package' && fin.balanceLessons <= 0) || m.debt ? 'danger-text' : ''}">${s.payType === 'package' ? packageText : m.debt ? money(m.debt) : '✓'}</b><small>${s.payType === 'package' ? 'Абонемент' : m.debt ? 'Долг' : 'Оплачено'}</small></div></div></div></article>`;
           })
           .join('')
@@ -581,7 +585,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       ? history
           .map(
             (p) =>
-              `<div class="row"><div class="grow"><b>${esc(student(p.studentId)?.name || 'Удалённый ученик')}</b><small>${fmtDate(p.date)}${p.packageLessons ? ` · ${p.packageLessons} занятий` : ''}${p.note ? ' · ' + esc(p.note) : ''}</small></div><b class="payment-positive">+${money(p.amount)}</b><button class="icon-btn" data-delete-payment="${p.id}" title="Удалить платёж">×</button></div>`,
+              `<div class="row"><div class="grow"><b>${esc(student(p.studentId)?.name || 'Удалённый ученик')}</b><small>${fmtDate(p.date)}${p.packageLessons ? ` · ${p.coveredLessons != null ? p.coveredLessons : Math.floor(p.packageLessons)} ${lessonCountWord(p.coveredLessons != null ? p.coveredLessons : Math.floor(p.packageLessons))}${p.creditAfter ? ` + аванс ${money(p.creditAfter)}` : p.coveredLessons == null && p.priceAtPayment && p.amount % p.priceAtPayment ? ` + аванс ${money(p.amount % p.priceAtPayment)}` : ''}` : ''}${p.note ? ' · ' + esc(p.note) : ''}</small></div><b class="payment-positive">+${money(p.amount)}</b><button class="icon-btn" data-delete-payment="${p.id}" title="Удалить платёж">×</button></div>`,
           )
           .join('')
       : '<div class="empty">За последние 45 дней платежей не было</div>';
@@ -610,7 +614,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
         .sort((a, b) => a.left - b.left);
     box.style.display = items.length ? 'block' : 'none';
     box.innerHTML = items.length
-      ? `<div class="section-head"><div><h2>Заканчиваются абонементы</h2><span>Можно заранее напомнить об оплате</span></div></div><div class="list">${items.map(({ s, left }) => `<div class="row"><div class="grow"><b>${esc(s.name)}</b><small>${left <= 0 ? 'Абонемент закончился' : left === 1 ? 'Осталось последнее занятие' : `Осталось ${left} занятия`}</small></div><button class="btn" data-payment-student="${s.id}">Добавить оплату</button></div>`).join('')}</div>`
+      ? `<div class="section-head"><div><h2>Заканчиваются оплаченные занятия</h2><span>Можно заранее напомнить об оплате</span></div></div><div class="list">${items.map(({ s, left }) => `<div class="row"><div class="grow"><b>${esc(s.name)}</b><small>${left < 0 ? `Долг ${Math.abs(left)} занят.` : left === 0 ? 'Нет оплаченных занятий' : left === 1 ? 'Осталось последнее занятие' : `Осталось ${Math.floor(left)} занятия`}</small></div><button class="btn" data-payment-student="${s.id}">Добавить оплату</button></div>`).join('')}</div>`
       : '';
   }
   function paymentState(s) {
@@ -625,10 +629,12 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
           : left < 0
             ? `Долг: ${Math.abs(left)} занят.`
             : left === 0
-              ? 'Абонемент закончился'
-              : left === 1
+              ? f.bought
+                ? 'Нет оплаченных занятий'
+                : 'Оплата ещё не внесена'
+              : f.wholeLessons === 1
                 ? 'Осталось 1 занятие'
-                : `Осталось ${left} занятия`,
+                : `Осталось ${f.wholeLessons} занятия`,
       };
     }
     return {
@@ -668,6 +674,56 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       dates = [...regularDates, ...oneoffDates].sort((a, b) => a - b),
       lessons = dates.length;
     return { lessons, dates, cost: lessons * (+s.price || 0) };
+  }
+
+  function packageCoverage(s, date = new Date()) {
+    const cutoff = Math.max(+s.createdAt || 0, +s.billingSince || 0),
+      currentMonth = new Date(date.getFullYear(), date.getMonth(), 1),
+      firstMonth = cutoff
+        ? new Date(new Date(cutoff).getFullYear(), new Date(cutoff).getMonth(), 1)
+        : new Date(currentMonth),
+      cursor = firstMonth > currentMonth ? new Date(currentMonth) : firstMonth,
+      finance = finances(s.id),
+      price = +s.price || 0;
+    let requiredBefore = 0;
+    while (cursor < currentMonth) {
+      requiredBefore += packagePlan(s, cursor).lessons;
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+    const plan = packagePlan(s, currentMonth),
+      requiredLessons = requiredBefore + plan.lessons,
+      arch = data.financeArchive[s.id] || {},
+      extraCharges =
+        (+arch.singleCharged || 0) +
+        data.lessons
+          .filter(
+            (lesson) =>
+              lesson.studentId === s.id &&
+              ['done', 'paid_missed'].includes(lesson.status) &&
+              lesson.payment !== 'package' &&
+              new Date(lesson.date).getTime() >= cutoff,
+          )
+          .reduce((sum, lesson) => sum + (+lesson.amount || 0), 0),
+      requiredBeforeAmount = requiredBefore * price + extraCharges,
+      requiredAmount = requiredLessons * price + extraCharges,
+      paidAmount = +finance.paid || 0,
+      availableForCurrentMonth = Math.max(0, paidAmount - requiredBeforeAmount),
+      covered = price
+        ? Math.max(0, Math.min(plan.lessons, Math.floor(availableForCurrentMonth / price + 1e-9)))
+        : 0,
+      missingAmount = Math.max(0, requiredAmount - paidAmount),
+      advanceAmount = Math.max(0, paidAmount - requiredAmount);
+    return {
+      plan,
+      finance,
+      requiredLessons,
+      requiredAmount,
+      paidAmount,
+      extraCharges,
+      covered,
+      missingAmount,
+      advanceAmount,
+    };
   }
 
   function packagePlanDates(plan) {
@@ -715,84 +771,46 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       now = new Date();
     if (!stats || !body || !attentionPanel || !allPanel) return;
 
-    const monthBounds = (date = new Date()) => ({
-        from: new Date(date.getFullYear(), date.getMonth(), 1).getTime(),
-        to: new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999).getTime(),
-      }),
-      paymentDateMs = (value) => {
-        const raw = String(value || '');
-        return new Date(raw.length === 10 ? `${raw}T12:00` : raw).getTime();
-      },
-      packageProgress = (s, date = now) => {
-        const plan = packagePlan(s, date),
-          bounds = monthBounds(date),
-          cutoff = Math.max(+s.createdAt || 0, +s.billingSince || 0),
-          payments = data.payments.filter((p) => {
-            const at = paymentDateMs(p.date);
-            return (
-              p.studentId === s.id &&
-              !p.ledgerOnly &&
-              (+p.packageLessons > 0 || p.billingType === 'package') &&
-              at >= bounds.from &&
-              at <= bounds.to &&
-              Math.max(+p.createdAt || 0, at) >= cutoff
-            );
-          }),
-          bought = payments.reduce((sum, p) => sum + (+p.packageLessons || 0), 0),
-          missingLessons = Math.max(0, plan.lessons - bought);
+    const packageProgress = (s, date = now) => {
+        const coverage = packageCoverage(s, date),
+          { plan, covered } = coverage;
         return {
+          ...coverage,
           plan,
-          bought,
-          missingLessons,
-          due: missingLessons * (+s.price || 0),
-          percent: plan.lessons ? Math.min(100, Math.round((bought / plan.lessons) * 100)) : 0,
+          covered,
+          due: coverage.missingAmount,
+          percent: plan.lessons
+            ? Math.min(100, Math.round((Math.min(covered, plan.lessons) / plan.lessons) * 100))
+            : 0,
         };
       },
       paymentRowState = (s) => {
         const f = finances(s.id);
         if (s.payType === 'package') {
           const progress = packageProgress(s),
-            extraDebt = +f.extraDebt || 0,
-            debtAmount = progress.due + extraDebt,
-            left = f.balanceLessons || 0;
-          if (!progress.plan.lessons)
+            debtAmount = progress.missingAmount;
+          if (!progress.requiredLessons && !progress.extraCharges)
             return {
-              kind: 'ending',
+              kind: 'ok',
               format: 'Абонемент',
-              state: 'Не рассчитан — нет регулярного расписания',
-              debtAmount: extraDebt,
+              state: 'Нет регулярного расписания',
+              debtAmount: 0,
               actionable: false,
             };
           if (debtAmount > 0)
             return {
               kind: 'need',
               format: 'Абонемент',
-              state:
-                progress.due && extraDebt
-                  ? `К оплате ${money(debtAmount)} · абонемент + доплата`
-                  : progress.due
-                    ? `К оплате ${money(progress.due)} · ${progress.missingLessons} ${lessonCountWord(progress.missingLessons)}`
-                    : `Доплата ${money(extraDebt)}`,
+              state: `К оплате ${money(debtAmount)} · покрыто ${progress.covered}/${progress.plan.lessons}`,
               debtAmount,
-              actionable: true,
-            };
-          if (left <= 2)
-            return {
-              kind: 'ending',
-              format: 'Абонемент',
-              state:
-                left <= 0
-                  ? 'Абонемент закончился'
-                  : left === 1
-                    ? 'Осталось 1 занятие'
-                    : 'Осталось 2 занятия',
-              debtAmount: 0,
               actionable: true,
             };
           return {
             kind: 'ok',
             format: 'Абонемент',
-            state: `Оплачено за месяц · осталось ${left} ${lessonCountWord(left)}`,
+            state: progress.advanceAmount
+              ? `Оплачено · аванс ${money(progress.advanceAmount)}`
+              : 'Оплачено полностью',
             debtAmount: 0,
             actionable: true,
           };
@@ -827,7 +845,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       rows = data.students.map((s) => ({ s, ...paymentRowState(s) })),
       debtTotal = rows.reduce((sum, row) => sum + (+row.debtAmount || 0), 0),
       debtorsN = rows.filter((row) => row.debtAmount > 0).length,
-      attentionRows = rows.filter((row) => row.kind !== 'ok'),
+      attentionRows = rows.filter((row) => row.kind === 'need'),
       need = rows.filter((row) => row.kind === 'need').length;
 
     $('#analyticsRangeLabel').textContent = range.label;
@@ -862,14 +880,11 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
 
     const renderRow = (row, allMode = false) => {
         const action = row.actionable
-          ? `<button class="btn payment-for" data-payment-student="${row.s.id}">${row.s.payType === 'package' && row.kind === 'ending' ? 'Пополнить' : 'Принять оплату'}</button>`
+          ? `<button class="btn payment-for" data-payment-student="${row.s.id}">Принять оплату</button>`
           : '';
         return `<article class="payment-balance-item" data-kind="${row.kind}"><div class="payment-balance-main"><b>${esc(row.s.name)}</b><small>${row.format}</small></div><div class="payment-balance-state">${esc(row.state)}</div>${action || (allMode ? '<span></span>' : '')}</article>`;
       },
-      groups = [
-        ['need', 'Нужно оплатить'],
-        ['ending', 'Заканчиваются / требуют проверки'],
-      ];
+      groups = [['need', 'Должники']];
 
     const expandButton = (key, hiddenCount, expanded = false) =>
         hiddenCount > 0 || expanded
@@ -898,7 +913,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
         ? '<div class="payments-empty"><div><b>Сейчас всё оплачено</b>Ничего делать не нужно — можно спокойно закрывать вкладку.</div></div>'
         : '<div class="payments-empty"><div><b>Учеников пока нет</b>После добавления учеников здесь появятся расчёты.</div></div>';
 
-    const priority = { need: 0, ending: 1, ok: 2 },
+    const priority = { need: 0, ok: 1 },
       allRows = [...rows].sort(
         (aRow, bRow) =>
           priority[aRow.kind] - priority[bRow.kind] ||
@@ -916,22 +931,22 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       const packageRows = packageStudents.map((s) => ({ s, progress: packageProgress(s) })),
         total = packageRows.reduce((sum, row) => sum + row.progress.plan.cost, 0);
       $('#packageMonthLabel').textContent = monthName(now);
-      if (packageMeta)
-        packageMeta.textContent = `${packageStudents.length} чел. · ${money(total)}`;
+      if (packageMeta) packageMeta.textContent = `${packageStudents.length} чел. · ${money(total)}`;
       const packageLimit = 6,
         visiblePackageRows = paymentsExpanded.packages
           ? packageRows
           : packageRows.slice(0, packageLimit);
-      packageGrid.innerHTML = visiblePackageRows
-        .map(({ s, progress }) => {
-          const paidText = !progress.plan.lessons
-            ? 'Нет расписания'
-            : progress.missingLessons
-              ? `Оплачено ${Math.min(progress.bought, progress.plan.lessons)}/${progress.plan.lessons}`
-              : 'Оплачено полностью';
-          return `<div class="package-month-item"><div class="package-month-main"><b>${esc(s.name)}</b><small>${progress.plan.lessons ? `${progress.plan.lessons} ${lessonCountWord(progress.plan.lessons)} по регулярному расписанию` : 'Регулярное расписание не заполнено'}</small></div><div class="package-month-progress"><div class="package-month-progress-label"><span>${paidText}</span><span>${progress.percent}%</span></div><div class="package-month-progress-track"><i style="width:${progress.percent}%"></i></div></div><strong>${money(progress.plan.cost)}</strong></div>`;
-        })
-        .join('') +
+      packageGrid.innerHTML =
+        visiblePackageRows
+          .map(({ s, progress }) => {
+            const paidText = !progress.plan.lessons
+              ? 'Нет расписания'
+              : progress.missingAmount
+                ? `Покрыто ${Math.min(progress.covered, progress.plan.lessons)}/${progress.plan.lessons}`
+                : 'Оплачено полностью';
+            return `<div class="package-month-item"><div class="package-month-main"><b>${esc(s.name)}</b><small>${progress.plan.lessons ? `${progress.plan.lessons} ${lessonCountWord(progress.plan.lessons)} по регулярному расписанию` : 'Регулярное расписание не заполнено'}</small></div><div class="package-month-progress"><div class="package-month-progress-label"><span>${paidText}</span><span>${progress.percent}%</span></div><div class="package-month-progress-track"><i style="width:${progress.percent}%"></i></div></div><strong>${money(progress.plan.cost)}</strong></div>`;
+          })
+          .join('') +
         expandButton(
           'packages',
           packageRows.length - visiblePackageRows.length,
@@ -953,7 +968,8 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
         .filter((p) => !historyFilter || p.studentId === historyFilter)
         .sort((b, c) => new Date(c.date) - new Date(b.date));
     historyHint.textContent =
-      selectedHistoryRange.label + (historyFilter ? ` · ${student(historyFilter)?.name || ''}` : '');
+      selectedHistoryRange.label +
+      (historyFilter ? ` · ${student(historyFilter)?.name || ''}` : '');
     const historyLimit = 10,
       visibleHistory = paymentsExpanded.history ? history : history.slice(0, historyLimit);
     $('#paymentHistory').innerHTML = history.length
@@ -962,7 +978,9 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
             const owner = student(p.studentId)?.name || 'Удалённый ученик',
               details = [
                 fmtDate(p.date),
-                p.packageLessons ? `Абонемент · ${p.packageLessons} ${lessonCountWord(+p.packageLessons || 0)}` : '',
+                p.packageLessons
+                  ? `Абонемент · ${p.coveredLessons != null ? p.coveredLessons : Math.floor(p.packageLessons)} ${lessonCountWord(p.coveredLessons != null ? p.coveredLessons : Math.floor(+p.packageLessons || 0))}${p.creditAfter ? ` + аванс ${money(p.creditAfter)}` : p.coveredLessons == null && p.priceAtPayment && p.amount % p.priceAtPayment ? ` + аванс ${money(p.amount % p.priceAtPayment)}` : ''}`
+                  : '',
                 p.note || '',
               ].filter(Boolean);
             return `<article class="payment-history-item"><div class="payment-history-main"><b>${esc(owner)}</b><small>${details.map(esc).join(' · ')}</small></div><b class="payment-history-amount">+${money(p.amount)}</b><button class="icon-btn" type="button" data-delete-payment="${p.id}" title="Удалить платёж" aria-label="Удалить платёж: ${esc(owner)}, ${fmtDate(p.date)}">×</button></article>`;
@@ -1716,8 +1734,8 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     note.innerHTML = `⚠ Время занято: ${esc([...new Set(found.map((x) => x.name))].join(', '))}. Сохранить всё равно можно, или <button type="button" class="slot-suggestion" data-time="${suggest}">выбрать ближайшее свободное — ${suggest}</button>.`;
     row.append(note);
   }
-  function generateSchedule(type, id, slots, replace = true) {
-    data = generateRecurringSchedule(data, { type, id, slots, replace, uid });
+  function generateSchedule(type, id, slots, replace = true, now = new Date()) {
+    data = generateRecurringSchedule(data, { type, id, slots, replace, now, uid });
   }
   function extendAllSchedules() {
     data = extendSchedules(data, { uid });
@@ -1961,13 +1979,14 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     const selectedBillingDay = o.billingStartDate,
       before = o.id ? student(o.id) : null,
       formatChanged = !!before && before.payType !== o.payType,
-      startedAt = before && !formatChanged
-        ? Math.max(+before.createdAt || 0, +before.billingSince || 0)
-        : before
-          ? Date.now()
-          : selectedBillingDay && selectedBillingDay !== localDay()
-            ? new Date(`${selectedBillingDay}T00:00`).getTime()
-            : Date.now();
+      startedAt =
+        before && !formatChanged
+          ? Math.max(+before.createdAt || 0, +before.billingSince || 0)
+          : before
+            ? Date.now()
+            : selectedBillingDay && selectedBillingDay !== localDay()
+              ? new Date(`${selectedBillingDay}T00:00`).getTime()
+              : Date.now();
     delete o.billingStartDate;
     o.packageSize =
       o.payType === 'package'
@@ -1997,7 +2016,10 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       o.billingSince = startedAt;
       data.students.push(o);
     }
-    generateSchedule('student', o.id, o.scheduleSlots);
+    const scheduleStart = new Date(Math.min(startedAt, Date.now()));
+    generateSchedule('student', o.id, o.scheduleSlots, true, scheduleStart);
+    generateSchedule('student', o.id, o.scheduleSlots, false, new Date());
+    normalizePastLessons();
     syncFutureStudentBilling(o.id, formatChanged);
     syncFutureGroupBilling();
     save();
@@ -2264,6 +2286,9 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
         });
     }
     saved.forEach((l) => {
+      if (l.lessonKind === 'regular' && ['cancelled', 'missed', 'moved'].includes(l.status))
+        rememberRecurringExclusion(l);
+      else restoreRecurringExclusion(l);
       carryNextNote(l, o.nextNote);
       applyHomeworkResult(l);
       syncPaidLessonHistory(l);
@@ -2285,28 +2310,37 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     const f = $('#paymentForm'),
       s = student(f.elements.studentId.value),
       pack = s?.payType === 'package',
-      field = $('#paymentPackageField'),
       title = $('#paymentModal .modal-head h2'),
-      submit = $('#paymentForm button[type=submit]'),
-      paymentMonth = f.elements.date.value
-        ? new Date(f.elements.date.value + 'T12:00')
-        : new Date(),
-      packageLessons = pack ? packagePlan(s, paymentMonth).lessons : 0,
-      packageMonthLabel = $('#paymentPackageMonthLabel');
-    field.style.display = pack ? 'grid' : 'none';
-    field.querySelector('input').required = !!pack;
-    if (packageMonthLabel)
-      packageMonthLabel.textContent = paymentMonth.toLocaleDateString('ru-RU', { month: 'long' });
-    if (pack) {
-      field.querySelector('input').value = packageLessons;
-      f.elements.amount.value = (+s.price || 0) * packageLessons;
-      title.textContent = 'Пополнить абонемент';
-      submit.textContent = 'Пополнить абонемент';
-    } else {
-      f.elements.amount.value = s?.price || '';
-      title.textContent = 'Добавить оплату';
-      submit.textContent = 'Сохранить оплату';
+      submit = $('#paymentForm button[type=submit]');
+    f.elements.amount.value = '';
+    title.textContent = pack ? 'Пополнить абонемент' : 'Добавить оплату';
+    submit.textContent = pack ? 'Пополнить абонемент' : 'Сохранить оплату';
+    syncPaymentAmountHint();
+  }
+  function syncPaymentAmountHint() {
+    const f = $('#paymentForm'),
+      s = student(f.elements.studentId.value),
+      amount = +f.elements.amount.value || 0,
+      price = +s?.price || 0,
+      hint = $('#paymentAmountHint');
+    if (!s) hint.textContent = 'Сначала выберите ученика';
+    else if (!price) hint.textContent = 'В карточке ученика не указана стоимость занятия';
+    else if (s.payType !== 'package' || !amount)
+      hint.textContent = `Стоимость занятия: ${money(price)}`;
+    else {
+      const allocation = packagePaymentAllocation(s, amount);
+      hint.textContent = `Будет оплачено ещё ${allocation.lessons} ${lessonCountWord(allocation.lessons)}${allocation.remainder ? ` · аванс ${money(allocation.remainder)} сохранится` : ''}`;
     }
+  }
+  function packagePaymentAllocation(s, amount) {
+    const price = +s?.price || 0,
+      paidBefore = +finances(s?.id).paid || 0,
+      creditBefore = price ? ((paidBefore % price) + price) % price : 0,
+      combined = creditBefore + (+amount || 0);
+    return {
+      lessons: price ? Math.floor(combined / price + 1e-9) : 0,
+      remainder: price ? Math.round(combined % price) : 0,
+    };
   }
   $('#paymentForm').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -2314,25 +2348,31 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       s = student(o.studentId);
     o.id = uid();
     o.createdAt = Date.now();
+    o.date = new Date(o.createdAt).toISOString();
     o.billingType = s?.payType || 'single';
     o.amount = +o.amount || 0;
     if (s?.payType === 'package') {
-      o.packageLessons = +o.packageLessons || 0;
-      if (!o.packageLessons) {
+      const price = +s.price || 0;
+      if (!price) {
         inform(
-          'У ученика не заполнено регулярное расписание на выбранный месяц. Сначала добавьте дни занятий в карточке ученика.',
-          'Абонемент не рассчитан',
+          'Сначала укажите стоимость одного занятия в карточке ученика.',
+          'Не указана стоимость занятия',
           true,
         );
         return;
       }
+      const allocation = packagePaymentAllocation(s, o.amount);
+      o.packageLessons = o.amount / price;
+      o.priceAtPayment = price;
+      o.coveredLessons = allocation.lessons;
+      o.creditAfter = allocation.remainder;
     } else delete o.packageLessons;
     data.payments.push(o);
     save();
     closeAll();
     toast(
       s?.payType === 'package'
-        ? `Абонемент пополнен на ${o.packageLessons} занятий`
+        ? `Оплата сохранена: ещё ${o.coveredLessons} ${lessonCountWord(o.coveredLessons)}`
         : 'Оплата сохранена',
     );
   });
@@ -2460,7 +2500,6 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     if (openType === 'payment') {
       const f = $('#paymentForm');
       f.reset();
-      f.elements.date.value = localDay();
       syncPaymentForm();
       open('paymentModal');
     }
@@ -2482,8 +2521,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       const f = $('#paymentForm');
       f.reset();
       f.elements.studentId.value = paySid;
-      f.elements.date.value = localDay();
-      syncPaymentForm();
+      f.elements.studentId.dispatchEvent(new Event('change', { bubbles: true }));
       open('paymentModal');
     }
   }
@@ -2635,13 +2673,8 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
   $('#studentForm [name=billingStartDate]').addEventListener('change', syncPackageField);
   $('#studentForm [name=price]').addEventListener('input', syncPackageField);
   $('#paymentForm [name=studentId]').addEventListener('change', syncPaymentForm);
-  $('#paymentForm [name=date]').addEventListener('change', syncPaymentForm);
   $('#paymentModal').addEventListener('input', (e) => {
-    if (!e.target.matches('#paymentForm [name=packageLessons]')) return;
-    const f = $('#paymentForm'),
-      s = student(f.elements.studentId.value);
-    if (s?.payType === 'package')
-      f.elements.amount.value = (+s.price || 0) * (+e.target.value || 0);
+    if (e.target.matches('#paymentForm [name=amount]')) syncPaymentAmountHint();
   });
   $('#customGoal').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
@@ -2924,10 +2957,41 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     if (!lesson || (!lesson.auto && lesson.lessonKind !== 'regular')) return;
     const type = lesson.groupId ? 'group' : 'student',
       ownerId = lesson.groupId || lesson.studentId,
-      key = recurringScheduleKey(type, ownerId, lesson.date);
+      key = recurringScheduleKey(type, ownerId, recurringOccurrenceDate(lesson));
     data.settings.scheduleExclusions = [
       ...new Set([...(data.settings.scheduleExclusions || []), key]),
     ];
+  }
+  function recurringOccurrenceDate(lesson) {
+    const owner = lesson.groupId ? group(lesson.groupId) : student(lesson.studentId),
+      date = new Date(lesson.date),
+      slots = (owner?.scheduleSlots || []).filter((slot) => +slot.day === date.getDay());
+    if (!slots.length) return date;
+    const lessonMinutes = date.getHours() * 60 + date.getMinutes(),
+      nearest = slots
+        .map((slot) => {
+          const [hours = 0, minutes = 0] = String(slot.time || '00:00')
+            .split(':')
+            .map(Number);
+          return { hours, minutes, distance: Math.abs(hours * 60 + minutes - lessonMinutes) };
+        })
+        .sort((a, b) => a.distance - b.distance)[0];
+    date.setHours(nearest.hours, nearest.minutes, 0, 0);
+    return date;
+  }
+  function restoreRecurringExclusion(lesson) {
+    if (
+      !lesson ||
+      lesson.lessonKind !== 'regular' ||
+      !['planned', 'unconfirmed', 'done', 'paid_missed'].includes(lesson.status)
+    )
+      return;
+    const type = lesson.groupId ? 'group' : 'student',
+      ownerId = lesson.groupId || lesson.studentId,
+      key = recurringScheduleKey(type, ownerId, recurringOccurrenceDate(lesson));
+    data.settings.scheduleExclusions = (data.settings.scheduleExclusions || []).filter(
+      (item) => item !== key,
+    );
   }
   $('#profileBody').addEventListener('click', async (e) => {
     const editId = e.target.closest('[data-edit-history-lesson]')?.dataset.editHistoryLesson;
@@ -3329,16 +3393,6 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       '<option value="5">5 — отлично</option><option value="4">4 — хорошо</option><option value="3">3 — удовлетворительно</option><option value="2">2 — нужно повторить</option><option value="1">1 — не выполнено</option>';
     field.querySelector('label').textContent = 'Оценка за предыдущее ДЗ';
     oldHomework.replaceWith(grade);
-  }
-  const paymentAmount = $('#paymentForm [name=amount]')?.closest('.field');
-  if (paymentAmount) {
-    const packageField = document.createElement('div');
-    packageField.className = 'field';
-    packageField.id = 'paymentPackageField';
-    packageField.style.display = 'none';
-    packageField.innerHTML =
-      '<label>Количество занятий</label><input name="packageLessons" type="number" min="1" value="8">';
-    paymentAmount.after(packageField);
   }
   const paymentHead = $('#paymentBalances')?.closest('table')?.querySelector('thead');
   if (paymentHead)

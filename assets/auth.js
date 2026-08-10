@@ -332,9 +332,6 @@ import { createAuthFlow } from '../src/auth/auth-flow.js';
     if (!window.tutorCloud.casAvailable)
       showSync('Изменения пока сохраняются только на этом устройстве', 'error');
   }
-  document.getElementById('cloudDownloadBackup').addEventListener('click', () => {
-    document.getElementById('backupBtn').click();
-  });
   document.getElementById('cloudLoadVersion').addEventListener('click', () => {
     sessionStorage.removeItem('tutor_cloud_loaded_user');
     location.reload();

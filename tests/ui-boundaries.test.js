@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const appJs = fs.readFileSync(path.resolve(here, '../assets/app.js'), 'utf8');
+const customSelectJs = fs.readFileSync(path.resolve(here, '../assets/custom-select.js'), 'utf8');
 const indexHtml = fs.readFileSync(path.resolve(here, '../index.html'), 'utf8');
 
 describe('UI ownership boundaries', () => {
@@ -69,12 +70,24 @@ describe('UI ownership boundaries', () => {
 
   it('warns about closing a modal only after an actual form change', () => {
     expect(appJs).toContain("const form = wrap.querySelector('form')");
-    expect(appJs).toContain("if (form && id !== 'onboardingModal') modalInitial[id] = formSnapshot(form)");
+    expect(appJs).toContain(
+      "if (form && id !== 'onboardingModal') modalInitial[id] = formSnapshot(form)",
+    );
     expect(appJs).not.toMatch(/setTimeout\(\(\) => \(modalInitial\[id\]/);
     expect(appJs).toContain('formSnapshot(form) !== modalInitial[wrap.id]');
     expect(appJs).toContain('control.name || control.id || String(index)');
     expect(appJs).toContain('Object.keys(modalInitial).forEach((id) => delete modalInitial[id])');
     expect(appJs).toMatch(/syncPaymentForm\(\);\s*open\('paymentModal'\)/);
     expect(appJs).not.toMatch(/setTimeout\(syncPaymentForm\)/);
+  });
+
+  it('custom selects stay visually synced after programmatic preselection and form reset', () => {
+    expect(customSelectJs).toContain(
+      "Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')",
+    );
+    expect(customSelectJs).toMatch(
+      /set\(value\)[\s\S]*nativeValue\.set\.call\(this, value\)[\s\S]*sync\(this\)/,
+    );
+    expect(customSelectJs).toContain("document.addEventListener('reset'");
   });
 });

@@ -53,18 +53,22 @@ describe('payments action-first redesign contract', () => {
     expect(section).not.toMatch(/class=["'][^"']*avatar/);
   });
 
-  it('restores the package fields expected by the existing payment flow', () => {
-    expect(html).toContain('id="paymentPackageField"');
-    expect(html).toContain('name="packageLessons"');
-    expect(html).toContain('id="paymentPackageMonthLabel"');
-    expect(app).toContain("$('#paymentPackageField')");
-    expect(app).toContain("field.querySelector('input').value = packageLessons");
-    expect(app).toContain("#paymentForm [name=packageLessons]");
+  it('accepts a payment amount without a date or manual lesson count', () => {
+    const form = html.match(/<form id="paymentForm">[\s\S]*?<\/form>/)?.[0] || '';
+    expect(form).toContain('name="studentId"');
+    expect(form).toContain('name="amount"');
+    expect(form).not.toContain('name="date"');
+    expect(form).not.toContain('name="packageLessons"');
+    expect(form).toContain('id="paymentAmountHint"');
+    expect(app).toContain('o.packageLessons = o.amount / price');
   });
 
   it('keeps context payment actions discoverable by existing delegated handlers', () => {
     expect(app).toContain('data-payment-student=');
     expect(app).toContain("e.target.closest('[data-payment-student]')");
+    expect(app).toContain(
+      "f.elements.studentId.dispatchEvent(new Event('change', { bubbles: true }))",
+    );
   });
 
   it('supports current-month and 45-day payment history filters', () => {

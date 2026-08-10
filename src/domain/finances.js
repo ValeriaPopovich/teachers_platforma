@@ -48,10 +48,14 @@ export function finances(data, id) {
     const paid =
       (+arch.paidAmount || 0) + balancePayments.reduce((n, p) => n + (+p.amount || 0), 0);
     const balanceLessons = bought - used;
+    const wholeLessons = Math.max(0, Math.floor(balanceLessons + 1e-9));
+    const creditAmount = Math.max(0, Math.round((balanceLessons - wholeLessons) * (+s.price || 0)));
     return {
       charged: used * (+s.price || 0) + extraDebt,
       paid,
       balanceLessons,
+      wholeLessons,
+      creditAmount,
       extraDebt,
       debt: Math.max(0, -balanceLessons) * (+s.price || 0) + extraDebt,
       bought,
