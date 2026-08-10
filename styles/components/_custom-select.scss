@@ -71,6 +71,14 @@
 
 .custom-select-value {
   min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+// Compact toolbar filters stay on one line; form controls may grow to fit their label.
+.toolbar .custom-select-value,
+.payments-history-controls .custom-select-value,
+.rating-label .custom-select-value {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -119,6 +127,8 @@
   background: transparent;
   font: inherit;
   line-height: 1.35;
+  overflow-wrap: anywhere;
+  white-space: normal;
   text-align: left;
   cursor: pointer;
 }

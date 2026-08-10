@@ -39,6 +39,7 @@ export function createGroupFormView({ store, service, modal, dialog, toast }) {
     form.elements.id.value = '';
     form.elements.duration.value = 60;
     $('#deleteGroup').style.display = 'none';
+    $('#groupModalTitle').textContent = 'Новая группа';
     fillMemberOptions();
     setSlots('#groupScheduleSlots', [], false);
     modal.open('groupModal');
@@ -58,6 +59,7 @@ export function createGroupFormView({ store, service, modal, dialog, toast }) {
     syncMemberChips();
     setSlots('#groupScheduleSlots', group.scheduleSlots || [], false);
     $('#deleteGroup').style.display = 'inline-block';
+    $('#groupModalTitle').textContent = 'Редактировать группу';
     modal.closeAll();
     modal.open('groupModal');
   }

@@ -137,6 +137,20 @@
       '<span class="custom-select-value"></span><span class="custom-select-chevron" aria-hidden="true"></span>';
     wrapper.append(trigger);
 
+    const valueDescriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
+    if (valueDescriptor?.get && valueDescriptor?.set) {
+      Object.defineProperty(select, 'value', {
+        configurable: true,
+        get() {
+          return valueDescriptor.get.call(this);
+        },
+        set(value) {
+          valueDescriptor.set.call(this, value);
+          queueMicrotask(() => sync(this));
+        },
+      });
+    }
+
     trigger.addEventListener('click', () => {
       sync(select);
       open(select);
@@ -156,6 +170,7 @@
     });
     select.addEventListener('change', () => sync(select));
     select.addEventListener('focus', () => trigger.focus());
+    select.form?.addEventListener('reset', () => queueMicrotask(() => sync(select)));
     new MutationObserver(() => {
       sync(select);
       if (openSelect === select) open(select);

@@ -76,13 +76,13 @@ export function getStudentPaymentState(state, student, date = new Date()) {
         progress,
         finance,
       };
-    return { kind: 'ok', label: 'Оплата в порядке', amountDue: 0, progress, finance };
+    return { kind: 'ok', label: 'Оплачено', amountDue: 0, progress, finance };
   }
   if (finance.debt > 0)
     return { kind: 'need', label: 'Есть долг', amountDue: finance.debt, finance };
   return {
     kind: 'ok',
-    label: finance.balance > 0 ? 'Есть аванс' : 'Оплата в порядке',
+    label: finance.balance > 0 ? 'Есть аванс' : 'Оплачено',
     amountDue: 0,
     finance,
   };

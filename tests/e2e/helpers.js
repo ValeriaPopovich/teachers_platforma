@@ -50,7 +50,7 @@ export function student(overrides = {}) {
   };
 }
 
-export async function boot(page, data = blankData()) {
+export async function boot(page, data = blankData(), { onboarding = false } = {}) {
   await page.route('**/assets/auth.js', async (route) => {
     await route.fulfill({
       contentType: 'application/javascript',
@@ -87,7 +87,8 @@ export async function boot(page, data = blankData()) {
   );
   await page.goto('/');
   await expect(page.locator('#page-dashboard')).toHaveClass(/active/);
-  await expect(page.locator('#onboardingModal')).not.toHaveClass(/open/);
+  if (onboarding) await expect(page.locator('#onboardingModal')).toHaveClass(/open/);
+  else await expect(page.locator('#onboardingModal')).not.toHaveClass(/open/);
 }
 
 export async function persistedData(page) {

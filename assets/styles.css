@@ -447,6 +447,11 @@ button {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.student-grid > .empty {
+  grid-column: 1/-1;
+  width: 100%;
+}
+
 .student-card {
   cursor: pointer;
 }
@@ -2828,17 +2833,6 @@ body {
 #groupAttendance,
 #customPeriodFields {
   animation: field-in 0.24s ease;
-}
-
-#homeworkGradeField {
-  display: grid !important;
-  transition: opacity 0.18s ease;
-}
-
-#homeworkGradeField.is-disabled {
-  visibility: hidden;
-  opacity: 0;
-  pointer-events: none;
 }
 
 .page.active {
@@ -5413,6 +5407,13 @@ body {
 
 .custom-select-value {
   min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.toolbar .custom-select-value,
+.payments-history-controls .custom-select-value,
+.rating-label .custom-select-value {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -5461,6 +5462,8 @@ body {
   background: transparent;
   font: inherit;
   line-height: 1.35;
+  overflow-wrap: anywhere;
+  white-space: normal;
   text-align: left;
   cursor: pointer;
 }

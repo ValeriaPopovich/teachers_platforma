@@ -16,15 +16,15 @@ export function createDashboardView({ store, openLesson, retentionDays = 45 }) {
   const page = $('#page-dashboard');
   let bound = false;
 
-  function rows(state, list, empty) {
+  function rows(state, list, empty, { visual = '', withDate = false } = {}) {
     return list.length
       ? list
           .map(
             (lesson) =>
-              `<button type="button" class="list-row lesson-row" data-open-lesson="${lesson.seriesId || lesson.id}"><span><b>${escapeHtml(lessonName(state, lesson))}</b><small>${formatTime(lesson.date)} · ${escapeHtml(STATUS_LABELS[lesson.status] || lesson.status)}</small></span><span>→</span></button>`,
+              `<button type="button" class="list-row lesson-row" data-open-lesson="${lesson.seriesId || lesson.id}"><span><b>${withDate ? `${new Date(lesson.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })} · ` : ''}${formatTime(lesson.date)} · ${escapeHtml(lessonName(state, lesson))}</b><small>${escapeHtml(STATUS_LABELS[lesson.status] || lesson.status)}</small></span><span>→</span></button>`,
           )
           .join('')
-      : `<div class="empty">${empty}</div>`;
+      : `<div class="empty">${visual ? `<div class="dashboard-empty-person">${visual}</div>` : ''}${empty}</div>`;
   }
 
   function bind() {
@@ -72,25 +72,37 @@ export function createDashboardView({ store, openLesson, retentionDays = 45 }) {
             (lesson.status === 'done' && lesson.reportFilled === false)),
       )
       .sort((a, b) => new Date(b.date) - new Date(a.date));
-    if ($('#hello'))
-      $('#hello').textContent =
-        `${now.getHours() < 12 ? 'Доброе утро' : now.getHours() < 18 ? 'Добрый день' : 'Добрый вечер'}${state.settings.tutor ? `, ${state.settings.tutor}` : ''}!`;
+    if ($('#hello')) {
+      const hour = now.getHours();
+      const part = hour < 6 ? 'night' : hour < 12 ? 'morning' : hour < 18 ? 'day' : 'evening';
+      const greeting = {
+        night: 'Доброй ночи',
+        morning: 'Доброе утро',
+        day: 'Добрый день',
+        evening: 'Добрый вечер',
+      }[part];
+      const visual = { night: '🌙', morning: '🌅', day: '☀️', evening: '🌇' }[part];
+      $('#hello').innerHTML =
+        `${escapeHtml(`${greeting}${state.settings.tutor ? `, ${state.settings.tutor}` : ''}!`)} <span class="greeting-visual ${part}" aria-hidden="true">${visual}</span>`;
+    }
     if ($('#todayText'))
-      $('#todayText').textContent = now.toLocaleDateString('ru-RU', {
+      $('#todayText').textContent = now.toLocaleString('ru-RU', {
         weekday: 'long',
         day: 'numeric',
         month: 'long',
+        hour: '2-digit',
+        minute: '2-digit',
       });
     if ($('#upcoming'))
-      $('#upcoming').innerHTML = rows(
-        state,
-        upcoming,
-        'На сегодня больше нет предстоящих занятий.',
-      );
+      $('#upcoming').innerHTML = rows(state, upcoming, 'Предстоящих занятий сегодня нет', {
+        visual: '🧘‍♀️',
+      });
     if ($('#todayCompleted'))
-      $('#todayCompleted').innerHTML = rows(state, completed, 'Сегодня ещё нет прошедших занятий.');
+      $('#todayCompleted').innerHTML = rows(state, completed, 'Прошедших занятий сегодня пока нет');
     if ($('#unfilledLessons'))
-      $('#unfilledLessons').innerHTML = rows(state, unfilled, 'Все прошедшие занятия заполнены.');
+      $('#unfilledLessons').innerHTML = rows(state, unfilled, 'Все занятия заполнены', {
+        withDate: true,
+      });
     if ($('#dashboardUnfilledAlert'))
       $('#dashboardUnfilledAlert').innerHTML = unfilled.length
         ? `<button type="button" class="notice" data-scroll-unfilled>Незаполненных занятий: <b>${unfilled.length}</b></button>`

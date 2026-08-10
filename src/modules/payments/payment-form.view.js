@@ -7,7 +7,7 @@ export function createPaymentFormView({ store, service, modal, dialog, toast }) 
   if (!form) return {};
 
   function fillStudents(selected = '') {
-    form.elements.studentId.innerHTML = `<option value="">Выберите...</option>${store
+    form.elements.studentId.innerHTML = `<option value="">Выберите ученика</option>${store
       .getState()
       .students.map(
         (student) => `<option value="${student.id}">${escapeHtml(student.name)}</option>`,

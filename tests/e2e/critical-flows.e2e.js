@@ -33,10 +33,18 @@ test('lesson lifecycle: create, reopen with locked owner and persist', async ({ 
   await boot(page, data);
   await go(page, 'schedule');
   await page.locator('#page-schedule [data-open="lesson"]').first().click();
+  await expect(page.locator('#lessonModalTitle')).toHaveText('Новое разовое занятие');
   await page.locator('#lessonForm [name="targetId"]').selectOption('s:s-e2e');
   await page.locator('#lessonForm [name="date"]').fill(localDateTime(60));
   await page.locator('#lessonForm [name="status"]').selectOption('done');
   await page.locator('#lessonForm [name="topics"]').fill('Квадратные уравнения');
+  await page.locator('#previousHomeworkToggle').focus();
+  await page.keyboard.press('Space');
+  await page.locator('#lessonForm [name="homeworkGrade"]').selectOption('4');
+  await page.locator('#lessonPaymentToggle').focus();
+  await page.keyboard.press('Space');
+  await expect(page.locator('#lessonPaymentLabel')).toHaveText('Занятие оплачено');
+  await expect(page.locator('#parentMessage')).toHaveValue(/Квадратные уравнения/);
   await page.locator('#lessonForm button[type="submit"]').click();
 
   const stored = await persistedData(page);
@@ -45,10 +53,18 @@ test('lesson lifecycle: create, reopen with locked owner and persist', async ({ 
     studentId: 's-e2e',
     status: 'done',
     topics: 'Квадратные уравнения',
+    previousHomework: 'yes',
+    homeworkGrade: '4',
+    payment: 'paid',
   });
+  expect(stored.payments).toHaveLength(1);
 
   await page.locator('#calendar [data-lesson]').first().click();
+  await expect(page.locator('#lessonModalTitle')).toHaveText('Редактировать занятие');
   await expect(page.locator('#lessonForm [name="targetId"]')).toBeDisabled();
+  await expect(page.locator('#previousHomeworkToggle')).toBeChecked();
+  await expect(page.locator('#lessonForm [name="homeworkGrade"]')).toHaveValue('4');
+  await expect(page.locator('#lessonPaymentToggle')).toBeChecked();
   await page.locator('#lessonForm [data-close], #lessonModal [data-close]').first().click();
   await page.reload();
   const afterReload = await persistedData(page);

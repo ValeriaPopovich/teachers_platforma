@@ -1,4 +1,4 @@
-import { $, escapeHtml } from '../../shared/dom.js';
+import { $, escapeHtml, safeExternalUrl } from '../../shared/dom.js';
 import { initials, money } from '../../shared/format.js';
 import { finances } from '../payments/finances.js';
 import { getStudentMetrics, scheduleText } from './students.selectors.js';
@@ -21,7 +21,7 @@ export function createStudentsView({ store, service, modal, dialog, toast, sched
       if (!student) return false;
       if (
         !(await dialog.ask(
-          `Удалить ученика «${student.name}» вместе с его занятиями и платежами?`,
+          `Удалить ученика «${student.name}», его занятия и платежи? Это действие нельзя отменить.`,
           'Удаление ученика',
           'Удалить',
         ))
@@ -44,6 +44,7 @@ export function createStudentsView({ store, service, modal, dialog, toast, sched
       if (filter === 'debt' && finances(state, student.id).debt <= 0) return false;
       return true;
     });
+    list.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ru'));
     const grid = $('#studentGrid');
     if (!grid) return;
     grid.innerHTML = list.length
@@ -51,13 +52,19 @@ export function createStudentsView({ store, service, modal, dialog, toast, sched
           .map((student) => {
             const metric = getStudentMetrics(state, student.id);
             const finance = finances(state, student.id);
+            const lessonUrl = safeExternalUrl(student.lessonLink);
+            const parent = [student.parentName, student.parentContact].filter(Boolean).join(' · ');
             const payment =
               student.payType === 'package'
-                ? `${finance.balanceLessons ?? 0} зан. осталось`
+                ? finance.balanceLessons < 0
+                  ? `Долг ${Math.abs(finance.balanceLessons)} зан.`
+                  : finance.balanceLessons === 0
+                    ? 'Закончился'
+                    : `${finance.balanceLessons} зан.`
                 : finance.debt > 0
                   ? `Долг ${money(finance.debt)}`
-                  : `Баланс ${money(Math.max(0, finance.balance || 0))}`;
-            return `<article class="card student-card" data-student="${student.id}" tabindex="0" role="button" aria-label="Открыть карточку ученика ${escapeHtml(student.name)}"><div class="student-head"><div class="avatar">${escapeHtml(initials(student.name))}</div><div><h3>${escapeHtml(student.name)}</h3><div class="sub">${escapeHtml(student.grade || 'Класс не указан')}</div></div><button class="icon-btn quick-delete-student" type="button" data-delete-student="${student.id}" aria-label="Удалить ученика">×</button></div><div class="student-card-meta"><span>${escapeHtml(scheduleText(student.scheduleSlots || []))}</span><span>${escapeHtml(payment)}</span></div><div class="student-card-kpis"><span><b>${metric.attendance}%</b><small>посещаемость</small></span><span><b>${metric.homework == null ? '—' : `${String(metric.homework).replace('.', ',')}/5`}</b><small>ДЗ</small></span></div></article>`;
+                  : '✓';
+            return `<article class="card student-card"><button class="btn student-delete" type="button" data-delete-student="${student.id}" title="Удалить ученика" aria-label="Удалить ученика">🗑</button><div class="student-card-main" role="button" tabindex="0" aria-label="Открыть карточку: ${escapeHtml(student.name)}" data-student="${student.id}"><div class="student-top"><div><h3>${escapeHtml(student.name)}</h3><div class="meta">${escapeHtml(student.grade || 'Класс не указан')} · ${escapeHtml(scheduleText(student.scheduleSlots || []))}</div></div></div><div class="student-card-details">${student.contact ? `<div><span>Контакт ученика</span><b>${escapeHtml(student.contact)}</b></div>` : ''}${parent ? `<div><span>Родитель</span><b>${escapeHtml(parent)}</b></div>` : ''}<div><span>Условия занятий</span><b>${money(student.price)} · ${+student.duration || 60} мин · ${student.payType === 'package' ? 'абонемент' : 'разовая оплата'}</b></div>${student.goals ? `<div><span>Цели</span><b>${escapeHtml(student.goals)}</b></div>` : ''}${student.notes ? `<div class="student-card-notes"><span>Заметки</span><b>${escapeHtml(student.notes)}</b></div>` : ''}${lessonUrl ? `<a class="student-lesson-link" href="${escapeHtml(lessonUrl)}" target="_blank" rel="noopener">↗ Открыть ссылку на занятие</a>` : ''}</div><div class="student-metrics"><div><b>${metric.attendance}%</b><small>Посещение</small></div><div><b>${metric.homework == null ? '—' : `${String(metric.homework).replace('.', ',')}/5`}</b><small>Средняя оценка ДЗ</small></div><div><b class="${(student.payType === 'package' && finance.balanceLessons <= 0) || finance.debt ? 'danger-text' : ''}">${escapeHtml(payment)}</b><small>${student.payType === 'package' ? 'Абонемент' : finance.debt ? 'Долг' : 'Оплачено'}</small></div></div></div></article>`;
           })
           .join('')
       : '<div class="empty">Ученики не найдены</div>';
@@ -69,16 +76,12 @@ export function createStudentsView({ store, service, modal, dialog, toast, sched
     if (!grid) return;
     grid.innerHTML = state.groups.length
       ? state.groups
-          .map(
-            (group) =>
-              `<article class="card student-card group-card" data-group="${group.id}" tabindex="0" role="button" aria-label="Редактировать группу ${escapeHtml(group.name)}"><div class="student-head"><div class="avatar">${escapeHtml(initials(group.name))}</div><div><h3>${escapeHtml(group.name)}</h3><div class="sub">${escapeHtml(group.grade || 'Группа')}</div></div><button class="icon-btn quick-delete-group" type="button" data-delete-group="${group.id}" aria-label="Удалить группу">×</button></div><div class="student-card-meta"><span>${escapeHtml(scheduleText(group.scheduleSlots || []))}</span><span>${(group.members || []).length} уч.</span></div><div class="sub">${
-                (group.members || [])
-                  .map((id) => state.students.find((student) => student.id === id)?.name)
-                  .filter(Boolean)
-                  .map(escapeHtml)
-                  .join(', ') || 'Без участников'
-              }</div></article>`,
-          )
+          .map((group) => {
+            const members = (group.members || [])
+              .map((id) => state.students.find((student) => student.id === id)?.name)
+              .filter(Boolean);
+            return `<article class="card student-card group-card"><button class="btn student-delete" type="button" data-delete-group="${group.id}" title="Удалить группу" aria-label="Удалить группу">🗑</button><div class="student-card-main" role="button" tabindex="0" aria-label="Открыть группу: ${escapeHtml(group.name)}" data-group="${group.id}"><div class="student-top"><div class="avatar">${escapeHtml(initials(group.name))}</div><div><h3>${escapeHtml(group.name)}</h3><div class="meta">${escapeHtml(group.grade || 'Направление не указано')} · ${escapeHtml(scheduleText(group.scheduleSlots || []))}</div></div></div><div class="student-metrics" style="grid-template-columns:repeat(2,1fr)"><div><b>${members.length}</b><small>Участников</small></div><div><b>${+group.duration || 60} мин</b><small>Длительность</small></div></div><div class="member-chips">${members.map((name) => `<span class="member-chip">${escapeHtml(name)}</span>`).join('')}</div></div></article>`;
+          })
           .join('')
       : '<div class="empty">Групп пока нет</div>';
   }
@@ -105,7 +108,7 @@ export function createStudentsView({ store, service, modal, dialog, toast, sched
       if (
         student &&
         (await dialog.ask(
-          `Удалить ученика «${student.name}» вместе с его занятиями и платежами?`,
+          `Удалить ученика «${student.name}», его занятия и платежи? Это действие нельзя отменить.`,
           'Удаление ученика',
           'Удалить',
         ))

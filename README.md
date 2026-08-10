@@ -6,6 +6,15 @@
 
 Это статический сайт: единственный production-файл `assets/styles.css` генерируется из SCSS и хранится в репозитории для GitHub Pages. Открыть `index.html` через static-сервер.
 
+Для локальной разработки с автоматической пересборкой SCSS и live reload:
+
+```bash
+npm install
+npm run dev
+```
+
+Vite откроет `http://127.0.0.1:5173`. Остановить Sass watcher и dev-сервер можно одной комбинацией `Ctrl+C`.
+
 Основной browser entry после архитектурного рефакторинга:
 
 ```text

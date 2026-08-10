@@ -452,6 +452,11 @@ button {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.student-grid > .empty {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
 .student-card {
   cursor: pointer;
 }
@@ -3004,17 +3009,6 @@ body {
 #groupAttendance,
 #customPeriodFields {
   animation: field-in 0.24s ease;
-}
-
-#homeworkGradeField {
-  display: grid !important;
-  transition: opacity 0.18s ease;
-}
-
-#homeworkGradeField.is-disabled {
-  visibility: hidden;
-  opacity: 0;
-  pointer-events: none;
 }
 
 .page.active {

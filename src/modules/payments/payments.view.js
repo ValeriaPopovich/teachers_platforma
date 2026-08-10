@@ -1,5 +1,6 @@
 import { $, escapeHtml } from '../../shared/dom.js';
 import { formatDate, money, monthName } from '../../shared/format.js';
+import { periodAnalytics } from '../../domain/analytics.js';
 import { createPaymentFormView } from './payment-form.view.js';
 import {
   getMonthlyPaymentSummary,
@@ -25,13 +26,9 @@ function paymentStateMarkup(row) {
       : row.amountDue > 0
         ? `${row.label} · ${money(row.amountDue)}`
         : row.label;
-  const detail =
-    student.payType === 'package' && row.progress
-      ? `${row.progress.used} использовано · ${row.progress.bought} куплено · ${row.progress.remaining} осталось`
-      : row.finance.balance > 0
-        ? `Аванс ${money(row.finance.balance)}`
-        : `Начислено ${money(row.finance.charged)} · оплачено ${money(row.finance.paid)}`;
-  return `<article class="payment-balance-item" data-kind="${row.kind}" data-payment-student="${student.id}"><div class="payment-balance-main"><b>${escapeHtml(student.name)}</b><small>${escapeHtml(student.payType === 'package' ? 'Абонемент' : 'Разовые занятия')}</small></div><div class="payment-balance-state"><b>${escapeHtml(stateText)}</b><small>${escapeHtml(detail)}</small></div><button class="btn payment-row-action" type="button" data-payment-for="${student.id}">Принять оплату</button></article>`;
+  const actionLabel =
+    student.payType === 'package' && row.kind === 'ending' ? 'Пополнить' : 'Принять оплату';
+  return `<article class="payment-balance-item" data-kind="${row.kind}"><div class="payment-balance-main"><b>${escapeHtml(student.name)}</b><small>${escapeHtml(student.payType === 'package' ? 'Абонемент' : 'Разовые занятия')}</small></div><div class="payment-balance-state">${escapeHtml(stateText)}</div><button class="btn payment-row-action" type="button" data-payment-for="${student.id}">${actionLabel}</button></article>`;
 }
 
 function visibleRows(rows, key, expanded) {
@@ -47,6 +44,9 @@ export function createPaymentsView({ store, service, modal, dialog, toast }) {
     const state = store.getState();
     const now = new Date();
     const summary = getMonthlyPaymentSummary(state, now);
+    const monthFrom = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    const monthTo = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+    const analytics = periodAnalytics(state, monthFrom, monthTo);
     const allRows = getPaymentRows(state, now);
     const attention = getPaymentAttentionRows(state, now);
     const packageRows = getPackageMonthRows(state, now);
@@ -55,15 +55,24 @@ export function createPaymentsView({ store, service, modal, dialog, toast }) {
     const history = getPaymentHistory(state, { days: historyDays, studentId: historyStudent, now });
 
     $('#analyticsRangeLabel').textContent = monthName(now);
+    const statTips = [
+      'Сколько денег фактически отмечено как полученные в текущем месяце — по дате платежа.',
+      'Рассчитанные абонементы месяца плюс запланированные и проведённые разовые занятия.',
+      'Общий долг прямо сейчас: неоплаченные занятия, абонементы и дополнительные долги.',
+    ];
     $('#paymentStats').innerHTML = [
-      [money(summary.received), 'Получено', ''],
-      [money(summary.debt), 'Нужно получить', summary.debt ? 'debt-stat' : ''],
-      [summary.attention, 'Требуют внимания', summary.attention ? 'debt-stat' : ''],
-      [summary.payments, 'Платежей', ''],
+      [money(analytics.paid), 'Получено за месяц', 'По фактическим платежам', ''],
+      [money(analytics.charged), 'Начислено за месяц', 'По расписанию и абонементам', ''],
+      [
+        money(summary.debt),
+        'Долг сейчас',
+        summary.attention ? `${summary.attention} чел. требуют оплаты` : 'Задолженности нет',
+        summary.debt ? 'debt-stat' : '',
+      ],
     ]
       .map(
-        ([value, label, extra]) =>
-          `<div class="stat ${extra}"><span class="value">${value}</span><span class="label">${label}</span></div>`,
+        ([value, label, note, extra], index) =>
+          `<div class="card stat ${extra}"><span class="help-tip" tabindex="0" data-tip="${escapeHtml(statTips[index])}">?</span><div class="value">${value}</div><div class="label">${label}</div><small class="payment-stat-note">${note}</small></div>`,
       )
       .join('');
     $('#paymentAttentionCount').textContent = attention.length;
@@ -72,11 +81,13 @@ export function createPaymentsView({ store, service, modal, dialog, toast }) {
     const visibleAttention = visibleRows(attention, 'attention', expanded);
     $('#paymentAttentionPanel').innerHTML = attention.length
       ? `<div class="payment-balance-stack">${visibleAttention.map(paymentStateMarkup).join('')}</div>${expandButton('attention', attention.length, visibleAttention.length, expanded.attention)}`
-      : '<div class="payments-empty"><div><b>Всё оплачено</b><span>Сейчас нет учеников, требующих внимания.</span></div></div>';
+      : allRows.length
+        ? '<div class="payments-empty"><div><b>Сейчас всё оплачено</b>Ничего делать не нужно — можно спокойно закрывать вкладку.</div></div>'
+        : '<div class="payments-empty"><div><b>Учеников пока нет</b>После добавления учеников здесь появятся расчёты.</div></div>';
     const visibleAll = visibleRows(allRows, 'all', expanded);
     $('#paymentAllPanel').innerHTML = allRows.length
       ? `<div class="payment-balance-stack">${visibleAll.map(paymentStateMarkup).join('')}</div>${expandButton('all', allRows.length, visibleAll.length, expanded.all)}`
-      : '<div class="payments-empty"><div><b>Учеников пока нет</b><span>Добавьте учеников, чтобы видеть расчёты.</span></div></div>';
+      : '<div class="payments-empty"><div><b>Учеников пока нет</b>Здесь появится полный список расчётов.</div></div>';
     $('#paymentAttentionPanel').hidden = currentView !== 'attention';
     $('#paymentAllPanel').hidden = currentView !== 'all';
     $('#paymentAttentionTab').setAttribute('aria-selected', String(currentView === 'attention'));
@@ -86,8 +97,8 @@ export function createPaymentsView({ store, service, modal, dialog, toast }) {
 
     const badge = $('#paymentNavBadge');
     if (badge) {
-      badge.textContent = attention.length || '';
-      badge.style.display = attention.length ? '' : 'none';
+      badge.textContent = attention.length;
+      badge.classList.toggle('show', attention.length > 0);
     }
 
     const packageCard = $('#packageMonthCard');
@@ -128,7 +139,7 @@ export function createPaymentsView({ store, service, modal, dialog, toast }) {
           })
           .join('') +
         expandButton('history', history.length, visibleHistory.length, expanded.history)
-      : '<div class="payments-empty"><div><b>Платежей за выбранный период нет</b><span>Попробуйте другой период или ученика.</span></div></div>';
+      : '<div class="payments-empty"><div><b>Платежей за этот период нет</b>Попробуйте другой период или другого ученика.</div></div>';
   }
 
   function switchView(view, focus = false) {

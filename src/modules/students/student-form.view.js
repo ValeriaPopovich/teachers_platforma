@@ -196,6 +196,7 @@ export function createStudentFormView({ store, service, modal, dialog, toast }) 
     $('#studentModalTitle').textContent = 'Новый ученик';
     syncPackageField();
     modal.open('studentModal');
+    requestAnimationFrame(() => form.elements.name.focus());
   }
 
   function openEdit(id) {

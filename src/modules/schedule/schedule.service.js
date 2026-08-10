@@ -70,6 +70,8 @@ function baseLesson(input, student, ownerPatch, id) {
     homework: input.homework || '',
     comment: input.comment || '',
     nextNote: input.nextNote || '',
+    previousHomework: input.previousHomework || 'no',
+    homeworkGrade: input.previousHomework === 'yes' ? input.homeworkGrade || '' : '',
     testDone: input.testDone || 'no',
     testName: input.testName || '',
     testScore: input.testScore || '',
@@ -148,7 +150,8 @@ export function createScheduleService({ store, uid, now = () => Date.now() }) {
             lesson.payment = 'unpaid';
             draft.payments = draft.payments.filter((payment) => payment.lessonId !== lesson.id);
           } else {
-            lesson.payment = 'package';
+            lesson.payment =
+              input.lessonPaymentChoice === 'not_charged' ? 'not_charged' : 'package';
             draft.payments = draft.payments.filter((payment) => payment.lessonId !== lesson.id);
           }
         } else

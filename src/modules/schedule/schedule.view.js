@@ -1,5 +1,5 @@
 import { $, escapeHtml } from '../../shared/dom.js';
-import { formatTime } from '../../shared/format.js';
+import { formatTime, localDay } from '../../shared/format.js';
 import { calendarViewRange } from './schedule.domain.js';
 import { lessonName, uniqueSessions } from './schedule.selectors.js';
 import { createLessonFormView } from './lesson-form.view.js';
@@ -27,31 +27,41 @@ export function createScheduleView({ store, service, modal, dialog, toast }) {
     const calendar = $('#calendar');
     if (!calendar) return;
     const state = store.getState();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const { start, days } = calendarViewRange(calendarView, anchorDate);
     const sessions = uniqueSessions(state.lessons);
-    calendar.className = `calendar-days calendar-${calendarView}`;
-    calendar.innerHTML = Array.from({ length: days }, (_, index) => {
-      const day = new Date(start);
-      day.setDate(start.getDate() + index);
-      const key = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
-      const lessons = sessions
-        .filter((lesson) => String(lesson.date).slice(0, 10) === key)
-        .sort((a, b) => String(a.date).localeCompare(String(b.date)));
-      const events = state.events
-        .filter((event) => String(event.date).slice(0, 10) === key)
-        .sort((a, b) => String(a.date).localeCompare(String(b.date)));
-      const entries = [
-        ...lessons.map((lesson) => ({
-          time: lesson.date,
-          html: `<button type="button" class="calendar-item lesson-item status-${lesson.status}" data-lesson="${lesson.seriesId || lesson.id}"><span class="calendar-item-time">${formatTime(lesson.date)}</span><b>${escapeHtml(lessonName(state, lesson))}</b><small>${escapeHtml(statusLabel(lesson.status))}</small></button>`,
-        })),
-        ...events.map((event) => ({
-          time: event.date,
-          html: `<button type="button" class="calendar-item event-item" data-event="${event.id}"><span class="calendar-item-time">${formatTime(event.date)}</span><b>${escapeHtml(event.title)}</b><small>Личное событие</small></button>`,
-        })),
-      ].sort((a, b) => String(a.time).localeCompare(String(b.time)));
-      return `<section class="calendar-day ${key === new Date().toISOString().slice(0, 10) ? 'today' : ''}" data-date="${key}"><header><b>${day.toLocaleDateString('ru-RU', { weekday: 'short' })}</b><span>${day.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}</span></header><div class="calendar-day-items">${entries.length ? entries.map((entry) => entry.html).join('') : '<span class="calendar-empty">—</span>'}</div></section>`;
-    }).join('');
+    const weekdayHeads =
+      calendarView === 'day'
+        ? [today.toLocaleDateString('ru-RU', { weekday: 'short' })]
+        : ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+    calendar.className = 'calendar-days';
+    calendar.dataset.calendarView = calendarView;
+    calendar.innerHTML =
+      weekdayHeads.map((day) => `<div class="calendar-weekday">${day}</div>`).join('') +
+      Array.from({ length: days }, (_, index) => {
+        const day = new Date(start);
+        day.setDate(start.getDate() + index);
+        const key = localDay(day);
+        const lessons = sessions
+          .filter((lesson) => String(lesson.date).slice(0, 10) === key)
+          .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+        const events = state.events
+          .filter((event) => String(event.date).slice(0, 10) === key)
+          .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+        const entries = [
+          ...lessons.map((lesson) => ({
+            time: lesson.date,
+            html: `<button type="button" class="event event--${lesson.status}" data-lesson="${lesson.seriesId || lesson.id}">${formatTime(lesson.date)} ${escapeHtml(lessonName(state, lesson))}<br><span class="sub">${escapeHtml(statusLabel(lesson.status))}${lesson.lessonKind === 'oneoff' ? ' · разовое' : ''}</span></button>`,
+          })),
+          ...events.map((event) => ({
+            time: event.date,
+            html: `<button type="button" class="event custom-event" data-event="${event.id}">${formatTime(event.date)} ${escapeHtml(event.title)}<br><span class="sub">Своё событие · ${event.duration || 60} мин</span></button>`,
+          })),
+        ].sort((a, b) => String(a.time).localeCompare(String(b.time)));
+        const weekday = day.toLocaleDateString('ru-RU', { weekday: 'long' });
+        return `<div class="day ${key === localDay(today) ? 'today' : ''} ${day < today ? 'past-day' : ''} ${entries.length ? 'has-events' : ''}" data-date="${key}"><div class="date"><span class="mobile-weekday">${weekday},&nbsp;</span>${day.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}</div>${entries.map((entry) => entry.html).join('')}</div>`;
+      }).join('');
     $('#calendarViewSwitch')
       ?.querySelectorAll('[data-calendar-view]')
       .forEach((button) => {

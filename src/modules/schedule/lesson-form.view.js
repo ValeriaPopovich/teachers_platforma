@@ -11,10 +11,18 @@ export function createLessonFormView({ store, service, modal, dialog, toast }) {
   const form = $('#lessonForm');
   const eventForm = $('#eventForm');
   if (!form) return {};
+  const notice = $('#lessonForm .notice');
+  if (notice && !$('#lessonContext')) {
+    const context = document.createElement('div');
+    context.id = 'lessonContext';
+    context.className = 'notice';
+    context.style.display = 'none';
+    notice.after(context);
+  }
 
   function fillTargets(selected = '') {
     const state = store.getState();
-    form.elements.targetId.innerHTML = `<option value="">Выберите...</option>${state.students.map((student) => `<option value="s:${student.id}">${escapeHtml(student.name)}</option>`).join('')}${state.groups.map((group) => `<option value="g:${group.id}">Группа: ${escapeHtml(group.name)}</option>`).join('')}`;
+    form.elements.targetId.innerHTML = `<option value="">Выберите ученика или группу</option>${state.students.map((student) => `<option value="s:${student.id}">${escapeHtml(student.name)}</option>`).join('')}${state.groups.map((group) => `<option value="g:${group.id}">Группа: ${escapeHtml(group.name)}</option>`).join('')}`;
     form.elements.targetId.value = selected;
   }
 
@@ -34,7 +42,7 @@ export function createLessonFormView({ store, service, modal, dialog, toast }) {
       $('#groupAttendanceMembers').innerHTML = '';
       return;
     }
-    wrap.style.display = 'block';
+    wrap.style.display = 'grid';
     const state = store.getState();
     const chosen = new Set(selected || group.members || []);
     $('#groupAttendanceMembers').innerHTML = (group.members || [])
@@ -56,27 +64,110 @@ export function createLessonFormView({ store, service, modal, dialog, toast }) {
   function syncFields() {
     const info = targetInfo();
     const student = info.student;
+    const groupMode = info.type === 'g';
     const isPackage =
       student?.payType === 'package' ||
       (info.group &&
         (info.group.members || []).every(
           (id) => store.getState().students.find((item) => item.id === id)?.payType === 'package',
         ));
-    $('#movedToField').style.display = form.elements.status.value === 'moved' ? 'block' : 'none';
+    $('#movedToField').style.display = form.elements.status.value === 'moved' ? 'grid' : 'none';
     $('#packageOneoffField').style.display =
-      isPackage && form.elements.lessonKind.value === 'oneoff' ? 'block' : 'none';
-    $('#lessonPaymentField').style.display = isPackage ? 'none' : 'block';
-    $('#testFields').style.display = $('#testDoneToggle').checked ? 'block' : 'none';
-    $('#homeworkGradeField').style.display = $('#previousHomeworkToggle').checked
-      ? 'block'
-      : 'none';
+      isPackage && form.elements.lessonKind.value === 'oneoff' ? 'grid' : 'none';
+    const packageOneoff = isPackage && form.elements.lessonKind.value === 'oneoff';
+    const packageOneoffHasExtraCharge =
+      packageOneoff && $('#packageOneoffBilling').value !== 'package';
+    $('#lessonPaymentField').style.display = groupMode || packageOneoff ? 'none' : 'grid';
+    $('#lessonAmountField').style.display =
+      groupMode || (isPackage && !packageOneoffHasExtraCharge) ? 'none' : 'grid';
+    $('#testFields').style.display = $('#testDoneToggle').checked ? 'grid' : 'none';
+    const hasPreviousHomework = $('#previousHomeworkToggle').checked;
+    $('#homeworkGradeField').style.display = hasPreviousHomework ? 'grid' : 'none';
+    form.elements.homeworkGrade.disabled = !hasPreviousHomework;
     form.elements.testDone.value = $('#testDoneToggle').checked ? 'yes' : 'no';
-    form.elements.previousHomework.value = $('#previousHomeworkToggle').checked ? 'yes' : 'no';
-    form.elements.lessonPaymentChoice.value = $('#lessonPaymentToggle').checked ? 'paid' : 'unpaid';
-    $('#lessonPaymentLabel').textContent = $('#lessonPaymentToggle').checked
-      ? 'Занятие оплачено'
-      : 'Занятие не оплачено';
+    form.elements.previousHomework.value = hasPreviousHomework ? 'yes' : 'no';
+    const paid = $('#lessonPaymentToggle').checked;
+    form.elements.lessonPaymentChoice.value = isPackage
+      ? paid
+        ? 'package'
+        : 'not_charged'
+      : paid
+        ? 'paid'
+        : 'unpaid';
+    $('#lessonPaymentLabel').textContent = isPackage
+      ? 'Списать занятие из абонемента'
+      : 'Занятие оплачено';
+    $('#lessonPaymentHint').textContent = paid
+      ? isPackage
+        ? 'Выключите, если занятие списывать не нужно'
+        : 'Выключите, если оплата ещё не поступила'
+      : isPackage
+        ? 'Включите, если занятие нужно списать'
+        : 'Включите, если оплата уже поступила';
     if (student && !form.elements.amount.value) form.elements.amount.value = +student.price || 0;
+    renderLessonContext();
+    refreshParentMessage();
+  }
+
+  function renderLessonContext() {
+    const box = $('#lessonContext');
+    const info = targetInfo();
+    if (!box || !info.id) return;
+    const currentDate = new Date(form.elements.date.value || Date.now());
+    const previous = store
+      .getState()
+      .lessons.filter(
+        (lesson) =>
+          new Date(lesson.date) < currentDate &&
+          lesson.status === 'done' &&
+          (info.type === 'g'
+            ? lesson.groupId === info.id
+            : lesson.studentId === info.id && !lesson.groupId),
+      )
+      .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+    const current = store
+      .getState()
+      .lessons.find(
+        (lesson) =>
+          lesson.id === form.elements.id.value || lesson.seriesId === form.elements.id.value,
+      );
+    const parts = [];
+    if (previous?.homework) parts.push(`<b>Предыдущее ДЗ:</b> ${escapeHtml(previous.homework)}`);
+    if (previous?.topics) parts.push(`<b>Последняя тема:</b> ${escapeHtml(previous.topics)}`);
+    if (current?.prepNote)
+      parts.push(`<b>Подготовить к уроку:</b> ${escapeHtml(current.prepNote)}`);
+    box.innerHTML = parts.join('<br>');
+    box.style.display = parts.length ? 'block' : 'none';
+  }
+
+  function refreshParentMessage() {
+    const field = $('#parentMessageField');
+    const output = $('#parentMessage');
+    const info = targetInfo();
+    if (!field || !output) return;
+    field.style.display = info.student ? 'grid' : 'none';
+    if (!info.student) return;
+    const parent = info.student.parentName?.trim() ? `, ${info.student.parentName.trim()}` : '';
+    const details = [
+      form.elements.topics.value.trim() ? `Разобрали: ${form.elements.topics.value.trim()}.` : '',
+      form.elements.comment.value.trim(),
+      form.elements.homework.value.trim()
+        ? `Новое домашнее задание: ${form.elements.homework.value.trim()}.`
+        : '',
+      $('#previousHomeworkToggle').checked
+        ? `Предыдущее домашнее задание оценено на ${form.elements.homeworkGrade.value}.`
+        : '',
+      $('#testDoneToggle').checked
+        ? `Проверочная работа: ${form.elements.testName.value.trim() || 'выполнена'}${form.elements.testScore.value && form.elements.testMax.value ? ` — ${form.elements.testScore.value} из ${form.elements.testMax.value}` : ''}.`
+        : '',
+    ].filter(Boolean);
+    output.value = [
+      `Здравствуйте${parent}.`,
+      ['done', 'paid_missed'].includes(form.elements.status.value)
+        ? `Сегодня занятие с ${info.student.name} прошло${form.elements.status.value === 'done' ? ' по плану' : ', но ученик отсутствовал'}.`
+        : `Сообщаю о занятии с ${info.student.name}.`,
+      ...details,
+    ].join(' ');
   }
 
   function serialize() {
@@ -88,7 +179,7 @@ export function createLessonFormView({ store, service, modal, dialog, toast }) {
     const input = Object.fromEntries(fd);
     input.targetId = targetId;
     input.attendance = fd.getAll('attendance');
-    input.lessonPaymentChoice = $('#lessonPaymentToggle').checked ? 'paid' : 'unpaid';
+    input.lessonPaymentChoice = form.elements.lessonPaymentChoice.value;
     input.testDone = $('#testDoneToggle').checked ? 'yes' : 'no';
     input.previousHomework = $('#previousHomeworkToggle').checked ? 'yes' : 'no';
     input.packageOneoffBilling = $('#packageOneoffBilling').value;
@@ -105,7 +196,7 @@ export function createLessonFormView({ store, service, modal, dialog, toast }) {
     form.elements.lessonKind.value = 'oneoff';
     form.elements.status.value = 'planned';
     $('#deleteLesson').style.display = 'none';
-    $('#lessonModalTitle').textContent = 'Информация о занятии';
+    $('#lessonModalTitle').textContent = 'Новое разовое занятие';
     $('#lessonConflict').textContent = '';
     $('#testDoneToggle').checked = false;
     $('#previousHomeworkToggle').checked = false;
@@ -137,14 +228,19 @@ export function createLessonFormView({ store, service, modal, dialog, toast }) {
       'testName',
       'testScore',
       'testMax',
+      'homeworkGrade',
     ];
     keys.forEach((key) => {
       if (form.elements[key]) form.elements[key].value = representative[key] ?? '';
     });
     form.elements.date.value = String(lesson.date).slice(0, 16);
     $('#testDoneToggle').checked = representative.testDone === 'yes';
-    $('#previousHomeworkToggle').checked = false;
-    $('#lessonPaymentToggle').checked = representative.payment === 'paid';
+    $('#previousHomeworkToggle').checked =
+      (representative.previousHomework ||
+        (representative.homeworkGrade !== '' && representative.homeworkGrade != null
+          ? 'yes'
+          : 'no')) === 'yes';
+    $('#lessonPaymentToggle').checked = ['paid', 'package'].includes(representative.payment);
     $('#packageOneoffBilling').value =
       representative.payment === 'paid'
         ? 'extra_paid'
@@ -155,7 +251,7 @@ export function createLessonFormView({ store, service, modal, dialog, toast }) {
       records.filter((item) => item.status === 'done').map((item) => item.studentId),
     );
     $('#deleteLesson').style.display = 'inline-block';
-    $('#lessonModalTitle').textContent = 'Информация о занятии';
+    $('#lessonModalTitle').textContent = 'Редактировать занятие';
     $('#lessonConflict').textContent = '';
     syncFields();
     modal.closeAll();
@@ -216,10 +312,21 @@ export function createLessonFormView({ store, service, modal, dialog, toast }) {
   });
   form.elements.status.addEventListener('change', syncFields);
   form.elements.lessonKind.addEventListener('change', syncFields);
+  $('#packageOneoffBilling').addEventListener('change', syncFields);
+  form.elements.date.addEventListener('change', syncFields);
   $('#testDoneToggle').addEventListener('change', syncFields);
   $('#previousHomeworkToggle').addEventListener('change', syncFields);
   $('#lessonPaymentToggle').addEventListener('change', syncFields);
   $('#groupAttendanceMembers').addEventListener('change', syncAttendanceChips);
+  form.addEventListener('input', (event) => {
+    if (event.target.id !== 'parentMessage') refreshParentMessage();
+  });
+  $('#copyParentMessage')?.addEventListener('click', async () => {
+    const text = $('#parentMessage')?.value || '';
+    if (!text) return;
+    await navigator.clipboard.writeText(text);
+    toast('Сообщение скопировано');
+  });
 
   function openEvent(id = '') {
     eventForm.reset();
@@ -231,6 +338,10 @@ export function createLessonFormView({ store, service, modal, dialog, toast }) {
       });
     if (!event) eventForm.elements.date.value = toLocalInput(new Date());
     $('#deleteEvent').style.display = event ? 'inline-block' : 'none';
+    $('#eventModalTitle').textContent = event ? 'Редактировать событие' : 'Своё событие';
+    $('#eventForm button[type="submit"]').textContent = event
+      ? 'Сохранить событие'
+      : 'Добавить в расписание';
     $('#eventConflict').textContent = '';
     modal.closeAll();
     modal.open('eventModal');
