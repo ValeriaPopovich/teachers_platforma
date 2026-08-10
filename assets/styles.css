@@ -2603,17 +2603,25 @@ body {
 }
 .day .event--planned {
   border-left-color: var(--brand2);
+  background: color-mix(in srgb, var(--brand2) 10%, var(--panel));
+}
+.day .event--unconfirmed {
+  border-left-color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 12%, var(--panel));
 }
 .day .event--done {
   border-left-color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 10%, var(--panel));
 }
 .day .event--missed,
 .day .event--paid_missed {
   border-left-color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 10%, var(--panel));
 }
 .day .event--moved {
   border-left-color: var(--warn);
   border-left-style: dashed;
+  background: color-mix(in srgb, var(--warn) 8%, var(--panel));
 }
 .day .event--cancelled {
   opacity: 0.6;
@@ -3319,42 +3327,51 @@ body {
   }
 }
 
-/* Финальное мобильное правило: не даём более ранней карточной раскладке
-   превратить календарь в список. */
+/* На телефоне неделя и месяц — вертикальные списки читаемых карточек. */
 @media (max-width: 820px) {
   #page-schedule .calendar-card {
-    overflow-x: auto;
-    padding: 10px;
-    background: var(--panel);
-    border: 1px solid var(--line);
-    box-shadow: var(--shadow);
-  }
-  #page-schedule .calendar-days {
-    display: grid !important;
-    grid-template-columns: repeat(7, minmax(92px, 1fr)) !important;
-    min-width: 700px !important;
-    gap: 7px;
-  }
-  #page-schedule .calendar-weekday,
-  #page-schedule .day,
-  #page-schedule .day.has-events,
-  #page-schedule .day.today {
-    display: block;
-  }
-  #page-schedule .day {
-    min-height: 105px;
-    margin: 0;
-    padding: 8px;
-    border-radius: 13px;
+    overflow: visible;
+    padding: 0;
+    background: transparent;
+    border: 0;
     box-shadow: none;
   }
-  #page-schedule .mobile-weekday,
-  #page-schedule .day.today .date:after {
-    display: none;
+  #page-schedule #calendar[data-calendar-view='week'],
+  #page-schedule #calendar[data-calendar-view='month'] {
+    display: block !important;
+    min-width: 0 !important;
+    width: 100%;
   }
-  #page-schedule .day .date {
+  #page-schedule #calendar[data-calendar-view='week'] .calendar-weekday,
+  #page-schedule #calendar[data-calendar-view='month'] .calendar-weekday,
+  #page-schedule #calendar[data-calendar-view='month'] .day.outside-month {
+    display: none !important;
+  }
+  #page-schedule #calendar[data-calendar-view='week'] .day,
+  #page-schedule #calendar[data-calendar-view='month'] .day {
     display: block;
-    margin-bottom: 6px;
-    font-size: 11px;
+    width: 100%;
+    min-width: 0;
+    min-height: 70px;
+    margin: 0 0 10px;
+    padding: 13px;
+    border-radius: 15px;
+  }
+  #page-schedule #calendar[data-calendar-view='week'] .mobile-weekday,
+  #page-schedule #calendar[data-calendar-view='month'] .mobile-weekday {
+    display: inline !important;
+  }
+  #page-schedule #calendar[data-calendar-view='week'] .day .date,
+  #page-schedule #calendar[data-calendar-view='month'] .day .date {
+    display: flex;
+    margin-bottom: 9px;
+    font-size: 13px;
+    text-transform: capitalize;
+  }
+  #page-schedule .event {
+    overflow: visible;
+    overflow-wrap: anywhere;
+    padding: 10px;
+    font-size: 13px;
   }
 }
