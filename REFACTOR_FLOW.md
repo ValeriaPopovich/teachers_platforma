@@ -496,3 +496,225 @@ cloud save status
 After the user commits this overlay, always read the committed branch from GitHub before continuing.
 
 Do not reconstruct Pass 1 from this document if the committed code differs from the archive. The committed branch is authoritative.
+
+---
+
+# Pass 2 handoff — prepared from GitHub HEAD 851eea1
+
+## Source of truth used for Pass 2
+
+Pass 2 was prepared against the committed branch:
+
+```text
+refactor/v5-lean-domain-modules
+HEAD 851eea1d4fa0d0e669faf6e39c9db2316d5a6b4b
+```
+
+This is important because the originally attached Part 1 archive differed trivially from the committed `src/app/bootstrap.js`. The committed GitHub blob was reconstructed and used as the actual edit base.
+
+Do not apply this Pass 2 overlay onto a different `bootstrap.js` without reviewing the diff first.
+
+## Pass 2 apply model
+
+The archive is an overlay plus `apply_part2.py`. Keep the extracted package outside the repository, switch the repository itself to `refactor/v5-lean-domain-modules` at the expected base HEAD, then run the script with the repository path:
+
+```bash
+python3 apply_part2.py /absolute/path/to/teachers_platforma
+```
+
+The script performs repository operations that a plain ZIP overlay cannot express safely:
+
+- points `index.html` directly to `src/app/bootstrap.js`;
+- removes script references to legacy progressive-enhancement JS;
+- moves dedicated feature CSS into module ownership;
+- deletes the old compatibility JS/CSS files and thin `assets/app.js` loader.
+
+## Stage 7 — Reports
+
+**Implemented in the overlay.**
+
+```text
+src/modules/reports/
+  reports.view.js
+  reports.model.js
+  report-drag.js
+  reports.css        # created from assets/reports-redesign.css by apply_part2.py
+```
+
+Ownership moved out of `src/app/bootstrap.js` and `assets/reports-redesign.js`:
+
+- student/period selection;
+- report source/model;
+- topics/tests/homework rows;
+- included blocks;
+- preview rendering;
+- copy text;
+- PNG export;
+- accordion behavior;
+- row drag/reorder;
+- row counters/empty states;
+- fixed report action bar.
+
+The old content-watching `MutationObserver` architecture is removed. Report rows are created with their final drag handle markup, and the reports module calls its interaction helpers directly after mutations.
+
+`ResizeObserver` is retained only for layout sizing of the fixed action bar; it is not a progressive DOM renderer.
+
+## Stage 8 — Settings
+
+**Implemented.**
+
+```text
+src/modules/settings/
+  settings.view.js
+  settings.service.js
+  settings.css
+```
+
+Persisted commands now belong to `settings.service.js`:
+
+- theme toggle;
+- sidebar compact toggle;
+- tutor/reminder save;
+- onboarding tutor-name persistence.
+
+`settings.view.js` applies theme/sidebar UI and renders the account metadata supplied by the existing cloud/auth layer. Auth/logout state is not moved into settings domain ownership.
+
+## Stage 9 — Dashboard
+
+**Implemented.**
+
+```text
+src/modules/dashboard/dashboard.view.js
+```
+
+Dashboard is a read-oriented aggregator. It reads schedule selectors and delegates lesson opening to the owning schedule view rather than mutating lesson state itself.
+
+## Stage 10 — compatibility/progressive cleanup
+
+**Applied by `apply_part2.py`.**
+
+Removed after ownership migration:
+
+```text
+assets/app.js
+assets/profile-modal.js
+assets/payments-redesign.js
+assets/reports-redesign.js
+```
+
+`index.html` loads `src/app/bootstrap.js` directly.
+
+The payments module receives Home/End keyboard tab behavior before `assets/payments-redesign.js` is removed, so the useful accessibility behavior is not lost.
+
+`assets/profile-modal.js` is safe to remove because Part 1 `profile.view.js` already renders the final `.profile-redesign` tree itself; the legacy enhancer explicitly exited when that tree was present.
+
+## Stage 11 — CSS cleanup
+
+**Safe ownership cleanup implemented for the dedicated legacy feature styles.**
+
+`apply_part2.py` moves content without redesign:
+
+```text
+assets/profile-modal.css      -> src/modules/students/students.css
+assets/payments-redesign.css  -> src/modules/payments/payments.css
+assets/reports-redesign.css   -> src/modules/reports/reports.css
+```
+
+and rewrites the corresponding stylesheet links in `index.html`.
+
+`assets/styles.css` remains the shared/base stylesheet and still contains some historically mixed layout/feature selectors. They were not heuristically split in this pass because doing so without browser visual regression coverage would be a destructive CSS rewrite. This is documented residual cleanup, not duplicate JS ownership.
+
+## Stage 12 — dead code / docs cleanup
+
+**Implemented for the migrated areas.**
+
+Removed from bootstrap:
+
+- dashboard renderer/listeners;
+- settings renderer/listeners/direct mutations;
+- report builder/model/render/copy/export/listeners;
+- report page special-case refresh.
+
+`src/app/bootstrap.js` is reduced to composition, navigation/application glue, backup/import UI orchestration, onboarding/tutorial shell, maintenance and reminder runtime orchestration.
+
+Updated:
+
+```text
+README.md
+REFACTOR_FLOW.md
+PASS2_MANIFEST.json
+```
+
+README now states that CAS is already applied rather than instructing the next developer to apply it again.
+
+## Transitional code intentionally still in bootstrap
+
+These are not feature ownership violations and were intentionally not over-abstracted in Pass 2:
+
+```text
+navigation/application glue
+backup/import UI orchestration
+tutorial shell
+maintenance bootstrap call
+runtime notification timer
+```
+
+Onboarding persistence itself goes through `settingsService.completeOnboarding(...)`.
+
+## Pass 2 verification performed in archive build
+
+Static checks:
+
+```text
+node --check for changed/new JS
+relative import resolution for the overlay against the Part 1 tree
+no store.update/store.replace calls in *.view.js
+no MutationObserver in src/modules/reports/
+no report/settings/dashboard legacy functions in the new bootstrap
+bootstrap built from GitHub blob SHA 5193f459076163be4b13c16ea92507192812f2f6
+```
+
+Existing tests are diagnostic only at this stage. No new test infrastructure is authored in Pass 2.
+
+## Manual smoke required after applying Part 2
+
+Critical browser smoke:
+
+```text
+login
+navigation between all pages
+create/edit student and group
+open profile and profile history
+create/edit/complete/delete lesson
+calendar views
+payments tabs including keyboard Left/Right/Home/End
+create/remove payment
+reports: select student + each period
+reports: custom date range
+reports: add/remove/reorder topic/test/homework rows
+reports: enable/disable blocks
+reports: copy text
+reports: save PNG
+reports: fixed action bar desktop + mobile width
+settings: tutor/reminder save
+settings: theme toggle from sidebar and profile
+sidebar compact toggle
+backup export/import
+reload persistence
+cloud save/conflict status
+```
+
+## Exact continuation point — Pass 3
+
+After the user applies, smokes and commits Pass 2, start from that new Git commit and perform the dedicated testing/finalization pass:
+
+```text
+1. inspect/update legacy source-contract tests that still expect assets/app.js
+2. unit/integration cleanup around the final module locations
+3. add 4–8 critical Playwright E2E flows
+4. add lightweight architecture guards
+5. CI finalization
+6. final architecture/dead-code/docs audit
+```
+
+Do not reintroduce feature renderers into bootstrap to satisfy old structural tests. Update tests to the final architecture instead.

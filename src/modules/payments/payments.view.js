@@ -71,8 +71,10 @@ export function createPaymentsView({ store, service, modal, dialog, toast }) {
   $('#paymentAttentionTab')?.addEventListener('click', () => switchView('attention'));
   $('#paymentAllTab')?.addEventListener('click', () => switchView('all'));
   $('.payments-tabs')?.addEventListener('keydown', (event) => {
-    if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
-    event.preventDefault(); switchView(currentView === 'attention' ? 'all' : 'attention', true);
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const next = event.key === 'Home' ? 'attention' : event.key === 'End' ? 'all' : currentView === 'attention' ? 'all' : 'attention';
+    switchView(next, true);
   });
   $('#paymentHistoryPeriod')?.addEventListener('change', render);
   $('#paymentHistoryStudent')?.addEventListener('change', render);

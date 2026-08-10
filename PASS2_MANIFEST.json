@@ -1,0 +1,98 @@
+{
+  "name": "teachers_platforma_refactor_part2",
+  "repository": "ValeriaPopovich/teachers_platforma",
+  "branch": "refactor/v5-lean-domain-modules",
+  "base_head": "851eea1d4fa0d0e669faf6e39c9db2316d5a6b4b",
+  "base_bootstrap_blob": "5193f459076163be4b13c16ea92507192812f2f6",
+  "architecture": "Lean Domain Modules",
+  "overlay_files": [
+    {
+      "path": "README.md",
+      "bytes": 5097,
+      "sha256": "fca3f0bf12ec1f319cef2cda972d305902bbaa6001cd4adb3b2c01c2e5147489"
+    },
+    {
+      "path": "REFACTOR_FLOW.md",
+      "bytes": 16841,
+      "sha256": "2a8ca1a2e2394fe5aae7418d3e76a19552a7ad9767ef57b5f130266f2cc637c9"
+    },
+    {
+      "path": "src/app/bootstrap.js",
+      "bytes": 10672,
+      "sha256": "baefe4b9f8f5f4dacf66667572fb397bbaea89b2f28b83bde67be9fda4e9426e"
+    },
+    {
+      "path": "src/modules/dashboard/dashboard.view.js",
+      "bytes": 3588,
+      "sha256": "d95df6211a8312b4c951b3b5a32c8f737f10031481f6b5dad9bbb9533797706a"
+    },
+    {
+      "path": "src/modules/payments/payments.view.js",
+      "bytes": 7260,
+      "sha256": "994c64e4e14f5bbd112eb13ac571ecf539bab300001495f2ef8618cea042e5ab"
+    },
+    {
+      "path": "src/modules/reports/report-drag.js",
+      "bytes": 6363,
+      "sha256": "e8a436420bdb01460708b086e0026a12b77ff222ca35a0dfcd3423420a1c7172"
+    },
+    {
+      "path": "src/modules/reports/reports.model.js",
+      "bytes": 2571,
+      "sha256": "7fe783e0c2a337533cfd8b836213ec5beadfa83e00cc378ab272a974eff8050b"
+    },
+    {
+      "path": "src/modules/reports/reports.view.js",
+      "bytes": 10148,
+      "sha256": "4095405a050fbb98b813c4134112e100f29ff849dffa28ed9f37a873a3192e37"
+    },
+    {
+      "path": "src/modules/settings/settings.css",
+      "bytes": 153,
+      "sha256": "20cfce70af8b437392632616c02b0cf105686998c7b162ee2cf78679fe5e1f3f"
+    },
+    {
+      "path": "src/modules/settings/settings.service.js",
+      "bytes": 950,
+      "sha256": "e97c73acd5584597104be1f49913332d3edddec68711e27ad256477fdc8a5c19"
+    },
+    {
+      "path": "src/modules/settings/settings.view.js",
+      "bytes": 1732,
+      "sha256": "bd275cd7a33c1cfabeba484a945d1d31afe71c2d9d17376dea0ea9bce548da26"
+    }
+  ],
+  "css_moves": [
+    {
+      "from": "assets/profile-modal.css",
+      "to": "src/modules/students/students.css"
+    },
+    {
+      "from": "assets/payments-redesign.css",
+      "to": "src/modules/payments/payments.css"
+    },
+    {
+      "from": "assets/reports-redesign.css",
+      "to": "src/modules/reports/reports.css"
+    }
+  ],
+  "delete_files": [
+    "assets/app.js",
+    "assets/profile-modal.js",
+    "assets/payments-redesign.js",
+    "assets/reports-redesign.js",
+    "assets/profile-modal.css",
+    "assets/payments-redesign.css",
+    "assets/reports-redesign.css"
+  ],
+  "index_changes": [
+    "load src/app/bootstrap.js directly",
+    "load module-owned students/payments/reports/settings CSS",
+    "remove profile/payments/reports progressive-enhancement scripts"
+  ],
+  "not_in_scope": [
+    "new E2E test infrastructure",
+    "database normalization",
+    "Supabase CAS rewrite"
+  ]
+}

@@ -8,9 +8,10 @@
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.2"></script>
   <link rel="stylesheet" href="assets/styles.css">
-  <link rel="stylesheet" href="assets/payments-redesign.css">
-  <link rel="stylesheet" href="assets/profile-modal.css">
-  <link rel="stylesheet" href="assets/reports-redesign.css">
+  <link rel="stylesheet" href="src/modules/payments/payments.css">
+  <link rel="stylesheet" href="src/modules/students/students.css">
+  <link rel="stylesheet" href="src/modules/reports/reports.css">
+  <link rel="stylesheet" href="src/modules/settings/settings.css">
   <link rel="stylesheet" href="assets/custom-select.css">
 </head>
 <body>
@@ -184,10 +185,7 @@
 <div class="modal-wrap app-dialog-wrap" id="appDialog" role="dialog" aria-modal="true" aria-labelledby="appDialogTitle"><div class="modal app-dialog" id="appDialogCard"><div class="modal-body"><div class="app-dialog-icon" id="appDialogIcon">!</div><h2 id="appDialogTitle" style="margin:0 0 8px">Сообщение</h2><p class="app-dialog-message" id="appDialogMessage"></p></div><div class="modal-foot"><button type="button" class="btn" id="appDialogCancel">Отмена</button><button type="button" class="btn primary" id="appDialogConfirm">Хорошо</button></div></div></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script type="module" src="assets/auth.js"></script>
-<script type="module" src="assets/app.js"></script>
-<script type="module" src="assets/payments-redesign.js"></script>
-<script type="module" src="assets/reports-redesign.js"></script>
+<script type="module" src="src/app/bootstrap.js"></script>
 <script type="module" src="assets/custom-select.js"></script>
-<script src="assets/profile-modal.js"></script>
 </body>
 </html>
