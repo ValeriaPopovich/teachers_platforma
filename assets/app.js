@@ -1097,11 +1097,27 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       now = new Date(),
       slots = getSlots('#studentScheduleSlots'),
       current = f.elements.id.value ? student(f.elements.id.value) : null,
-      start = Math.max(+current?.createdAt || 0, +current?.billingSince || 0, current ? 0 : Date.now()),
-      count = countMonthlyRecurringLessonsFrom(slots, now, start);
+      startField = $('#studentBillingStartField'),
+      startInput = f.elements.billingStartDate,
+      selectedDay = startInput.value,
+      selectedStart = selectedDay
+        ? selectedDay === localDay()
+          ? Date.now()
+          : new Date(`${selectedDay}T00:00`).getTime()
+        : Date.now(),
+      start = current
+        ? Math.max(+current.createdAt || 0, +current.billingSince || 0)
+        : selectedStart,
+      count = countMonthlyRecurringLessonsFrom(slots, new Date(start), start),
+      hint = $('#studentBillingStartHint');
     input.disabled = !on;
+    startField.style.display = on && !current ? 'block' : 'none';
     if (!on) return;
     input.value = count;
+    if (hint && !current)
+      hint.textContent = slots.length
+        ? `${count} ${lessonCountWord(count)} · ${money(count * (+f.elements.price.value || 0))}`
+        : 'Добавьте регулярное расписание — сумма рассчитается автоматически';
   }
   function monthName(date) {
     return date
@@ -1913,14 +1929,20 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     o.price = +o.price || 0;
     o.duration = +o.duration || 60;
     o.scheduleSlots = getSlots('#studentScheduleSlots');
-    const before = o.id ? student(o.id) : null,
+    const selectedBillingDay = o.billingStartDate,
+      before = o.id ? student(o.id) : null,
       formatChanged = !!before && before.payType !== o.payType,
       startedAt = before && !formatChanged
         ? Math.max(+before.createdAt || 0, +before.billingSince || 0)
-        : Date.now();
+        : before
+          ? Date.now()
+          : selectedBillingDay && selectedBillingDay !== localDay()
+            ? new Date(`${selectedBillingDay}T00:00`).getTime()
+            : Date.now();
+    delete o.billingStartDate;
     o.packageSize =
       o.payType === 'package'
-        ? countMonthlyRecurringLessonsFrom(o.scheduleSlots, new Date(), startedAt)
+        ? countMonthlyRecurringLessonsFrom(o.scheduleSlots, new Date(startedAt), startedAt)
         : 0;
     const own = ownSlotConflict(o.scheduleSlots, o.duration),
       conflicts = recurringConflicts(o.scheduleSlots, o.duration, 'student', o.id),
@@ -2374,6 +2396,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       f.elements.id.value = '';
       f.elements.duration.value = 60;
       f.elements.packageSize.value = 0;
+      f.elements.billingStartDate.value = localDay();
       setGoalChecks('');
       setSlots('#studentScheduleSlots', [], false);
       syncPackageField();
@@ -2579,6 +2602,8 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     }
   };
   $('#studentForm [name=payType]').addEventListener('change', syncPackageField);
+  $('#studentForm [name=billingStartDate]').addEventListener('change', syncPackageField);
+  $('#studentForm [name=price]').addEventListener('input', syncPackageField);
   $('#paymentForm [name=studentId]').addEventListener('change', syncPaymentForm);
   $('#paymentForm [name=date]').addEventListener('change', syncPaymentForm);
   $('#paymentModal').addEventListener('input', (e) => {
