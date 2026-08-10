@@ -1074,7 +1074,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
               .slice(0, 20)
               .map((l) => {
                 const grade = homeworkGrade(l);
-                return `<tr><td>${fmtDate(l.date, true)}</td><td>${statusName(l.status)}</td><td>${esc(l.topics || '—')}<br><span class="sub">${esc(l.comment || '')}</span></td><td>${l.homework ? `${esc(l.homework)}${grade == null ? '' : `<br><b>Оценка ${grade}</b>`}` : grade == null ? '—' : 'Оценка ' + grade}</td><td>${l.testDone === 'yes' ? `${esc(l.testName || 'Работа')}: ${esc(l.testScore || '—')}/${esc(l.testMax || '—')}` : '—'}</td><td><button class="icon-btn" type="button" data-delete-history-lesson="${l.id}" title="Удалить занятие" aria-label="Удалить занятие ${esc(fmtDate(l.date, true))}">×</button></td></tr>`;
+                return `<tr class="profile-history-row" data-edit-history-lesson="${l.id}" tabindex="0" role="button" aria-label="Открыть занятие ${esc(fmtDate(l.date, true))}"><td>${fmtDate(l.date, true)}</td><td>${statusName(l.status)}</td><td>${esc(l.topics || '—')}<br><span class="sub">${esc(l.comment || '')}</span></td><td>${l.homework ? `${esc(l.homework)}${grade == null ? '' : `<br><b>Оценка ${grade}</b>`}` : grade == null ? '—' : 'Оценка ' + grade}</td><td>${l.testDone === 'yes' ? `${esc(l.testName || 'Работа')}: ${esc(l.testScore || '—')}/${esc(l.testMax || '—')}` : '—'}</td><td><button class="icon-btn" type="button" data-delete-history-lesson="${l.id}" title="Удалить занятие" aria-label="Удалить занятие ${esc(fmtDate(l.date, true))}">×</button></td></tr>`;
               })
               .join('')}</tbody></table></div>`
           : '<div class="empty">Занятий пока нет</div>'
@@ -2854,14 +2854,23 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     body.innerHTML = ls
       .map(
         (l) =>
-          `<tr><td>${fmtDate(l.date, true)}</td><td>${statusName(l.status)}</td><td>${esc(l.topics || '—')}<br><span class="sub">${esc(l.comment || '')}</span></td><td>${l.homework ? `${esc(l.homework)}${homeworkGrade(l) == null ? '' : `<br><b>Оценка ${homeworkGrade(l)}</b>`}` : homeworkGrade(l) == null ? '—' : `Оценка ${homeworkGrade(l)}`}</td><td>${l.testDone === 'yes' ? `${esc(l.testName || 'Работа')}: ${esc(l.testScore || '—')}/${esc(l.testMax || '—')}` : '—'}</td><td><button class="icon-btn" type="button" data-delete-history-lesson="${l.id}" title="Удалить занятие" aria-label="Удалить занятие ${esc(fmtDate(l.date, true))}">×</button></td></tr>`,
+          `<tr class="profile-history-row" data-edit-history-lesson="${l.id}" tabindex="0" role="button" aria-label="Открыть занятие ${esc(fmtDate(l.date, true))}"><td>${fmtDate(l.date, true)}</td><td>${statusName(l.status)}</td><td>${esc(l.topics || '—')}<br><span class="sub">${esc(l.comment || '')}</span></td><td>${l.homework ? `${esc(l.homework)}${homeworkGrade(l) == null ? '' : `<br><b>Оценка ${homeworkGrade(l)}</b>`}` : homeworkGrade(l) == null ? '—' : `Оценка ${homeworkGrade(l)}`}</td><td>${l.testDone === 'yes' ? `${esc(l.testName || 'Работа')}: ${esc(l.testScore || '—')}/${esc(l.testMax || '—')}` : '—'}</td><td><button class="icon-btn" type="button" data-delete-history-lesson="${l.id}" title="Удалить занятие" aria-label="Удалить занятие ${esc(fmtDate(l.date, true))}">×</button></td></tr>`,
       )
       .join('');
   }
   $('#page-students').addEventListener('click', (e) => {
     if (e.target.closest('[data-student]')) setTimeout(refreshFullStudentHistory);
   });
+  function editHistoryLesson(id) {
+    closeAll();
+    editLesson(id);
+  }
   $('#profileBody').addEventListener('click', async (e) => {
+    const editId = e.target.closest('[data-edit-history-lesson]')?.dataset.editHistoryLesson;
+    if (editId && !e.target.closest('[data-delete-history-lesson]')) {
+      editHistoryLesson(editId);
+      return;
+    }
     const id = e.target.closest('[data-delete-history-lesson]')?.dataset.deleteHistoryLesson,
       lesson = data.lessons.find((item) => item.id === id);
     if (!lesson) return;
@@ -2874,6 +2883,13 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     save();
     showProfile(activeStudent);
     toast('Занятие удалено из истории');
+  });
+  $('#profileBody').addEventListener('keydown', (e) => {
+    if (!['Enter', ' '].includes(e.key) || e.target.closest('button')) return;
+    const id = e.target.closest('[data-edit-history-lesson]')?.dataset.editHistoryLesson;
+    if (!id) return;
+    e.preventDefault();
+    editHistoryLesson(id);
   });
   $('#deleteStudent').onclick = () => removeStudent(activeStudent);
   $('#deleteGroup').onclick = () => removeGroup($('#groupForm [name=id]').value);

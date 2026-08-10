@@ -452,6 +452,17 @@
   padding: 12px 10px;
 }
 
+#profileModal .profile-history-row {
+  cursor: pointer;
+  transition: background-color 0.16s ease;
+}
+
+#profileModal .profile-history-row:hover,
+#profileModal .profile-history-row:focus-visible {
+  background: var(--panel2);
+  outline: none;
+}
+
 @media (max-width: 980px) {
   #profileModal .profile-modal-card {
     width: min(900px, 100%);
