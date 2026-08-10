@@ -50,13 +50,11 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
   let data = structuredClone(store.getState()),
     activeStudent = null,
     lessonInitial = '',
-    calendarView = ['day', 'week', 'month'].includes(
-      sessionStorage.getItem('tutorCabinet_calendarView'),
-    )
-      ? sessionStorage.getItem('tutorCabinet_calendarView')
-      : 'week',
+    calendarView = 'week',
     paymentsExpanded = { attention: false, all: false, packages: false, history: false },
     pendingImport = null;
+  const savedCalendarView = sessionStorage.getItem('tutorCabinet_calendarView');
+  if (['day', 'week', 'month'].includes(savedCalendarView)) calendarView = savedCalendarView;
   if (!loaded.ok)
     console.error(
       `Local state rejected at ${loaded.stage}; the last copy was not overwritten.`,
