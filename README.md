@@ -4,9 +4,9 @@
 
 ## Запуск приложения
 
-Это статический сайт — сборка не нужна. Открыть `index.html` локально или через любой static-сервер; в проде хостится на GitHub Pages.
+Это статический сайт — сборка не нужна. Открыть `index.html` через static-сервер; в проде приложение хостится на GitHub Pages.
 
-Основной browser entry после архитектурного Pass 2:
+Основной browser entry после архитектурного рефакторинга:
 
 ```text
 index.html
@@ -36,40 +36,60 @@ Cloud CAS
 
 Persisted state имеет один runtime source of truth — глобальный store. View не мутирует persisted state напрямую; бизнес-команды принадлежат services.
 
-Основные feature-модули:
+Feature ownership:
 
 ```text
-src/modules/students/
-src/modules/schedule/
-src/modules/payments/
-src/modules/reports/
-src/modules/settings/
-src/modules/dashboard/
+students + groups -> src/modules/students/
+schedule + lessons/events -> src/modules/schedule/
+payments -> src/modules/payments/
+reports -> src/modules/reports/
+settings -> src/modules/settings/
+dashboard -> src/modules/dashboard/
 ```
 
 Общие UI primitives находятся в `src/shared/`, state/persistence — в `src/state/`, cloud/auth — в `src/cloud/` и `src/auth/`.
 
-## Разработка (тесты и линт)
+## Разработка: проверки
 
-Требуется Node.js 20+. Зависимости — только dev-инструменты, само приложение их не использует.
+Локально требуется Node.js 20+; CI использует Node.js 24. Зависимости нужны только для разработки, само приложение остаётся статическим.
 
 ```bash
 npm install
-npm test
-npm run test:watch
 npm run lint
-npm run format
-npm run format:check
+npm run validate:stage0
+npm test
+npm run test:architecture
+npx playwright install chromium
+npm run test:e2e
 ```
 
-CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) прогоняет `lint` и `test` на каждый push и PR.
+`npm test` запускает Vitest unit/integration/source-contract suites и lightweight architecture guards. `npm run test:e2e` запускает только критические Chromium E2E flows.
+
+CI (`.github/workflows/ci.yml`) на каждый push/PR выполняет:
+
+```text
+lint
+Stage 0 validation
+unit/integration + architecture guards
+critical Playwright E2E
+```
 
 ## Тесты и baseline
 
-- Чистые domain-модули и compatibility re-export могут находиться в [`src/domain/`](src/domain/); feature-domain логика постепенно принадлежит соответствующим `src/modules/*/`.
-- Эталонный fixture — [`tests/fixtures/baseline.json`](tests/fixtures/baseline.json), ожидаемые числа — [`docs/baseline-manifest.md`](docs/baseline-manifest.md).
-- Ручной smoke — [`docs/smoke-checklist.md`](docs/smoke-checklist.md).
-- Отдельный Pass 3 посвящён cleanup тестов, критическим Playwright E2E flows, architecture guards и CI finalization.
+- Чистые compatibility re-export могут находиться в `src/domain/`; feature-domain логика принадлежит соответствующим `src/modules/*/`.
+- Эталонный fixture — `tests/fixtures/baseline.json`, ожидаемые числа — `docs/baseline-manifest.md`.
+- Architecture guards — `tests/architecture-guards.test.js`.
+- Критические browser flows — `tests/e2e/critical-flows.e2e.js`.
+- Ручной smoke — `docs/smoke-checklist.md`; он дополняет автоматизацию, а не заменяется ею.
+
+Критический E2E gate покрывает:
+
+- создание/редактирование ученика + reload persistence;
+- создание занятия + сохранение + запрет тихой смены владельца при редактировании;
+- разовую оплату;
+- расчёт абонемента;
+- report builder + preview + copy text;
+- backup export.
 
 ## Данные и резервные копии
 
@@ -79,23 +99,26 @@ CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) прогоняет `
 
 ## Документация
 
-- Текущий handoff рефакторинга: [`REFACTOR_FLOW.md`](REFACTOR_FLOW.md).
-- Утверждённая Lean-спецификация: [`docs/REFACTORING_SPEC_V5_LEAN.md`](docs/REFACTORING_SPEC_V5_LEAN.md).
-- Исторический план: [`docs/REFACTORING_SPEC.md`](docs/REFACTORING_SPEC.md).
-- Архитектурные решения: [`docs/adr/`](docs/adr/README.md).
-- RLS-аудит: [`docs/SUPABASE_RLS_AUDIT.md`](docs/SUPABASE_RLS_AUDIT.md).
-- Cloud sync: [`docs/CLOUD_SYNC_SETUP.md`](docs/CLOUD_SYNC_SETUP.md).
+- Текущий handoff рефакторинга: `REFACTOR_FLOW.md`.
+- Утверждённая Lean-спецификация: `docs/REFACTORING_SPEC_V5_LEAN.md`.
+- Исторический план: `docs/REFACTORING_SPEC.md`.
+- Архитектурные решения: `docs/adr/`.
+- RLS-аудит: `docs/SUPABASE_RLS_AUDIT.md`.
+- Cloud sync: `docs/CLOUD_SYNC_SETUP.md`.
 
 ## Deploy
 
-Push в ветку, обслуживающую GitHub Pages. Перед выпуском пройти release gate и [smoke-чеклист](docs/smoke-checklist.md).
+Push в ветку, обслуживающую GitHub Pages, только после зелёного release gate и ручного smoke по критичным интеграциям.
 
 ### Release gate
 
 Перед production deploy:
 
-- [ ] `npm run lint`, `npm run validate:stage0`, `npm test` — зелёные либо известные legacy source-contract расхождения явно зафиксированы до Pass 3;
-- [ ] прогнан [smoke-чеклист](docs/smoke-checklist.md), включая backup replace + recovery, cloud conflict и гейтинг доступа;
+- [ ] `npm run lint` — зелёный;
+- [ ] `npm run validate:stage0` — зелёный;
+- [ ] `npm test` — зелёный, включая architecture guards;
+- [ ] `npm run test:e2e` — зелёный;
+- [ ] прогнан `docs/smoke-checklist.md`, особенно auth/cloud conflict и backup import/replace/recovery;
 - [ ] проверен вход и reload session; cloud save и reload;
 - [ ] подтверждено, что существующий CAS flow работает; CAS-миграцию повторно не применять;
 - [ ] `docs/SUPABASE_RLS_AUDIT.md` не имеет открытых пунктов, критичных для выпуска;

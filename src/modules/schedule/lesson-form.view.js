@@ -60,8 +60,13 @@ export function createLessonFormView({ store, service, modal, dialog, toast }) {
   }
 
   function serialize() {
+    // targetId is disabled while editing so the user cannot silently transfer an
+    // existing lesson to another student/group. Disabled controls are omitted by
+    // FormData, therefore capture the owner explicitly before serialization.
+    const targetId = form.elements.targetId.value;
     const fd = new FormData(form);
     const input = Object.fromEntries(fd);
+    input.targetId = targetId;
     input.attendance = fd.getAll('attendance');
     input.lessonPaymentChoice = $('#lessonPaymentToggle').checked ? 'paid' : 'unpaid';
     input.testDone = $('#testDoneToggle').checked ? 'yes' : 'no';
@@ -73,6 +78,7 @@ export function createLessonFormView({ store, service, modal, dialog, toast }) {
 
   function openNew({ studentId = '', groupId = '', date = '' } = {}) {
     form.reset();
+    form.elements.targetId.disabled = false;
     form.elements.id.value = '';
     fillTargets(studentId ? `s:${studentId}` : groupId ? `g:${groupId}` : '');
     form.elements.date.value = date || toLocalInput(new Date());
@@ -98,6 +104,7 @@ export function createLessonFormView({ store, service, modal, dialog, toast }) {
     const representative = records.find((item) => item.status === 'done') || lesson;
     form.elements.id.value = lesson.seriesId || lesson.id;
     fillTargets(lesson.groupId ? `g:${lesson.groupId}` : `s:${lesson.studentId}`);
+    form.elements.targetId.disabled = true;
     const keys = ['date', 'lessonKind', 'status', 'amount', 'topics', 'homework', 'comment', 'nextNote', 'testName', 'testScore', 'testMax'];
     keys.forEach((key) => { if (form.elements[key]) form.elements[key].value = representative[key] ?? ''; });
     form.elements.date.value = String(lesson.date).slice(0, 16);

@@ -1,0 +1,15 @@
+{
+  "part": 3,
+  "name": "Stabilization, Tests & Final Architecture Audit",
+  "baseBranch": "refactor/v5-lean-domain-modules",
+  "expectedBaseHead": "8e6dc428180ff60ed7e4a741252d88ccbbb0986f",
+  "changes": [
+    "rewrite legacy source-contract tests for final module ownership",
+    "remove direct store mutation from schedule view",
+    "restore lesson owner lock during edit",
+    "restore payments long-list UX and CSS contract",
+    "add lightweight architecture guards",
+    "add six critical Playwright Chromium flows",
+    "finalize CI and release-gate documentation"
+  ]
+}

@@ -1,6 +1,6 @@
 import { $, escapeHtml } from '../../shared/dom.js';
 import { formatTime } from '../../shared/format.js';
-import { calendarViewRange, extendAllSchedules } from './schedule.domain.js';
+import { calendarViewRange } from './schedule.domain.js';
 import { lessonName, uniqueSessions } from './schedule.selectors.js';
 import { createLessonFormView } from './lesson-form.view.js';
 
@@ -62,10 +62,6 @@ export function createScheduleView({ store, service, modal, dialog, toast }) {
       const result = service.removeLesson(id);
       if (result.ok) toast('Занятие удалено');
       return result.ok;
-    },
-    extendSchedules(uid) {
-      const next = extendAllSchedules(store.getState(), { uid });
-      store.replace(next, 'schedule:extend');
     },
   };
 }

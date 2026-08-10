@@ -718,3 +718,139 @@ After the user applies, smokes and commits Pass 2, start from that new Git commi
 ```
 
 Do not reintroduce feature renderers into bootstrap to satisfy old structural tests. Update tests to the final architecture instead.
+
+---
+
+# Pass 3 — Stabilization, Tests & Final Architecture Audit
+
+Prepared from committed GitHub source of truth:
+
+```text
+branch: refactor/v5-lean-domain-modules
+base HEAD: 8e6dc428180ff60ed7e4a741252d88ccbbb0986f
+Part 2 commit: refactor: implement lean domain modules pass 2
+```
+
+## Stage 13 — post-refactor architecture audit
+
+Audit findings from the committed Part 2 tree:
+
+1. Legacy progressive-enhancement JS is actually removed and `index.html` loads `src/app/bootstrap.js` directly.
+2. `bootstrap.js` is application/composition glue; feature renderers for students/schedule/payments/reports/settings/dashboard are no longer embedded there.
+3. `src/modules/schedule/schedule.view.js` still exposed an unused `extendSchedules()` command that called `store.replace(...)` directly from a View. Pass 3 removes that method so feature views remain read/UI-only with persisted commands owned outside the View boundary.
+4. The Part 2 lesson form lost the old UI guard that prevented editing an existing lesson into another student/group. Pass 3 restores the locked target control while explicitly preserving `targetId` during form serialization.
+5. The Part 2 payments view dropped the established long-list limits/reveal controls and used markup classes that no longer matched the moved payments CSS. Pass 3 restores the 6/8/6/10 list limits, “Показать ещё”, and aligns row/history markup with module-owned CSS.
+6. No `MutationObserver` rendering architecture remains in final feature modules. Reports keep only `ResizeObserver` for action-bar layout sizing.
+
+## Stage 14 — existing tests cleanup
+
+The first CI run on Part 2 HEAD failed only in stale source-contract suites that still attempted to read deleted legacy assets:
+
+```text
+assets/app.js
+assets/profile-modal.js
+assets/payments-redesign.js
+assets/reports-redesign.js
+```
+
+`lint` and `validate:stage0` were green. The stale tests are rewritten against final module ownership instead of restoring deleted compatibility code.
+
+Updated source-contract suites:
+
+```text
+tests/accessibility-guard.test.js
+tests/finances-inline-parity.test.js
+tests/inline-backup-fixes.test.js
+tests/payments-redesign-contract.test.js
+tests/profile-modal-contract.test.js
+tests/reports-redesign-contract.test.js
+tests/ui-boundaries.test.js
+```
+
+Useful domain/unit tests are preserved.
+
+## Stage 15 — architecture guards
+
+Added `tests/architecture-guards.test.js` with lightweight checks for the critical architecture rules:
+
+- deleted progressive-enhancement JS stays deleted;
+- `index.html` points directly to `src/app/bootstrap.js`;
+- feature `*.view.js` files cannot call `store.update()` / `store.replace()`;
+- feature views cannot import/use Supabase adapter directly;
+- `src/shared/` cannot depend on feature/domain modules;
+- bootstrap cannot regrow old feature renderers/global mutable mirror;
+- `MutationObserver` cannot reappear as feature rendering architecture.
+
+No AST framework or custom linter was introduced.
+
+## Stage 16 — critical E2E
+
+Playwright Chromium coverage is intentionally small and release-oriented:
+
+```text
+1. student lifecycle + edit + reload persistence
+2. lesson lifecycle + owner lock + reload persistence
+3. single payment + reload persistence
+4. package billing calculation
+5. reports builder + preview + clipboard text
+6. backup export
+```
+
+Files:
+
+```text
+playwright.config.js
+tests/e2e/helpers.js
+tests/e2e/critical-flows.e2e.js
+scripts/serve-static.mjs
+```
+
+Auth/cloud/CDN infrastructure is stubbed only inside browser tests; production code is unchanged.
+
+## Stage 17 — CI finalization
+
+CI now uses Node 24 and runs:
+
+```text
+npm install
+npm run lint
+npm run validate:stage0
+npm test
+npx playwright install --with-deps chromium
+npm run test:e2e
+```
+
+`npm test` already includes architecture guards, so CI does not run the same guard suite twice.
+
+## Stage 18 — final docs/dead-code pass
+
+Updated `README.md` to document final ownership, release gates, architecture guards, Playwright E2E and the already-applied CAS state.
+
+No framework migration, DB normalization or UI redesign is part of this pass.
+
+## Verification after applying this archive
+
+Run from repository root:
+
+```bash
+npm install
+npm run lint
+npm run validate:stage0
+npm test
+npx playwright install chromium
+npm run test:e2e
+```
+
+Then inspect:
+
+```bash
+git diff --check
+git status --short
+git diff --stat
+```
+
+If all checks are green, commit Part 3 on `refactor/v5-lean-domain-modules`. Do not push directly to `main`.
+
+## Continuation point
+
+After Part 3 is committed and CI is green, the refactor branch is ready for a full manual smoke against real auth/cloud behavior and then a deliberate PR/merge decision. Future work such as Supabase JSON normalization is separate from this architecture pass.

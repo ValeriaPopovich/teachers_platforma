@@ -1,23 +1,20 @@
-// Regression guard: the UI must call the tested backup module and persistence boundary.
-
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const appJs = fs.readFileSync(path.resolve(here, '../assets/app.js'), 'utf8');
+const bootstrap = fs.readFileSync(path.resolve(here, '../src/app/bootstrap.js'), 'utf8');
 
-describe('assets/app.js — backup module integration', () => {
-  it('merge delegates to mergeImported, which owns all ID remapping', () => {
-    expect(appJs).toMatch(
-      /import \{[^}]*mergeImported[^}]*\} from ['"]\.\.\/src\/domain\/backup\.js['"]/s,
-    );
-    expect(appJs).toMatch(/data = mergeImported\(data, pendingImport, uid\)/);
+describe('bootstrap — backup application orchestration', () => {
+  it('merge delegates ID remapping to the tested backup module', () => {
+    expect(bootstrap).toMatch(/import \{[^}]*mergeImported[^}]*\} from ['"]\.\.\/domain\/backup\.js['"]/s);
+    expect(bootstrap).toContain("store.replace(mergeImported(store.getState(), pendingImport, uid), 'backup:merge')");
   });
 
-  it('replace saves recovery through the persistence boundary before applying data', () => {
-    expect(appJs).toMatch(/replaceImported\(data, pendingImport\)/);
-    expect(appJs).toMatch(/persistence\.saveRecovery\(replacement\.recovery\)/);
+  it('replace saves recovery before replacing store data', () => {
+    expect(bootstrap).toContain('const result = replaceImported(store.getState(), pendingImport)');
+    expect(bootstrap).toContain('persistence.saveRecovery(result.recovery)');
+    expect(bootstrap).toContain("store.replace(result.nextData, 'backup:replace')");
   });
 });

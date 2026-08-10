@@ -1,36 +1,38 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 
-const js = readFileSync(new URL('../assets/profile-modal.js', import.meta.url), 'utf8');
-const css = readFileSync(new URL('../assets/profile-modal.css', import.meta.url), 'utf8');
+const view = readFileSync(new URL('../src/modules/students/profile.view.js', import.meta.url), 'utf8');
+const css = readFileSync(new URL('../src/modules/students/students.css', import.meta.url), 'utf8');
 
-describe('student profile responsive UI contract', () => {
-  test('keeps original profile hooks so app.js actions continue to work', () => {
-    expect(js).toContain("const PROFILE_ID = 'profileModal'");
-    expect(js).toContain("const BODY_ID = 'profileBody'");
-    expect(js).toContain("historyTable.querySelector('tbody')");
+describe('student profile final ownership contract', () => {
+  test('profile is rendered directly by the students module', () => {
+    expect(view).toContain("const body = document.querySelector('#profileBody')");
+    expect(view).toContain('class="profile-redesign"');
+    expect(view).toContain('profile-history-row');
   });
 
-  test('preserves content placed after the lesson history table', () => {
-    expect(js).toContain('const historyExtras = []');
-    expect(js).toContain('historyExtras.forEach((extra) => historyPanel.append(extra))');
+  test('preserves archived topics after lesson history', () => {
+    expect(view).toContain("state.topicLog[id]?.length");
+    expect(view).toContain('Ранее пройденные темы (архив)');
   });
 
-  test('escapes text reinserted into generated markup', () => {
-    expect(js).toContain('function escapeHtml');
-    expect(js).toContain("escapeHtml(textOrDash(learningData['Цели']");
+  test('escapes generated user content through shared escapeHtml', () => {
+    expect(view).toContain("import { escapeHtml, safeExternalUrl } from '../../shared/dom.js'");
+    expect(view).toContain('escapeHtml(student.name)');
+    expect(view).toContain("escapeHtml(student.goals || 'не указаны')");
   });
 
-  test('has desktop, tablet and mobile responsive modes', () => {
+  test('has desktop/tablet/mobile responsive profile styles', () => {
     expect(css).toContain('@media (max-width: 980px)');
     expect(css).toContain('@media (max-width: 720px)');
     expect(css).toContain('@media (max-width: 460px)');
-    expect(css).toContain('height: 100dvh');
+    expect(css).toContain('100dvh');
   });
 
-  test('uses accessible tabs rather than fake visual tabs', () => {
-    expect(js).toContain("tabs.setAttribute('role', 'tablist')");
-    expect(js).toContain("button.setAttribute('role', 'tab')");
-    expect(js).toContain("button.setAttribute('aria-selected'");
+  test('uses semantic tabs without a progressive enhancer', () => {
+    expect(view).toContain('role="tablist"');
+    expect(view).toContain('role="tab"');
+    expect(view).toContain('aria-selected="true"');
+    expect(view).toContain('function activateTab(name)');
   });
 });
