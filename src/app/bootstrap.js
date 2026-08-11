@@ -37,6 +37,7 @@ import { createToast } from '../shared/toast.js';
 import { createDialog } from '../shared/dialog.js';
 import { createModalManager } from '../shared/modal.js';
 import { formatTime, localDay } from '../shared/format.js';
+import './mount-vue-islands.js';
 
 const STORAGE_KEY = 'tutorCabinet_v1';
 const RETENTION_DAYS = 45;
@@ -103,6 +104,7 @@ function setPage(name) {
     button.classList.toggle('active', button.dataset.page === name),
   );
   sessionStorage.setItem('tutorCabinet_activePage', name);
+  window.dispatchEvent(new CustomEvent('app:page-change', { detail: { page: name } }));
   renderAll();
 }
 

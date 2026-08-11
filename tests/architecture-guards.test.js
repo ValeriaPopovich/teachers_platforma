@@ -18,6 +18,17 @@ const viewFiles = moduleFiles.filter((file) => file.endsWith('.view.js'));
 const sharedFiles = walk('src/shared').filter((file) => file.endsWith('.js'));
 
 describe('Lean Domain Modules architecture guards', () => {
+  it('mounts the application navigation as a Vue component', () => {
+    const html = read('index.html');
+    const bootstrap = read('src/app/bootstrap.js');
+    const navigation = read('src/app/components/AppNavigation.vue');
+
+    expect(html).toContain('<nav class="nav" id="nav"></nav>');
+    expect(bootstrap).toContain("import './mount-vue-islands.js';");
+    expect(navigation).toContain('v-for="page in pages"');
+    expect(navigation).toContain(':data-page="page.name"');
+  });
+
   it('legacy progressive-enhancement entry files stay deleted', () => {
     for (const file of [
       'assets/app.js',

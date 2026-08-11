@@ -100,6 +100,11 @@ export function createPaymentsView({ store, service, modal, dialog, toast }) {
       badge.textContent = attention.length;
       badge.classList.toggle('show', attention.length > 0);
     }
+    window.dispatchEvent(
+      new CustomEvent('app:payment-attention-change', {
+        detail: { count: attention.length },
+      }),
+    );
 
     const packageCard = $('#packageMonthCard');
     packageCard.style.display = packageRows.length ? '' : 'none';
