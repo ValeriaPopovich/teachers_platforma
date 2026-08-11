@@ -13,7 +13,7 @@ export function blankData() {
       theme: 'light',
       timeZone: 'auto',
       reminder: 15,
-      sidebarCompact: false,
+      sidebarCompact: true,
       customGoals: [],
       deletedGoals: [],
       scheduleExclusions: [],

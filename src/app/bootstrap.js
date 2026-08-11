@@ -108,7 +108,9 @@ function setPage(name) {
 
 $('#nav')?.addEventListener('click', (event) => {
   const name = event.target.closest('[data-page]')?.dataset.page;
-  if (name) setPage(name);
+  if (name) {
+    setPage(name);
+  }
 });
 document.addEventListener('click', (event) => {
   const name = event.target.closest('[data-page-go]')?.dataset.pageGo;

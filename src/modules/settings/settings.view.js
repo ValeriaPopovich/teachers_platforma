@@ -12,7 +12,14 @@ export function createSettingsView({
     const settings = store.getState().settings;
     document.documentElement.dataset.theme = settings.theme || 'light';
     document.body.classList.toggle('dark', settings.theme === 'dark');
-    $('.app')?.classList.toggle('sidebar-compact', !!settings.sidebarCompact);
+    const isCompact = !!settings.sidebarCompact;
+    $('.app')?.classList.toggle('sidebar-compact', isCompact);
+    const sidebarToggle = $('#sidebarToggle');
+    if (sidebarToggle) {
+      sidebarToggle.setAttribute('aria-expanded', String(!isCompact));
+      sidebarToggle.setAttribute('aria-label', isCompact ? 'Открыть меню' : 'Закрыть меню');
+      sidebarToggle.title = isCompact ? 'Открыть меню' : 'Закрыть меню';
+    }
     if ($('#settingTutor')) $('#settingTutor').value = settings.tutor || '';
     if ($('#settingReminder')) $('#settingReminder').value = String(settings.reminder ?? 15);
     const themeButton = $('#themeBtn');

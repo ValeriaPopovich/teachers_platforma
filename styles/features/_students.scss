@@ -756,3 +756,1860 @@
     }
   }
 }
+
+/* Pixel-fidelity layer for the approved React reference. */
+body:has(#page-students.active),
+body:has(#page-students.active) .main {
+  background: #f9f7f6;
+}
+
+.app #page-students {
+  color: #181d25;
+  font-family: 'Plus Jakarta Sans', Inter, sans-serif;
+  letter-spacing: -0.01em;
+
+  .students-toolbar {
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid rgb(220, 223, 229, 40%);
+    border-radius: 20px;
+    background: rgb(255, 255, 255, 70%);
+    box-shadow: 0 1px 3px rgb(24, 29, 37, 5%);
+  }
+
+  .student-search input {
+    min-height: 40px;
+    padding: 8px 12px 8px 40px;
+    border: 1px solid rgb(220, 223, 229, 50%);
+    border-radius: 16px;
+    color: #181d25;
+    background: rgb(249, 247, 246, 80%);
+    box-shadow: 0 1px 3px rgb(24, 29, 37, 5%);
+    font-family: inherit;
+    font-size: 14px;
+  }
+
+  .student-filter {
+    min-height: 40px;
+    border-radius: 16px;
+    background: #eeebe8;
+  }
+
+  .student-filter button {
+    min-height: 32px;
+    padding: 6px 14px;
+    color: #181d25;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .student-filter button.is-active {
+    color: #181d25;
+    background: #fff;
+    box-shadow: 0 1px 3px rgb(24, 29, 37, 8%);
+    font-weight: 600;
+  }
+
+  .students-toolbar-actions .btn {
+    min-height: 40px;
+    border-color: rgb(220, 223, 229, 70%);
+    color: #181d25;
+    background: #fff;
+    box-shadow: 0 1px 3px rgb(24, 29, 37, 7%);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .students-toolbar-actions .btn.primary {
+    border-color: transparent;
+    color: #fff;
+    background: linear-gradient(120deg, #ee2b65, #f45a34);
+    box-shadow: 0 7px 18px rgb(238, 43, 101, 18%);
+  }
+
+  .students-section-head h2 {
+    color: #181d25;
+    font-family: inherit;
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 36px;
+    letter-spacing: -0.035em;
+  }
+
+  .students-count {
+    border: 1px solid rgb(238, 43, 101, 25%);
+    color: #ee2b65;
+    background: rgb(246, 234, 237, 70%);
+  }
+
+  .student-card,
+  .group-card {
+    overflow: hidden;
+    border: 1px solid rgb(220, 223, 229, 70%);
+    border-radius: 20px;
+    color: #181d25;
+    background: #fff;
+    box-shadow:
+      0 1px 3px rgb(24, 29, 37, 10%),
+      0 1px 2px -1px rgb(24, 29, 37, 10%);
+    font-family: inherit;
+  }
+
+  .student-card {
+    flex-basis: 320px;
+    min-height: 240px;
+    overflow: visible;
+  }
+
+  .group-card {
+    flex-basis: 350px;
+  }
+
+  .student-card::before {
+    inset: 16px auto 16px 0;
+    width: 5px;
+  }
+
+  .student-card-main {
+    min-height: 238px;
+    padding: 20px 20px 0;
+  }
+
+  .student-avatar {
+    border-color: rgb(238, 43, 101, 20%);
+    color: #ee2b65;
+    background: #f6eaed;
+  }
+
+  .student-top h3 {
+    color: #181d25;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 22px;
+  }
+
+  .student-identity .meta {
+    color: #181d25;
+    font-size: 12px;
+    line-height: 16px;
+  }
+
+  .student-card-grade {
+    color: #181d25;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .student-fact {
+    color: #181d25;
+    font-size: 12px;
+    line-height: 16px;
+  }
+
+  .student-fact-schedule .student-fact-icon {
+    color: #ee2b65;
+  }
+
+  .student-fact-terms b {
+    color: #181d25;
+    font-weight: 500;
+  }
+
+  .student-card-footer {
+    margin: 16px -20px 0;
+    padding: 10px 20px;
+  }
+
+  .student-payment-status.is-paid {
+    border: 1px solid rgb(83, 198, 131, 25%);
+    color: #23a459;
+    background: rgb(83, 198, 131, 12%);
+  }
+
+  .student-payment-status.is-debt {
+    border: 1px solid #e11436;
+    color: #fff;
+    background: #e11436;
+  }
+
+  .student-lesson-link.has-video,
+  .student-lesson-link.is-empty {
+    position: relative;
+    z-index: 5;
+    color: #ee2b65;
+    background: #f6eaed;
+  }
+
+  .student-menu {
+    top: 16px;
+    right: 16px;
+  }
+
+  .student-menu summary {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    color: #181d25;
+    background: transparent;
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: -1px;
+  }
+
+  .student-menu summary:hover,
+  .student-menu[open] summary {
+    color: #181d25;
+    background: #eeebe8;
+  }
+
+  .student-menu > button {
+    top: 31px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 112px;
+    padding: 9px 11px;
+    border-color: #dcdfe5;
+    color: #e11436;
+    background: #fff;
+    box-shadow: 0 8px 22px rgb(24, 29, 37, 12%);
+    font-family: inherit;
+    font-size: 11px;
+  }
+
+  .student-menu > button svg {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-width: 1.8;
+  }
+
+  .group-card .student-card-main {
+    min-height: 0;
+    padding: 24px;
+  }
+
+  .group-direction {
+    color: #181d25;
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  .group-card .student-top h3 {
+    color: #181d25;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 22.5px;
+  }
+
+  .group-schedule {
+    border-color: rgb(220, 223, 229, 55%);
+    border-radius: 14px;
+    background: rgb(238, 235, 232, 50%);
+  }
+
+  .student-card-paid::before {
+    background: #53c683;
+  }
+
+  .student-card-partial::before {
+    background: #f59f0a;
+  }
+
+  .student-card-debt::before {
+    background: #e11436;
+  }
+
+  .student-card:hover,
+  .student-card:focus-within,
+  .group-card:hover,
+  .group-card:focus-within {
+    border-color: rgb(220, 223, 229, 90%);
+    box-shadow:
+      0 4px 6px -1px rgb(24, 29, 37, 10%),
+      0 2px 4px -2px rgb(24, 29, 37, 10%);
+    transform: none;
+  }
+
+  .student-card-main:focus,
+  .student-card-main:focus-visible,
+  .group-card .student-card-main:focus,
+  .group-card .student-card-main:focus-visible {
+    outline: 0;
+    box-shadow: none;
+  }
+
+  .student-top h3 {
+    font-size: 18px;
+    line-height: 24px;
+  }
+
+  .student-identity .meta {
+    font-size: 14px;
+    line-height: 19px;
+  }
+
+  .student-card-grade {
+    font-size: 15px;
+  }
+
+  .student-fact {
+    font-size: 14px;
+    line-height: 19px;
+  }
+
+  .student-fact-icon {
+    flex-basis: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  .student-payment-status {
+    font-size: 11px;
+  }
+
+  .student-card-footer {
+    align-items: center;
+  }
+
+  .student-lesson-link.has-video,
+  .student-lesson-link.is-empty {
+    display: grid;
+    place-items: center;
+    align-items: center;
+    align-self: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    margin-left: auto;
+    padding: 0;
+    line-height: 0;
+    text-align: center;
+    transition:
+      color 0.18s ease,
+      background-color 0.18s ease,
+      border-color 0.18s ease,
+      box-shadow 0.18s ease;
+  }
+
+  .student-lesson-link.has-video:hover,
+  .student-lesson-link.has-video:focus-visible {
+    color: #fff;
+    background: #ee2b65;
+    box-shadow: 0 8px 18px rgb(238, 43, 101, 25%);
+  }
+
+  .student-lesson-link.is-empty {
+    border: 1px dashed #dcdfe5;
+    color: #181d25;
+    background: #fff;
+    font-size: 20px;
+  }
+
+  .student-lesson-link.is-empty:hover,
+  .student-lesson-link.is-empty:focus-visible {
+    border-color: rgb(238, 43, 101, 45%);
+    background: #fff;
+    box-shadow: 0 8px 18px rgb(24, 29, 37, 12%);
+  }
+
+  .student-lesson-link.is-empty > span {
+    display: block;
+    transition: transform 0.18s ease;
+  }
+
+  .student-lesson-link.is-empty:hover > span,
+  .student-lesson-link.is-empty:focus-visible > span {
+    transform: scale(1.28);
+  }
+
+  .student-lesson-link[data-tooltip]::before,
+  .student-lesson-link[data-tooltip]::after {
+    position: absolute;
+    z-index: 20;
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      opacity 0.16s ease,
+      transform 0.16s ease;
+  }
+
+  .student-lesson-link[data-tooltip]::before {
+    right: -7px;
+    bottom: calc(100% + 13px);
+    padding: 9px 14px;
+    border-radius: 13px;
+    color: #fff;
+    background: #df3d6c;
+    box-shadow: 0 7px 18px rgb(223, 61, 108, 20%);
+    content: attr(data-tooltip);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+    white-space: nowrap;
+    transform: translateY(5px);
+  }
+
+  .student-lesson-link[data-tooltip]::after {
+    right: 10px;
+    bottom: calc(100% + 7px);
+    border: 7px solid transparent;
+    border-top-color: #df3d6c;
+    content: '';
+    transform: translateY(5px);
+  }
+
+  .student-lesson-link[data-tooltip]:hover::before,
+  .student-lesson-link[data-tooltip]:hover::after,
+  .student-lesson-link[data-tooltip]:focus-visible::before,
+  .student-lesson-link[data-tooltip]:focus-visible::after {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .student-lesson-link.has-video svg {
+    display: block;
+    width: 23px;
+    height: 23px;
+    stroke-width: 2;
+  }
+
+  .student-menu > button {
+    justify-content: flex-start;
+    gap: 0;
+  }
+
+  .group-direction {
+    font-size: 11px;
+  }
+
+  .group-card .student-top h3 {
+    font-size: 20px;
+    line-height: 26px;
+  }
+
+  .group-schedule {
+    font-size: 14px;
+  }
+
+  .group-open-icon {
+    width: 38px;
+    height: 38px;
+    border-color: transparent;
+    border-radius: 14px;
+    color: #ee2b65;
+    background: #f6eaed;
+    line-height: 0;
+  }
+
+  .group-open-icon svg {
+    display: block;
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke: #ee2b65;
+    stroke-width: 2;
+  }
+}
+
+/* Students list — compact, content-led cards. */
+#page-students {
+  --student-ok: color-mix(in sRGB, var(--ok) 82%, var(--text));
+  --student-ok-soft: color-mix(in sRGB, var(--ok) 11%, var(--panel));
+  --student-danger-soft: color-mix(in sRGB, var(--bad) 10%, var(--panel));
+
+  .students-topbar {
+    margin-bottom: 22px;
+  }
+
+  .students-topbar h1 {
+    letter-spacing: -0.035em;
+  }
+
+  .toolbar {
+    align-items: center;
+    width: fit-content;
+    max-width: 100%;
+    margin-bottom: 24px;
+    padding: 0;
+    background: transparent;
+  }
+
+  .toolbar input {
+    width: min(440px, 55vw);
+    min-height: 44px;
+    padding-left: 42px;
+    background:
+      linear-gradient(var(--panel), var(--panel)) padding-box,
+      linear-gradient(115deg, color-mix(in sRGB, var(--line) 88%, transparent), var(--line))
+        border-box;
+    box-shadow: 0 8px 24px color-mix(in sRGB, var(--text) 4%, transparent);
+  }
+
+  .toolbar::before {
+    position: absolute;
+    z-index: 1;
+    left: 16px;
+    color: var(--muted);
+    content: '⌕';
+    font-size: 20px;
+    pointer-events: none;
+  }
+
+  .students-section-head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 13px;
+  }
+
+  .students-section-head h2 {
+    margin: 0;
+    font-size: 17px;
+    letter-spacing: -0.015em;
+  }
+
+  .students-count {
+    display: inline-grid;
+    place-items: center;
+    min-width: 25px;
+    height: 22px;
+    padding-inline: 7px;
+    border-radius: 999px;
+    color: var(--brand-ink);
+    background: var(--soft);
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  .student-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 225px), 1fr));
+    gap: 14px;
+  }
+
+  .student-card {
+    position: relative;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 17px;
+    background: var(--panel);
+    box-shadow: 0 8px 26px color-mix(in sRGB, var(--text) 5%, transparent);
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.24s ease,
+      transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .student-card::before {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    border-radius: 0 999px 999px 0;
+    background: var(--ok);
+    content: '';
+  }
+
+  .student-card-attention::before {
+    background: var(--bad);
+  }
+
+  .student-card:hover,
+  .student-card:focus-within {
+    border-color: color-mix(in sRGB, var(--brand) 24%, var(--line));
+    box-shadow: 0 14px 34px color-mix(in sRGB, var(--text) 8%, transparent);
+    transform: translateY(-2px);
+  }
+
+  .student-card-main {
+    display: flex;
+    flex-direction: column;
+    min-height: 208px;
+    padding: 17px 16px 0;
+    cursor: pointer;
+  }
+
+  .student-top {
+    min-height: 50px;
+    padding-right: 28px;
+  }
+
+  .student-top h3 {
+    display: -webkit-box;
+    overflow: hidden;
+    margin: 0 0 4px;
+    font-size: 14px;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .student-card .meta {
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  .student-card-facts {
+    display: grid;
+    gap: 7px;
+    margin-top: 13px;
+  }
+
+  .student-fact {
+    display: flex;
+    align-items: baseline;
+    min-width: 0;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  .student-fact > span {
+    flex: 0 0 14px;
+    color: var(--text);
+  }
+
+  .student-fact b {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .student-fact i {
+    font-style: normal;
+  }
+
+  .student-fact-schedule b {
+    display: -webkit-box;
+    overflow: hidden;
+    line-height: 1.35;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .student-card-status {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: auto;
+    padding: 12px 0;
+  }
+
+  .student-payment-status {
+    padding: 4px 7px;
+    border-radius: 7px;
+    font-size: 10px;
+    font-weight: 800;
+  }
+
+  .student-payment-status.is-ok {
+    color: var(--student-ok);
+    background: var(--student-ok-soft);
+  }
+
+  .student-payment-status.is-attention {
+    color: var(--bad);
+    background: var(--student-danger-soft);
+  }
+
+  .student-lesson-link {
+    width: calc(100% + 32px);
+    display: block;
+    margin-inline: -16px;
+    padding: 11px 16px 12px;
+    border-top: 1px solid var(--line);
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    color: var(--brand2);
+    background: color-mix(in sRGB, var(--panel2) 72%, transparent);
+    font-size: 11px;
+    font-weight: 700;
+    text-decoration: none;
+    text-align: left;
+  }
+
+  .student-lesson-link:hover {
+    color: var(--brand-ink);
+    background: var(--soft);
+  }
+
+  .student-lesson-link.is-empty {
+    color: var(--muted);
+    background: color-mix(in sRGB, var(--panel2) 55%, transparent);
+    font-weight: 500;
+  }
+
+  .student-lesson-link.is-empty:hover {
+    color: var(--brand-ink);
+    background: var(--soft);
+  }
+
+  .student-delete {
+    top: 12px;
+    right: 12px;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    box-shadow: none;
+    font-size: 13px;
+  }
+
+  .student-delete:hover {
+    background: var(--student-danger-soft);
+    transform: none;
+  }
+
+  .student-delete-icon {
+    position: relative;
+    display: block;
+    width: 12px;
+    height: 12px;
+    margin: auto;
+    border: 1.5px solid currentColor;
+    border-top: 0;
+    border-radius: 0 0 3px 3px;
+  }
+
+  .student-delete-icon::before {
+    position: absolute;
+    top: -4px;
+    left: -2px;
+    width: 14px;
+    height: 1.5px;
+    border-radius: 999px;
+    background: currentColor;
+    content: '';
+  }
+
+  .student-delete-icon::after {
+    position: absolute;
+    top: -6px;
+    left: 3px;
+    width: 5px;
+    height: 3px;
+    border: 1.5px solid currentColor;
+    border-bottom: 0;
+    border-radius: 2px 2px 0 0;
+    content: '';
+  }
+
+  .subsection {
+    margin-top: 42px;
+    padding-top: 28px;
+    border-top: 1px solid var(--line);
+  }
+
+  .subsection .section-head {
+    margin-bottom: 14px;
+  }
+
+  .group-card {
+    background: color-mix(in sRGB, var(--panel) 92%, var(--soft));
+  }
+
+  .group-card::before {
+    background: linear-gradient(var(--brand), var(--brand2));
+  }
+
+  .group-card .student-top {
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr);
+    gap: 10px;
+    padding-right: 28px;
+  }
+
+  .group-card .avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    font-size: 12px;
+  }
+
+  .group-card .member-chips {
+    margin-top: auto;
+    padding: 13px 0 15px;
+  }
+
+  .group-card .member-chip {
+    max-width: 100%;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  @media (width <= 720px) {
+    .students-topbar {
+      align-items: flex-start;
+    }
+
+    .toolbar,
+    .toolbar input,
+    .toolbar > .custom-select {
+      width: 100%;
+      max-width: none;
+    }
+
+    .student-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .student-card-main {
+      min-height: 200px;
+    }
+  }
+
+  /* Final compact composition from the redesign specification. */
+  .students-title-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+  }
+
+  .students-summary {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 7px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 650;
+  }
+
+  .students-summary span {
+    padding: 4px 8px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: color-mix(in sRGB, var(--panel) 80%, transparent);
+  }
+
+  .students-summary i {
+    display: none;
+  }
+
+  .students-summary .has-debt {
+    color: color-mix(in sRGB, var(--bad) 80%, var(--text));
+    background: var(--student-danger-soft);
+  }
+
+  .students-toolbar {
+    display: flex;
+    width: 100%;
+    gap: 10px;
+    margin-bottom: 28px;
+    padding: 10px;
+    border: 1px solid color-mix(in sRGB, var(--line) 82%, transparent);
+    border-radius: 18px;
+    background: color-mix(in sRGB, var(--panel) 88%, transparent);
+    box-shadow: 0 5px 18px rgb(36, 28, 31, 4%);
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .students-toolbar::before {
+    content: none;
+  }
+
+  .student-search {
+    position: relative;
+  }
+
+  .student-search::before {
+    position: absolute;
+    z-index: 1;
+    top: 50%;
+    left: 15px;
+    width: 18px;
+    height: 18px;
+    background: var(--muted);
+    content: '';
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='6.5' fill='none' stroke='black' stroke-width='1.8'/%3E%3Cpath d='m16 16 4 4' fill='none' stroke='black' stroke-linecap='round' stroke-width='1.8'/%3E%3C/svg%3E")
+      center / contain no-repeat;
+    pointer-events: none;
+    transform: translateY(-52%);
+  }
+
+  .student-search input {
+    min-height: 42px;
+    border-color: color-mix(in sRGB, var(--line) 80%, transparent);
+    background: var(--panel);
+    font-size: 13px;
+    box-shadow: inset 0 1px 2px rgb(36, 28, 31, 2%);
+  }
+
+  .student-filter {
+    display: inline-flex;
+    padding: 3px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: color-mix(in sRGB, var(--panel2) 85%, transparent);
+  }
+
+  .student-filter button {
+    min-height: 40px;
+    padding: 0 13px;
+    border: 0;
+    border-radius: 9px;
+    color: var(--muted);
+    background: transparent;
+    box-shadow: none;
+    font-size: 12px;
+    font-weight: 650;
+    white-space: nowrap;
+  }
+
+  .student-filter button:hover {
+    color: var(--text);
+    background: color-mix(in sRGB, var(--panel) 60%, transparent);
+    transform: none;
+  }
+
+  .student-filter button.is-active {
+    color: var(--text);
+    background: var(--panel);
+    box-shadow: 0 2px 8px rgb(36, 28, 31, 7%);
+  }
+
+  .student-sort {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-left: auto;
+  }
+
+  .student-sort > span {
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  .student-sort select {
+    min-height: 42px;
+    font-size: 12px;
+  }
+
+  .student-grid {
+    display: flex;
+    gap: 18px;
+    width: 100%;
+    padding: 6px 20px 20px 2px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-inline: contain;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    scroll-padding-inline: 2px;
+    scroll-snap-type: inline mandatory;
+    touch-action: pan-x;
+  }
+
+  .student-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .students-carousel-actions {
+    display: flex;
+    gap: 6px;
+    margin-left: auto;
+  }
+
+  .students-carousel-actions button {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    color: var(--text);
+    background: var(--panel);
+    box-shadow: 0 3px 10px rgb(36, 28, 31, 5%);
+    font-size: 16px;
+  }
+
+  .students-carousel-actions button:hover {
+    border-color: color-mix(in sRGB, var(--brand) 30%, var(--line));
+    color: var(--brand-ink);
+    transform: translateY(-1px);
+  }
+
+  .student-card {
+    flex: 0 0 350px;
+    align-self: start;
+    overflow: visible;
+    border-radius: 22px 22px 25px;
+    scroll-snap-align: start;
+    box-shadow:
+      0 1px 2px rgb(36, 28, 31, 2%),
+      0 8px 24px rgb(36, 28, 31, 4.5%);
+    transition:
+      border-color 0.18s ease,
+      box-shadow 0.18s ease,
+      transform 0.18s ease;
+  }
+
+  .student-card::before {
+    inset: 18px auto 18px 0;
+    width: 2px;
+  }
+
+  .student-card::after,
+  .group-card::after {
+    position: absolute;
+    z-index: 1;
+    top: 50%;
+    right: 0;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    background:
+      radial-gradient(
+        circle,
+        color-mix(in sRGB, var(--muted) 55%, transparent) 0 2px,
+        transparent 2.5px
+      ),
+      var(--panel);
+    box-shadow: 0 3px 10px rgb(36, 28, 31, 6%);
+    content: '';
+    pointer-events: none;
+    transform: translate(50%, -50%);
+  }
+
+  .student-card-paid::before {
+    background: var(--ok);
+  }
+
+  .student-card-partial::before {
+    background: var(--warn);
+  }
+
+  .student-card-debt::before {
+    background: var(--bad);
+  }
+
+  .student-card-neutral::before {
+    background: color-mix(in sRGB, var(--muted) 58%, var(--line));
+  }
+
+  .student-card:hover,
+  .student-card:focus-within {
+    box-shadow:
+      0 2px 4px rgb(36, 28, 31, 3%),
+      0 13px 30px rgb(36, 28, 31, 7%);
+  }
+
+  .student-card-main {
+    display: block;
+    min-height: 0;
+    padding: 23px 23px 0;
+  }
+
+  .student-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 0;
+    padding-right: 28px;
+  }
+
+  .student-avatar {
+    display: grid;
+    place-items: center;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    border: 1px solid color-mix(in sRGB, var(--brand) 24%, var(--line));
+    border-radius: 15px;
+    color: var(--brand-ink);
+    background: color-mix(in sRGB, var(--brand) 10%, var(--panel));
+    box-shadow: 0 3px 9px rgb(36, 28, 31, 5%);
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .student-identity {
+    min-width: 0;
+  }
+
+  .student-top h3 {
+    margin-bottom: 5px;
+    font-size: 18px;
+    line-height: 1.28;
+  }
+
+  .student-identity .meta {
+    overflow: hidden;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .student-card-facts {
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid color-mix(in sRGB, var(--line) 75%, transparent);
+  }
+
+  .student-card-grade {
+    overflow: hidden;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 750;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .student-fact {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 5px 7px;
+    font-size: 13px;
+  }
+
+  .student-fact-icon {
+    flex: 0 0 17px;
+    width: 17px;
+    height: 17px;
+    margin-top: 0;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.7;
+  }
+
+  .student-fact-terms b {
+    color: var(--muted);
+    font-weight: 550;
+    white-space: nowrap;
+  }
+
+  .student-fact-schedule .student-fact-icon {
+    color: var(--brand2);
+  }
+
+  .student-fact-terms i {
+    color: color-mix(in sRGB, var(--muted) 60%, transparent);
+  }
+
+  .student-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 54px;
+    margin: 20px -23px 0;
+    padding: 11px 19px 12px 23px;
+    border-top: 1px solid var(--line);
+    border-radius: 0 0 25px 22px;
+    background: color-mix(in sRGB, var(--panel2) 48%, transparent);
+  }
+
+  .student-payment-status {
+    flex: 0 0 auto;
+    font-size: 11px;
+  }
+
+  .student-payment-status.is-paid {
+    color: var(--student-ok);
+    background: var(--student-ok-soft);
+  }
+
+  .student-payment-status.is-partial {
+    color: color-mix(in sRGB, var(--warn) 82%, var(--text));
+    background: color-mix(in sRGB, var(--warn) 12%, var(--panel));
+  }
+
+  .student-payment-status.is-debt {
+    color: var(--bad);
+    background: var(--student-danger-soft);
+  }
+
+  .student-lesson-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    width: auto;
+    min-width: 0;
+    margin: 0;
+    padding: 5px 7px;
+    overflow: hidden;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    font-size: 12px;
+    line-height: 1.25;
+    text-align: right;
+    text-overflow: ellipsis;
+  }
+
+  .student-lesson-link.has-video,
+  .student-lesson-link.is-empty {
+    display: grid;
+    place-items: center;
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 12px;
+    color: var(--brand2);
+    background: color-mix(in sRGB, var(--brand) 10%, var(--panel));
+    font-size: 18px;
+  }
+
+  .student-lesson-link.has-video svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.8;
+  }
+
+  .student-lesson-link.is-empty {
+    background: transparent;
+  }
+
+  .student-delete {
+    z-index: 3;
+    top: 50%;
+    right: 0;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid transparent;
+    border-radius: 50%;
+    color: var(--bad);
+    background: var(--panel);
+    transform: translate(50%, -50%);
+  }
+
+  .student-delete svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-width: 1.8;
+  }
+
+  .student-delete:hover,
+  .student-delete:focus-visible {
+    border-color: color-mix(in sRGB, var(--bad) 24%, var(--line));
+    background: color-mix(in sRGB, var(--bad) 9%, var(--panel));
+    transform: translate(50%, -50%);
+  }
+
+  .group-card:hover .student-delete,
+  .group-card:focus-within .student-delete {
+    opacity: 1;
+  }
+
+  .student-menu {
+    position: absolute;
+    z-index: 4;
+    top: 12px;
+    right: 12px;
+  }
+
+  .student-menu summary {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    list-style: none;
+  }
+
+  .student-menu summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .student-menu summary:hover,
+  .student-menu[open] summary {
+    color: var(--text);
+    background: var(--panel2);
+  }
+
+  .student-menu > button {
+    position: absolute;
+    top: 34px;
+    right: 0;
+    min-width: 104px;
+    padding: 8px 11px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    color: var(--bad);
+    background: var(--panel);
+    box-shadow: var(--shadow);
+    font-size: 11px;
+    font-weight: 700;
+    text-align: left;
+  }
+
+  #groupGrid {
+    gap: 18px;
+  }
+
+  .group-card {
+    flex: 0 0 470px;
+    position: relative;
+    align-self: start;
+    overflow: visible;
+    border: 1px solid color-mix(in sRGB, var(--brand) 13%, var(--line));
+    border-radius: 22px 25px 22px 22px;
+    background: color-mix(in sRGB, var(--brand) 4%, var(--panel));
+    box-shadow:
+      0 1px 2px rgb(36, 28, 31, 2%),
+      0 8px 24px rgb(36, 28, 31, 4.5%);
+    transition:
+      box-shadow 0.18s ease,
+      transform 0.18s ease;
+    scroll-snap-align: start;
+  }
+
+  .group-card::before {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: linear-gradient(var(--brand), var(--brand2));
+    content: '';
+  }
+
+  .group-card::after {
+    background:
+      radial-gradient(
+        circle,
+        color-mix(in sRGB, var(--muted) 55%, transparent) 0 2px,
+        transparent 2.5px
+      ),
+      color-mix(in sRGB, var(--brand) 4%, var(--panel));
+  }
+
+  .group-card:hover,
+  .group-card:focus-within {
+    box-shadow:
+      0 2px 4px rgb(36, 28, 31, 3%),
+      0 13px 30px rgb(36, 28, 31, 7%);
+    transform: translateY(-2px);
+  }
+
+  .group-card .student-card-main {
+    display: block;
+    padding: 23px 25px;
+  }
+
+  .group-card .student-top {
+    display: block;
+    min-height: 0;
+    padding-right: 28px;
+  }
+
+  .group-direction {
+    margin-bottom: 5px;
+    overflow: hidden;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.075em;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .group-card .student-top h3 {
+    margin: 0;
+    font-size: 18px;
+  }
+
+  .group-card .student-card-facts {
+    margin-top: 16px;
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .group-schedule {
+    align-items: center;
+    padding: 10px 12px;
+    border: 1px solid color-mix(in sRGB, var(--line) 72%, transparent);
+    border-radius: 13px;
+    background: color-mix(in sRGB, var(--panel2) 72%, transparent);
+  }
+
+  .group-facts {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .group-facts span,
+  .group-facts b {
+    white-space: nowrap;
+  }
+
+  .group-facts b {
+    color: var(--text);
+  }
+
+  .group-card .member-chips {
+    display: flex;
+    margin: 0;
+    padding: 0;
+  }
+
+  .group-card-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 15px;
+    padding-top: 14px;
+    border-top: 1px solid color-mix(in sRGB, var(--line) 70%, transparent);
+  }
+
+  .group-card .member-chip {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    margin-left: -5px;
+    padding: 0;
+    border: 2px solid var(--panel);
+    border-radius: 11px;
+    color: var(--brand-ink);
+    background: color-mix(in sRGB, var(--brand) 11%, var(--panel));
+    font-size: 10px;
+    font-weight: 800;
+  }
+
+  .group-card .member-chip:first-child {
+    margin-left: 0;
+  }
+
+  .group-card .member-chip:nth-child(3n + 2) {
+    color: color-mix(in sRGB, var(--ok) 78%, var(--text));
+    background: color-mix(in sRGB, var(--ok) 12%, var(--panel));
+  }
+
+  .group-card .member-chip:nth-child(3n) {
+    color: color-mix(in sRGB, var(--warn) 75%, var(--text));
+    background: color-mix(in sRGB, var(--warn) 13%, var(--panel));
+  }
+
+  .member-chip-more {
+    color: var(--muted);
+    background: var(--panel2);
+  }
+
+  .group-open-icon {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    background: var(--panel2);
+    font-size: 15px;
+  }
+
+  .students-empty {
+    display: grid;
+    justify-items: start;
+    grid-column: 1/-1;
+    gap: 5px;
+    min-width: min(100%, 340px);
+    padding: 28px;
+    border: 1px dashed color-mix(in sRGB, var(--line) 85%, transparent);
+    border-radius: 20px;
+    color: var(--muted);
+    background: color-mix(in sRGB, var(--panel) 58%, transparent);
+  }
+
+  .students-empty > span {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    margin-bottom: 5px;
+    border-radius: 11px;
+    color: var(--brand-ink);
+    background: var(--soft);
+    font-size: 18px;
+  }
+
+  .students-empty b {
+    color: var(--text);
+    font-size: 14px;
+  }
+
+  .students-empty p {
+    max-width: 300px;
+    margin: 0 0 9px;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+
+  /* Final fidelity pass based on the approved React composition. */
+  width: min(100%, 1280px);
+
+  .students-topbar {
+    align-items: center;
+    margin-bottom: 18px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid color-mix(in sRGB, var(--line) 70%, transparent);
+  }
+
+  .students-topbar h1 {
+    margin-bottom: 5px;
+    font-size: 27px;
+    letter-spacing: -0.035em;
+  }
+
+  .students-topbar .sub {
+    font-size: 13px;
+  }
+
+  .students-updated {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 11px;
+    border: 1px solid color-mix(in sRGB, var(--line) 72%, transparent);
+    border-radius: 999px;
+    color: var(--muted);
+    background: color-mix(in sRGB, var(--panel2) 62%, transparent);
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .students-updated span {
+    color: var(--text);
+    font-size: 14px;
+  }
+
+  .students-toolbar {
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 45px;
+    padding: 11px 12px;
+    border-radius: 20px;
+  }
+
+  .student-search {
+    flex: 1 1 440px;
+    min-width: 260px;
+  }
+
+  .student-search input {
+    width: 100%;
+    min-height: 44px;
+    border-radius: 15px;
+  }
+
+  .student-filter {
+    flex: 0 0 auto;
+    min-height: 44px;
+    border: 0;
+    border-radius: 15px;
+  }
+
+  .student-filter button {
+    min-height: 38px;
+    padding-inline: 16px;
+    border-radius: 12px;
+    font-size: 11px;
+  }
+
+  .students-toolbar-actions {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 8px;
+  }
+
+  .students-toolbar-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 44px;
+    padding-inline: 14px;
+    border-radius: 14px;
+    font-size: 12px;
+  }
+
+  .students-toolbar-actions svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.7;
+  }
+
+  .students-section-head {
+    margin-bottom: 24px;
+  }
+
+  .students-section-head h2 {
+    font-size: 25px;
+    letter-spacing: -0.035em;
+  }
+
+  .students-count {
+    min-width: 28px;
+    height: 24px;
+    color: var(--brand2);
+    background: color-mix(in sRGB, var(--brand) 8%, var(--panel));
+    font-size: 11px;
+  }
+
+  .student-grid {
+    gap: 20px;
+    padding: 6px 6px 18px 3px;
+  }
+
+  .student-card,
+  .group-card {
+    flex-basis: 350px;
+    overflow: hidden;
+    border-color: color-mix(in sRGB, var(--line) 86%, transparent);
+    border-radius: 18px;
+    box-shadow:
+      0 1px 2px rgb(36, 28, 31, 3%),
+      0 7px 18px rgb(36, 28, 31, 5%);
+  }
+
+  .student-card::after,
+  .group-card::after {
+    display: none;
+  }
+
+  .student-card::before {
+    inset: 16px auto 16px 0;
+    width: 4px;
+    border-radius: 0 4px 4px 0;
+  }
+
+  .student-card:hover,
+  .student-card:focus-within,
+  .group-card:hover,
+  .group-card:focus-within {
+    border-color: color-mix(in sRGB, var(--brand) 15%, var(--line));
+    box-shadow:
+      0 2px 4px rgb(36, 28, 31, 3%),
+      0 11px 24px rgb(36, 28, 31, 7%);
+    transform: translateY(-2px);
+  }
+
+  .student-card-main {
+    padding: 20px 22px 0 25px;
+  }
+
+  .student-avatar {
+    flex-basis: 42px;
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+  }
+
+  .student-top h3 {
+    margin-bottom: 2px;
+    font-size: 15px;
+  }
+
+  .student-identity .meta {
+    font-size: 11px;
+  }
+
+  .student-card-facts {
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 14px;
+  }
+
+  .student-card-grade {
+    font-size: 12px;
+  }
+
+  .student-fact {
+    align-items: center;
+    font-size: 12px;
+  }
+
+  .student-fact-icon {
+    flex-basis: 16px;
+    width: 16px;
+    height: 16px;
+  }
+
+  .student-fact-terms b {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .student-card-footer {
+    min-height: 54px;
+    margin: 16px -22px 0 -25px;
+    padding: 10px 18px 10px 25px;
+    border-radius: 0;
+  }
+
+  .student-payment-status {
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 10px;
+  }
+
+  .student-lesson-link.has-video,
+  .student-lesson-link.is-empty {
+    flex-basis: 38px;
+    width: 38px;
+    height: 38px;
+    border-radius: 14px;
+  }
+
+  .student-delete {
+    top: 15px;
+    right: 15px;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    background: var(--panel);
+    transform: none;
+  }
+
+  .student-delete:hover,
+  .student-delete:focus-visible {
+    transform: none;
+  }
+
+  .student-delete svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .subsection {
+    margin-top: 44px;
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .group-card::before {
+    width: 5px;
+  }
+
+  .group-card .student-card-main {
+    padding: 22px 24px 18px 27px;
+  }
+
+  .group-direction {
+    font-size: 9px;
+  }
+
+  .group-card .student-top h3 {
+    font-size: 17px;
+  }
+
+  .group-schedule {
+    padding: 9px 11px;
+    border-radius: 13px;
+  }
+
+  .group-facts {
+    display: none;
+  }
+
+  .group-card-bottom {
+    margin-top: 14px;
+    padding-top: 13px;
+  }
+
+  @media (width <= 760px) {
+    .students-toolbar {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .students-updated {
+      display: none;
+    }
+
+    .students-toolbar-actions .btn {
+      flex: 1;
+      justify-content: center;
+    }
+
+    .student-filter {
+      max-width: 100%;
+      overflow-x: auto;
+    }
+
+    .student-sort {
+      margin-left: 0;
+    }
+
+    .student-sort .custom-select,
+    .student-sort select {
+      flex: 1;
+      width: 100%;
+    }
+
+    .student-card {
+      flex-basis: min(84vw, 350px);
+    }
+
+    .group-card {
+      flex-basis: min(88vw, 350px);
+    }
+
+    .group-card .student-card-main {
+      grid-template-columns: 1fr;
+    }
+
+    .student-card-footer {
+      align-items: center;
+      flex-direction: row;
+      gap: 10px;
+    }
+
+    .student-lesson-link {
+      justify-content: flex-start;
+      text-align: left;
+    }
+  }
+}

@@ -1,0 +1,315 @@
+/* Final cascade layer for the redesign v1 application shell. */
+.app,
+.app.sidebar-compact {
+  display: grid;
+  min-height: 100vh;
+  grid-template-columns: 328px minmax(0, 1fr);
+  transition: grid-template-columns 0.56s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.app.sidebar-compact {
+  grid-template-columns: 100px minmax(0, 1fr);
+}
+
+.app .main {
+  width: 100%;
+  min-width: 0;
+  padding: 34px 42px 72px 18px;
+  transition: padding 0.56s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.app .sidebar {
+  position: sticky;
+  inset: 18px auto auto 18px;
+  z-index: 70;
+  width: 304px;
+  height: calc(100vh - 36px);
+  padding: 14px;
+  overflow: hidden;
+  border: 1px solid color-mix(in sRGB, var(--line) 82%, transparent);
+  border-radius: 24px;
+  background: color-mix(in sRGB, var(--panel) 96%, transparent);
+  box-shadow: var(--shell-shadow);
+  backdrop-filter: blur(18px);
+  isolation: isolate;
+  transition:
+    width 0.56s cubic-bezier(0.16, 1, 0.3, 1),
+    padding 0.56s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.4s ease;
+}
+
+.app .sidebar::before {
+  position: absolute;
+  z-index: -1;
+  top: -90px;
+  left: -80px;
+  width: 250px;
+  height: 250px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(239, 79, 145, 13%), transparent 68%);
+  content: '';
+  opacity: 0.9;
+  transform: scale(1) translate3d(0, 0, 0);
+  transition:
+    opacity 0.45s ease,
+    transform 0.72s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.app .sidebar-toggle {
+  position: static;
+  display: grid;
+  place-items: center;
+  flex: 0 0 36px;
+  width: 36px !important;
+  height: 36px !important;
+  padding: 0 !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 11px !important;
+  background: var(--panel2) !important;
+  box-shadow: none;
+}
+
+.app .sidebar-toggle:hover,
+.app .sidebar-toggle:active,
+.app .sidebar-toggle:focus {
+  color: var(--text);
+  background: var(--panel2) !important;
+  box-shadow: none;
+  outline: none;
+  transform: none;
+}
+
+.app .sidebar-toggle:focus-visible {
+  outline: 2px solid var(--muted);
+  outline-offset: 2px;
+}
+
+.app .nav {
+  display: grid;
+  gap: 5px;
+}
+
+.app .nav button {
+  min-height: 46px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  font-weight: 650;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease,
+    transform 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.app .nav button:hover {
+  background: var(--surface-hover);
+}
+
+.app .nav button.active {
+  background: var(--soft);
+}
+
+.app .nav-secondary {
+  margin-top: 13px;
+}
+
+.app .nav-label,
+.app .side-label {
+  max-width: 220px;
+  opacity: 1;
+  transform: translateX(0);
+  transition:
+    max-width 0.46s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.25s ease 0.1s,
+    transform 0.46s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.app .side-bottom {
+  min-height: 190px;
+}
+
+.app .side-actions {
+  grid-auto-rows: 42px;
+}
+
+.app .side-actions > button,
+.app .side-actions > a {
+  height: 42px;
+  overflow: hidden;
+}
+
+.app .side-actions .side-label {
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.app .side-warning {
+  height: 54px;
+  overflow: hidden;
+  opacity: 1;
+  transition: opacity 0.18s ease 0.22s;
+}
+
+.app .nav button:nth-child(2) .nav-label {
+  transition-delay: 0.12s;
+}
+
+.app .nav button:nth-child(3) .nav-label {
+  transition-delay: 0.14s;
+}
+
+.app .nav button:nth-child(4) .nav-label {
+  transition-delay: 0.16s;
+}
+
+.app .nav button:nth-child(5) .nav-label {
+  transition-delay: 0.18s;
+}
+
+.app .nav button:nth-child(6) .nav-label {
+  transition-delay: 0.2s;
+}
+
+.app.sidebar-compact .sidebar {
+  width: 76px;
+  padding: 14px 9px;
+  box-shadow: 0 12px 34px rgb(60, 37, 43, 10%);
+}
+
+.app.sidebar-compact .sidebar::before {
+  opacity: 0.35;
+  transform: scale(0.58) translate3d(-45px, -45px, 0);
+}
+
+.app.sidebar-compact .side-warning {
+  opacity: 0;
+  transition-delay: 0s;
+}
+
+.app.sidebar-compact .sidebar-head {
+  justify-content: center;
+}
+
+.app.sidebar-compact .sidebar-brand {
+  display: none;
+}
+
+.app.sidebar-compact .nav button {
+  justify-content: center;
+  padding-inline: 8px;
+}
+
+.app.sidebar-compact .nav-label,
+.app.sidebar-compact .nav-badge,
+.app.sidebar-compact .side-label {
+  max-width: 0;
+  opacity: 0;
+  transform: translateX(-8px);
+  pointer-events: none;
+}
+
+.app.sidebar-compact .side-actions > button,
+.app.sidebar-compact .side-actions > a {
+  justify-content: center;
+  padding-inline: 8px;
+}
+
+@media (width <= 820px) {
+  body {
+    padding-bottom: calc(92px + env(safe-area-inset-bottom));
+  }
+
+  .app .main,
+  .app.sidebar-compact .main {
+    padding: 24px 18px 36px;
+  }
+
+  .app,
+  .app.sidebar-compact {
+    display: block;
+  }
+
+  .app .sidebar,
+  .app.sidebar-compact .sidebar {
+    position: fixed;
+    inset: auto 12px calc(12px + env(safe-area-inset-bottom));
+    display: block;
+    width: auto;
+    height: 70px;
+    padding: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-radius: 22px;
+    background: color-mix(in sRGB, var(--panel) 94%, transparent);
+  }
+
+  .app .sidebar-head,
+  .app .side-bottom {
+    display: none;
+  }
+
+  .app .nav {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(48px, 1fr));
+    gap: 3px;
+    min-width: 354px;
+  }
+
+  .app .nav button,
+  .app.sidebar-compact .nav button {
+    display: flex;
+    min-height: 52px;
+    justify-content: center;
+    padding: 7px 5px;
+    gap: 0;
+    border-radius: 16px;
+  }
+
+  .app .nav .ico {
+    width: auto;
+    flex-basis: auto;
+  }
+
+  .app .nav-label {
+    display: none !important;
+  }
+
+  .app .nav-secondary {
+    margin-top: 0;
+  }
+
+  .app .nav button {
+    position: relative;
+  }
+
+  .app .nav-badge.show {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    display: block;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app,
+  .app .main,
+  .app .sidebar,
+  .app .sidebar::before,
+  .app .nav button,
+  .app .nav-label,
+  .app .side-label {
+    transition: none;
+  }
+}
+
+@media (width <= 480px) {
+  .app .main,
+  .app.sidebar-compact .main {
+    padding-inline: 14px;
+  }
+
+  .app .sidebar,
+  .app.sidebar-compact .sidebar {
+    inset-inline: 10px;
+  }
+}
