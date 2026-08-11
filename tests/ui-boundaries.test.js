@@ -63,6 +63,13 @@ describe('UI ownership boundaries', () => {
     expect(appJs).toMatch(/\(o\.targetId \|\| existingTarget\)\.split\(':'\)/);
   });
 
+  it('allows a start date for new students with either payment format', () => {
+    expect(indexHtml).toContain('<label>Дата начала занятий</label>');
+    expect(appJs).toContain("startField.style.display = !current ? 'block' : 'none'");
+    expect(appJs).toMatch(/selectedBillingDay\s*\? new Date\(`\$\{selectedBillingDay\}T00:00`\)/);
+    expect(appJs).not.toMatch(/selectedBillingDay && selectedBillingDay !== localDay\(\)/);
+  });
+
   it('individual calendar lessons are never collapsed into one session', () => {
     expect(appJs).toContain("`individual:${l.id || 'missing'}:${index}`");
     expect(appJs).toContain("'Статус не указан'");

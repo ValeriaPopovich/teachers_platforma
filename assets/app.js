@@ -1148,9 +1148,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       startInput = f.elements.billingStartDate,
       selectedDay = startInput.value,
       selectedStart = selectedDay
-        ? selectedDay === localDay()
-          ? Date.now()
-          : new Date(`${selectedDay}T00:00`).getTime()
+        ? new Date(`${selectedDay}T00:00`).getTime()
         : Date.now(),
       start = current
         ? Math.max(+current.createdAt || 0, +current.billingSince || 0)
@@ -1158,8 +1156,12 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       count = countMonthlyRecurringLessonsFrom(slots, new Date(start), start),
       hint = $('#studentBillingStartHint');
     input.disabled = !on;
-    startField.style.display = on && !current ? 'block' : 'none';
-    if (!on) return;
+    startField.style.display = !current ? 'block' : 'none';
+    if (!on) {
+      if (hint && !current)
+        hint.textContent = 'Первое регулярное занятие будет создано не раньше этой даты';
+      return;
+    }
     input.value = count;
     if (hint && !current)
       hint.textContent = slots.length
@@ -1984,7 +1986,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
           ? Math.max(+before.createdAt || 0, +before.billingSince || 0)
           : before
             ? Date.now()
-            : selectedBillingDay && selectedBillingDay !== localDay()
+            : selectedBillingDay
               ? new Date(`${selectedBillingDay}T00:00`).getTime()
               : Date.now();
     delete o.billingStartDate;
