@@ -1431,7 +1431,9 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     $('#testFields').style.display = toggle.checked ? 'block' : 'none';
   }
   function snapshotLesson() {
-    return new URLSearchParams(new FormData($('#lessonForm'))).toString();
+    const params = new URLSearchParams(new FormData($('#lessonForm')));
+    params.set('topicDraft', $('#lessonTopicDraft').value);
+    return params.toString();
   }
   function syncHomeworkFields() {
     const f = $('#lessonForm'),
@@ -1441,6 +1443,37 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     $('#homeworkGradeField').classList.toggle('is-disabled', !yes);
     f.elements.homeworkGrade.disabled = !yes;
   }
+  function topicItems(value = '') {
+    return [
+      ...new Set(
+        String(value)
+          .split(/[\n,;]+/)
+          .map((item) => item.trim())
+          .filter(Boolean),
+      ),
+    ];
+  }
+  function renderLessonTopics(value = $('#lessonForm').elements.topics.value) {
+    const items = topicItems(value),
+      hidden = $('#lessonForm').elements.topics;
+    hidden.value = items.join('\n');
+    $('#lessonTopicsList').innerHTML = items
+      .map(
+        (item, index) =>
+          `<span class="lesson-topic-chip"><span>${esc(item)}</span><button type="button" class="lesson-topic-remove" data-topic-index="${index}" aria-label="Удалить тему ${esc(item)}">×</button></span>`,
+      )
+      .join('');
+  }
+  function addLessonTopicsFromDraft() {
+    const draft = $('#lessonTopicDraft'),
+      hidden = $('#lessonForm').elements.topics,
+      additions = topicItems(draft.value);
+    if (!additions.length) return false;
+    renderLessonTopics([...topicItems(hidden.value), ...additions].join('\n'));
+    draft.value = '';
+    refreshParentMessage();
+    return true;
+  }
   function buildParentMessage() {
     const f = $('#lessonForm'),
       [type, id] = (f.elements.targetId.value || '').split(':'),
@@ -1448,8 +1481,9 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     if (!s) return '';
     const parent = s.parentName?.trim() ? `, ${s.parentName.trim()}` : '',
       status = f.elements.status.value,
+      topics = topicItems(f.elements.topics.value),
       details = [
-        f.elements.topics.value.trim() ? `Разобрали: ${f.elements.topics.value.trim()}.` : '',
+        topics.length ? `Разобрали:\n${topics.map((topic) => `• ${topic}`).join('\n')}` : '',
         f.elements.comment.value.trim(),
         f.elements.homework.value.trim()
           ? `Новое домашнее задание: ${f.elements.homework.value.trim()}.`
@@ -1499,6 +1533,8 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     $('#testDoneToggle').checked = false;
     $('#previousHomeworkToggle').checked = false;
     $('#packageOneoffBilling').dataset.lessonId = '';
+    $('#lessonTopicDraft').value = '';
+    renderLessonTopics('');
     $('#deleteLesson').style.display = 'none';
     showConflict('#lessonConflict', []);
     updateTestFields();
@@ -1523,6 +1559,8 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     f.elements.targetId.disabled = true;
     $('#lessonModalTitle').textContent = 'Редактировать занятие';
     f.elements.lessonKind.value = l.lessonKind || (l.auto ? 'regular' : 'oneoff');
+    $('#lessonTopicDraft').value = '';
+    renderLessonTopics(l.topics || '');
     $('#packageOneoffBilling').dataset.lessonId = '';
     $('#testDoneToggle').checked = l.testDone === 'yes' || !!l.score;
     $('#previousHomeworkToggle').checked =
@@ -1794,12 +1832,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     $('#reportTopics').innerHTML = $('#reportTests').innerHTML = $('#reportHws').innerHTML = '';
     const topics = [
       ...new Set(
-        done.flatMap((l) =>
-          (l.topics || '')
-            .split(',')
-            .map((x) => x.trim())
-            .filter(Boolean),
-        ),
+        done.flatMap((l) => topicItems(l.topics)),
       ),
     ];
     topics.forEach((x) => addReportRow('topic', x));
@@ -2161,6 +2194,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
   }
   $('#lessonForm').addEventListener('submit', (e) => {
     e.preventDefault();
+    addLessonTopicsFromDraft();
     const fd = new FormData(e.target),
       o = Object.fromEntries(fd),
       attendees = fd.getAll('attendees'),
@@ -2635,6 +2669,20 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
   });
   $('#testDoneToggle').addEventListener('change', updateTestFields);
   $('#previousHomeworkToggle').addEventListener('change', syncHomeworkFields);
+  $('#addLessonTopic').addEventListener('click', addLessonTopicsFromDraft);
+  $('#lessonTopicDraft').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    addLessonTopicsFromDraft();
+  });
+  $('#lessonTopicsList').addEventListener('click', (e) => {
+    const button = e.target.closest('[data-topic-index]');
+    if (!button) return;
+    const items = topicItems($('#lessonForm').elements.topics.value);
+    items.splice(+button.dataset.topicIndex, 1);
+    renderLessonTopics(items.join('\n'));
+    refreshParentMessage();
+  });
   $('#lessonPaymentToggle').addEventListener('change', () => {
     const f = $('#lessonForm'),
       [type, id] = (f.elements.targetId.value || '').split(':'),

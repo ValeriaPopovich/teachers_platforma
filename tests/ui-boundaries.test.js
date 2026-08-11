@@ -70,6 +70,16 @@ describe('UI ownership boundaries', () => {
     expect(appJs).not.toMatch(/selectedBillingDay && selectedBillingDay !== localDay\(\)/);
   });
 
+  it('stores lesson topics as separate items and keeps legacy comma-separated topics readable', () => {
+    expect(indexHtml).toContain('id="lessonTopicDraft"');
+    expect(indexHtml).toContain('id="addLessonTopic"');
+    expect(indexHtml).toContain('id="lessonTopicsList"');
+    expect(appJs).toMatch(/function topicItems[\s\S]*?split\(\/\[\\n,;\]\+\//);
+    expect(appJs).toContain("hidden.value = items.join('\\n')");
+    expect(appJs).toContain("topics.map((topic) => `• ${topic}`).join('\\n')");
+    expect(appJs).toContain('done.flatMap((l) => topicItems(l.topics))');
+  });
+
   it('individual calendar lessons are never collapsed into one session', () => {
     expect(appJs).toContain("`individual:${l.id || 'missing'}:${index}`");
     expect(appJs).toContain("'Статус не указан'");

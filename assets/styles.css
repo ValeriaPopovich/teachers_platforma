@@ -1582,6 +1582,47 @@ body {
 .goal-remove:hover {
   background: rgba(220, 82, 96, 0.12);
 }
+.lesson-topic-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+.lesson-topic-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 9px;
+}
+.lesson-topic-list:empty {
+  display: none;
+}
+.lesson-topic-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 6px 7px 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--neutral-chip);
+  color: var(--text);
+}
+.lesson-topic-chip span {
+  overflow-wrap: anywhere;
+}
+.lesson-topic-remove {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--bad);
+  cursor: pointer;
+}
+.lesson-topic-remove:hover {
+  background: rgba(220, 82, 96, 0.12);
+}
 .payments-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.3fr) minmax(300px, 0.7fr);
@@ -2950,6 +2991,12 @@ body {
   }
 }
 @media (max-width: 620px) {
+  .lesson-topic-entry {
+    grid-template-columns: 1fr;
+  }
+  .lesson-topic-entry .btn {
+    width: 100%;
+  }
   .builder-item,
   .builder-item.topic {
     grid-template-columns: minmax(0, 1fr) 38px;
