@@ -1,3 +1,5 @@
+import { finances } from './finances.js';
+
 export function createPaymentsService({ store, uid, now = () => Date.now() }) {
   function recordPayment(input) {
     const student = store.getState().students.find((item) => item.id === input.studentId);
@@ -7,14 +9,28 @@ export function createPaymentsService({ store, uid, now = () => Date.now() }) {
     const payment = {
       id: input.id || uid(),
       studentId: student.id,
-      date: input.date,
+      date: input.date || new Date(input.createdAt || now()).toISOString(),
       amount,
       note: String(input.note || '').trim(),
       createdAt: input.createdAt || now(),
       billingType: student.payType === 'package' ? 'package' : 'single',
     };
-    if (student.payType === 'package')
-      payment.packageLessons = Math.max(1, +input.packageLessons || 0);
+    if (student.payType === 'package') {
+      const price = +student.price || 0;
+      if (!price)
+        return {
+          ok: false,
+          code: 'PRICE_REQUIRED',
+          message: 'Сначала укажите стоимость одного занятия в карточке ученика.',
+        };
+      const paidBefore = +finances(store.getState(), student.id).paid || 0;
+      const creditBefore = ((paidBefore % price) + price) % price;
+      const combined = creditBefore + amount;
+      payment.packageLessons = amount / price;
+      payment.priceAtPayment = price;
+      payment.coveredLessons = Math.floor(combined / price + 1e-9);
+      payment.creditAfter = Math.round(combined % price);
+    }
     store.update(input.id ? 'payments:update' : 'payments:record', (draft) => {
       if (input.id) {
         const index = draft.payments.findIndex((item) => item.id === input.id);

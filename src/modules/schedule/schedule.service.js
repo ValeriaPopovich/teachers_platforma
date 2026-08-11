@@ -1,4 +1,4 @@
-import { existingLessonOwnerPatch } from './schedule.domain.js';
+import { existingLessonOwnerPatch, recurringScheduleKey } from './schedule.domain.js';
 import { groupLessonRecords } from './schedule.selectors.js';
 
 function syncLinkedPayment(draft, lesson, { paid, amount, uid, now }) {
@@ -202,6 +202,14 @@ export function createScheduleService({ store, uid, now = () => Date.now() }) {
     store.update('schedule:lesson-remove', (draft) => {
       const records = groupLessonRecords(draft, lesson);
       const ids = new Set(records.map((item) => item.id));
+      if (lesson.auto || lesson.lessonKind === 'regular') {
+        const type = lesson.groupId ? 'group' : 'student';
+        const ownerId = lesson.groupId || lesson.studentId;
+        const key = recurringScheduleKey(type, ownerId, lesson.date);
+        draft.settings.scheduleExclusions = [
+          ...new Set([...(draft.settings.scheduleExclusions || []), key]),
+        ];
+      }
       draft.lessons = draft.lessons.filter((item) => !ids.has(item.id));
       draft.payments = draft.payments.filter((payment) => !ids.has(payment.lessonId));
     });

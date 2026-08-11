@@ -20,6 +20,8 @@ function statusLabel(status) {
 
 export function createScheduleView({ store, service, modal, dialog, toast }) {
   let calendarView = 'week';
+  const savedCalendarView = sessionStorage.getItem('tutorCabinet_calendarView');
+  if (['day', 'week', 'month'].includes(savedCalendarView)) calendarView = savedCalendarView;
   let anchorDate = new Date();
   const lessonForm = createLessonFormView({ store, service, modal, dialog, toast });
 
@@ -60,7 +62,7 @@ export function createScheduleView({ store, service, modal, dialog, toast }) {
           })),
         ].sort((a, b) => String(a.time).localeCompare(String(b.time)));
         const weekday = day.toLocaleDateString('ru-RU', { weekday: 'long' });
-        return `<div class="day ${key === localDay(today) ? 'today' : ''} ${day < today ? 'past-day' : ''} ${entries.length ? 'has-events' : ''}" data-date="${key}"><div class="date"><span class="mobile-weekday">${weekday},&nbsp;</span>${day.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}</div>${entries.map((entry) => entry.html).join('')}</div>`;
+        return `<div class="day ${key === localDay(today) ? 'today' : ''} ${day < today ? 'past-day' : ''} ${calendarView === 'month' && day.getMonth() !== anchorDate.getMonth() ? 'outside-month' : ''} ${entries.length ? 'has-events' : ''}" data-date="${key}"><div class="date"><span class="mobile-weekday">${weekday},&nbsp;</span>${day.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}</div>${entries.map((entry) => entry.html).join('')}</div>`;
       }).join('');
     $('#calendarViewSwitch')
       ?.querySelectorAll('[data-calendar-view]')
@@ -81,6 +83,7 @@ export function createScheduleView({ store, service, modal, dialog, toast }) {
     const view = event.target.closest('[data-calendar-view]')?.dataset.calendarView;
     if (!view) return;
     calendarView = view;
+    sessionStorage.setItem('tutorCabinet_calendarView', view);
     render();
   });
 

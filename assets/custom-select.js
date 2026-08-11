@@ -170,7 +170,6 @@
     });
     select.addEventListener('change', () => sync(select));
     select.addEventListener('focus', () => trigger.focus());
-    select.form?.addEventListener('reset', () => queueMicrotask(() => sync(select)));
     new MutationObserver(() => {
       sync(select);
       if (openSelect === select) open(select);
@@ -190,6 +189,9 @@
   });
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && openSelect) close({ focus: true });
+  });
+  document.addEventListener('reset', (event) => {
+    setTimeout(() => event.target.querySelectorAll?.('select').forEach(sync));
   });
   window.addEventListener('resize', () => openSelect && positionPopover(openSelect), {
     passive: true,

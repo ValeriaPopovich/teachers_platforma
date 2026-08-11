@@ -99,4 +99,37 @@ describe('finances — characterization baseline (зеркалит index.html)',
     });
     expect(finances(data, 's1')).toMatchObject({ used: 0, extraDebt: 0, debt: 0 });
   });
+
+  it('сохраняет неполную стоимость занятия как денежный аванс', () => {
+    const data = {
+      students: [{ id: 's1', payType: 'package', price: 850 }],
+      lessons: [],
+      payments: [
+        {
+          studentId: 's1',
+          date: '2026-08-10',
+          amount: 2500,
+          billingType: 'package',
+          packageLessons: 2500 / 850,
+        },
+      ],
+      financeArchive: {},
+    };
+    expect(finances(data, 's1')).toMatchObject({ wholeLessons: 2, creditAmount: 800 });
+    data.lessons.push({
+      studentId: 's1',
+      date: '2026-08-11',
+      status: 'done',
+      payment: 'package',
+    });
+    expect(finances(data, 's1')).toMatchObject({ wholeLessons: 1, creditAmount: 800 });
+    data.payments.push({
+      studentId: 's1',
+      date: '2026-08-12',
+      amount: 50,
+      billingType: 'package',
+      packageLessons: 50 / 850,
+    });
+    expect(finances(data, 's1')).toMatchObject({ bought: 3, wholeLessons: 2, creditAmount: 0 });
+  });
 });

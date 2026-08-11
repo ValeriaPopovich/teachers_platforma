@@ -99,6 +99,48 @@ describe('periodAnalytics', () => {
     expect(result.charged).toBe(3600);
   });
 
+  it('не начисляет удалённое повторение регулярного занятия', () => {
+    const result = periodAnalytics(
+      {
+        students: [
+          { id: 's1', payType: 'package', price: 1800, scheduleSlots: [{ day: 1, time: '16:00' }] },
+        ],
+        payments: [],
+        lessons: [],
+        settings: { scheduleExclusions: ['student|s1|2026-08-03T16:00'] },
+      },
+      from,
+      to,
+    );
+    expect(result.charged).toBe(7200);
+    expect(result.byStudent.s1.charged).toBe(7200);
+  });
+
+  it('добавляет разовое занятие из абонемента к стоимости месяца', () => {
+    const result = periodAnalytics(
+      {
+        students: [
+          { id: 's1', payType: 'package', price: 1800, scheduleSlots: [{ day: 1, time: '16:00' }] },
+        ],
+        payments: [],
+        lessons: [
+          {
+            studentId: 's1',
+            date: '2026-08-20T17:00',
+            status: 'done',
+            lessonKind: 'oneoff',
+            payment: 'package',
+          },
+        ],
+        settings: {},
+      },
+      from,
+      to,
+    );
+    expect(result.charged).toBe(10800);
+    expect(result.byStudent.s1.charged).toBe(10800);
+  });
+
   it('включает запланированные разовые занятия в начисления месяца', () => {
     const result = periodAnalytics(
       {

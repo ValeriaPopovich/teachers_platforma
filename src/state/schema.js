@@ -16,6 +16,7 @@ export function blankData() {
       sidebarCompact: false,
       customGoals: [],
       deletedGoals: [],
+      scheduleExclusions: [],
     },
   };
 }

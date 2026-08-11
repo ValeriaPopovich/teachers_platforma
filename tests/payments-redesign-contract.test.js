@@ -55,12 +55,14 @@ describe('payments final module contract', () => {
     expect(css).toContain('.payment-history-item');
   });
 
-  it('keeps package fields and automatic package amount calculation', () => {
-    expect(html).toContain('id="paymentPackageField"');
-    expect(html).toContain('name="packageLessons"');
-    expect(form).toContain("const packageField = $('#paymentPackageField')");
-    expect(form).toContain('form.elements.packageLessons.value = count || 1');
-    expect(form).toContain('form.elements.amount.value = (count || 1) * (+student.price || 0)');
+  it('accepts an amount without manual date or lesson count', () => {
+    const paymentForm = html.match(/<form id="paymentForm">[\s\S]*?<\/form>/)?.[0] || '';
+    expect(paymentForm).toContain('name="studentId"');
+    expect(paymentForm).toContain('name="amount"');
+    expect(paymentForm).not.toContain('name="date"');
+    expect(paymentForm).not.toContain('name="packageLessons"');
+    expect(paymentForm).toContain('id="paymentAmountHint"');
+    expect(form).toContain('syncPaymentForm');
   });
 
   it('keeps context payment actions and history filters', () => {

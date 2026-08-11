@@ -102,6 +102,7 @@ function setPage(name) {
   $$('#nav [data-page]').forEach((button) =>
     button.classList.toggle('active', button.dataset.page === name),
   );
+  sessionStorage.setItem('tutorCabinet_activePage', name);
   renderAll();
 }
 
@@ -292,5 +293,8 @@ setInterval(() => {
 }, 30000);
 
 runMaintenance();
-renderAll();
+const savedPage = sessionStorage.getItem('tutorCabinet_activePage');
+const availablePages = new Set($$('#nav [data-page]').map((item) => item.dataset.page));
+if (savedPage && availablePages.has(savedPage)) setPage(savedPage);
+else renderAll();
 if (!store.getState().settings.tutor) modal.open('onboardingModal');

@@ -38,10 +38,17 @@ export function finances(data, id) {
         .reduce((sum, lesson) => sum + (+lesson.amount || 0), 0);
     const paid = (+archive.paidAmount || 0) + sumPaymentAmounts(balancePayments);
     const balanceLessons = bought - used;
+    const wholeLessons = Math.max(0, Math.floor(balanceLessons + 1e-9));
+    const creditAmount = Math.max(
+      0,
+      Math.round((balanceLessons - wholeLessons) * (+student.price || 0)),
+    );
     return {
       charged: used * (+student.price || 0) + extraDebt,
       paid,
       balanceLessons,
+      wholeLessons,
+      creditAmount,
       extraDebt,
       debt: Math.max(0, -balanceLessons) * (+student.price || 0) + extraDebt,
       bought,

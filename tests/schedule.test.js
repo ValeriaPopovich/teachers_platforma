@@ -8,6 +8,7 @@ import {
   extendAllSchedules,
   generateSchedule,
   monthlyRecurringDates,
+  recurringScheduleKey,
   timeConflicts,
 } from '../src/domain/schedule.js';
 import { blankData } from '../src/state/schema.js';
@@ -157,11 +158,20 @@ describe('calendarViewRange', () => {
     ]);
   });
 
-  it('для недели и месяца начинает диапазон с понедельника', () => {
+  it('для недели начинает диапазон с текущего понедельника', () => {
     const week = calendarViewRange('week', now);
-    const month = calendarViewRange('month', now);
     expect([week.start.getDay(), week.start.getDate(), week.days]).toEqual([1, 10, 7]);
-    expect([month.start.getDay(), month.start.getDate(), month.days]).toEqual([1, 10, 35]);
+  });
+
+  it('для месяца показывает полные недели календарного месяца', () => {
+    const month = calendarViewRange('month', now);
+    expect([
+      month.start.getFullYear(),
+      month.start.getMonth(),
+      month.start.getDate(),
+      month.start.getDay(),
+      month.days,
+    ]).toEqual([2026, 6, 27, 1, 42]);
   });
 });
 
@@ -201,6 +211,21 @@ describe('generateSchedule', () => {
     const once = extendAllSchedules(data, { now, uid: () => `l${++id}` });
     const twice = extendAllSchedules(once, { now, uid: () => `l${++id}` });
     expect(twice.lessons).toEqual(once.lessons);
+  });
+
+  it('не восстанавливает удалённое повторение регулярного занятия', () => {
+    const data = seed();
+    const excludedDate = new Date('2026-08-09T10:00');
+    data.settings.scheduleExclusions = [recurringScheduleKey('student', 's1', excludedDate)];
+    const next = generateSchedule(data, {
+      type: 'student',
+      id: 's1',
+      slots: data.students[0].scheduleSlots,
+      now,
+      uid: () => 'lesson',
+    });
+    expect(next.lessons.some((lesson) => lesson.date === '2026-08-09T10:00')).toBe(false);
+    expect(next.lessons).toHaveLength(7);
   });
 
   it('не удаляет вручную отредактированное автоматическое занятие при regenerate', () => {

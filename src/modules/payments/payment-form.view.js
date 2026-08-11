@@ -1,6 +1,6 @@
 import { $, escapeHtml } from '../../shared/dom.js';
-import { localDay, monthName, money } from '../../shared/format.js';
-import { expectedPackageLessons } from './payments.selectors.js';
+import { money } from '../../shared/format.js';
+import { finances } from './finances.js';
 
 export function createPaymentFormView({ store, service, modal, dialog, toast }) {
   const form = $('#paymentForm');
@@ -16,28 +16,35 @@ export function createPaymentFormView({ store, service, modal, dialog, toast }) 
     form.elements.studentId.value = selected;
   }
 
-  function syncPackage() {
+  function syncPaymentForm() {
     const student = store
       .getState()
       .students.find((item) => item.id === form.elements.studentId.value);
-    const date = new Date(`${form.elements.date.value || localDay()}T12:00`);
-    const packageField = $('#paymentPackageField');
-    const isPackage = student?.payType === 'package';
-    packageField.style.display = isPackage ? 'block' : 'none';
-    if (!student) return;
-    if (isPackage) {
-      const count = expectedPackageLessons(student, date);
-      form.elements.packageLessons.value = count || 1;
-      form.elements.amount.value = (count || 1) * (+student.price || 0);
-      $('#paymentPackageMonthLabel').textContent = monthName(date).toLowerCase();
+    const amount = +form.elements.amount.value || 0;
+    const price = +student?.price || 0;
+    const hint = $('#paymentAmountHint');
+    const title = $('#paymentModal .modal-head h2');
+    const submit = $('#paymentForm button[type=submit]');
+    title.textContent = student?.payType === 'package' ? 'Пополнить абонемент' : 'Добавить оплату';
+    submit.textContent =
+      student?.payType === 'package' ? 'Пополнить абонемент' : 'Сохранить оплату';
+    if (!student) hint.textContent = 'Сначала выберите ученика';
+    else if (!price) hint.textContent = 'В карточке ученика не указана стоимость занятия';
+    else if (student.payType !== 'package' || !amount)
+      hint.textContent = `Стоимость занятия: ${money(price)}`;
+    else {
+      const paidBefore = +finances(store.getState(), student.id).paid || 0;
+      const combined = (((paidBefore % price) + price) % price) + amount;
+      const lessons = Math.floor(combined / price + 1e-9);
+      const remainder = Math.round(combined % price);
+      hint.textContent = `Будет оплачено ещё ${lessons} зан.${remainder ? ` · аванс ${money(remainder)} сохранится` : ''}`;
     }
   }
 
   function open(studentId = '') {
     form.reset();
     fillStudents(studentId);
-    form.elements.date.value = localDay();
-    syncPackage();
+    syncPaymentForm();
     modal.open('paymentModal');
   }
 
@@ -52,16 +59,8 @@ export function createPaymentFormView({ store, service, modal, dialog, toast }) 
     modal.closeAll();
     toast(`Оплата ${money(result.value.amount)} сохранена`);
   });
-  form.elements.studentId.addEventListener('change', syncPackage);
-  form.elements.date.addEventListener('change', syncPackage);
-  form.elements.packageLessons.addEventListener('input', () => {
-    const student = store
-      .getState()
-      .students.find((item) => item.id === form.elements.studentId.value);
-    if (student?.payType === 'package')
-      form.elements.amount.value =
-        (+form.elements.packageLessons.value || 0) * (+student.price || 0);
-  });
+  form.elements.studentId.addEventListener('change', syncPaymentForm);
+  form.elements.amount.addEventListener('input', syncPaymentForm);
 
-  return { open, syncPackage };
+  return { open, syncPaymentForm };
 }

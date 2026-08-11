@@ -460,6 +460,13 @@
     }
   }
 
+  @media (width <= 820px) {
+    .report-tools.is-fixed {
+      bottom: calc(84px + env(safe-area-inset-bottom)) !important;
+      z-index: 19;
+    }
+  }
+
   @media (width <= 767px) {
     padding-bottom: calc(var(--reports-tools-height) + 18px);
 
