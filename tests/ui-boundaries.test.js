@@ -77,7 +77,14 @@ describe('UI ownership boundaries', () => {
     expect(appJs).toMatch(/function topicItems[\s\S]*?split\(\/\[\\n,;\]\+\//);
     expect(appJs).toContain("hidden.value = items.join('\\n')");
     expect(appJs).toContain("topics.map((topic) => `• ${topic}`).join('\\n')");
+    expect(appJs).toContain(
+      "topicItems(`${f.elements.topics.value}\\n${$('#lessonTopicDraft').value}`)",
+    );
     expect(appJs).toContain('done.flatMap((l) => topicItems(l.topics))');
+    expect(appJs).toContain("'Занятие прошло по плану.'");
+    expect(appJs).toContain('Прошлое ДЗ выполнено на оценку');
+    expect(appJs).toContain('Пройдены темы:');
+    expect(appJs).toContain(".join('\\n')}\\n`");
   });
 
   it('individual calendar lessons are never collapsed into one session', () => {

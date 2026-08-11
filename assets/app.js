@@ -1147,9 +1147,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       startField = $('#studentBillingStartField'),
       startInput = f.elements.billingStartDate,
       selectedDay = startInput.value,
-      selectedStart = selectedDay
-        ? new Date(`${selectedDay}T00:00`).getTime()
-        : Date.now(),
+      selectedStart = selectedDay ? new Date(`${selectedDay}T00:00`).getTime() : Date.now(),
       start = current
         ? Math.max(+current.createdAt || 0, +current.billingSince || 0)
         : selectedStart,
@@ -1460,7 +1458,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     $('#lessonTopicsList').innerHTML = items
       .map(
         (item, index) =>
-          `<span class="lesson-topic-chip"><span>${esc(item)}</span><button type="button" class="lesson-topic-remove" data-topic-index="${index}" aria-label="Удалить тему ${esc(item)}">×</button></span>`,
+          `<span class="lesson-topic-chip"><span>${esc(item)}</span><button type="button" class="lesson-topic-remove" data-topic-index="${index}" title="Удалить тему" aria-label="Удалить тему ${esc(item)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/></svg></button></span>`,
       )
       .join('');
   }
@@ -1471,6 +1469,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     if (!additions.length) return false;
     renderLessonTopics([...topicItems(hidden.value), ...additions].join('\n'));
     draft.value = '';
+    $('#lessonTopicHint').classList.remove('is-ready');
     refreshParentMessage();
     return true;
   }
@@ -1479,27 +1478,28 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       [type, id] = (f.elements.targetId.value || '').split(':'),
       s = type === 's' ? student(id) : null;
     if (!s) return '';
-    const parent = s.parentName?.trim() ? `, ${s.parentName.trim()}` : '',
-      status = f.elements.status.value,
-      topics = topicItems(f.elements.topics.value),
+    const status = f.elements.status.value,
+      topics = topicItems(`${f.elements.topics.value}\n${$('#lessonTopicDraft').value}`),
       details = [
-        topics.length ? `Разобрали:\n${topics.map((topic) => `• ${topic}`).join('\n')}` : '',
-        f.elements.comment.value.trim(),
+        $('#previousHomeworkToggle').checked
+          ? `Прошлое ДЗ выполнено на оценку ${f.elements.homeworkGrade.value}.`
+          : '',
+        topics.length ? `Пройдены темы:\n${topics.map((topic) => `• ${topic}`).join('\n')}\n` : '',
+        f.elements.comment.value.trim() ? `${f.elements.comment.value.trim()}\n` : '',
         f.elements.homework.value.trim()
           ? `Новое домашнее задание: ${f.elements.homework.value.trim()}.`
-          : '',
-        $('#previousHomeworkToggle').checked
-          ? `Предыдущее домашнее задание оценено на ${f.elements.homeworkGrade.value}.`
           : '',
         $('#testDoneToggle').checked
           ? `Проверочная работа: ${f.elements.testName.value.trim() || 'выполнена'}${f.elements.testScore.value && f.elements.testMax.value ? ` — ${f.elements.testScore.value} из ${f.elements.testMax.value}` : ''}.`
           : '',
       ].filter(Boolean);
     return [
-      `Здравствуйте${parent}.`,
-      ['done', 'paid_missed'].includes(status)
-        ? `Сегодня занятие с ${s.name} прошло${status === 'done' ? ' по плану' : ', но ученик отсутствовал'}.`
-        : `Сообщаю о занятии с ${s.name}.`,
+      'Здравствуйте!',
+      status === 'done'
+        ? 'Занятие прошло по плану.'
+        : status === 'paid_missed'
+          ? 'Занятие не состоялось, пропуск учитывается как оплаченный.'
+          : `Информация о занятии с ${s.name}.`,
       ...details,
     ].join(' ');
   }
@@ -1534,6 +1534,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     $('#previousHomeworkToggle').checked = false;
     $('#packageOneoffBilling').dataset.lessonId = '';
     $('#lessonTopicDraft').value = '';
+    $('#lessonTopicHint').classList.remove('is-ready');
     renderLessonTopics('');
     $('#deleteLesson').style.display = 'none';
     showConflict('#lessonConflict', []);
@@ -1560,6 +1561,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     $('#lessonModalTitle').textContent = 'Редактировать занятие';
     f.elements.lessonKind.value = l.lessonKind || (l.auto ? 'regular' : 'oneoff');
     $('#lessonTopicDraft').value = '';
+    $('#lessonTopicHint').classList.remove('is-ready');
     renderLessonTopics(l.topics || '');
     $('#packageOneoffBilling').dataset.lessonId = '';
     $('#testDoneToggle').checked = l.testDone === 'yes' || !!l.score;
@@ -1830,11 +1832,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       done = lessons.filter((l) => l.status === 'done'),
       miss = lessons.filter((l) => ['missed', 'paid_missed'].includes(l.status));
     $('#reportTopics').innerHTML = $('#reportTests').innerHTML = $('#reportHws').innerHTML = '';
-    const topics = [
-      ...new Set(
-        done.flatMap((l) => topicItems(l.topics)),
-      ),
-    ];
+    const topics = [...new Set(done.flatMap((l) => topicItems(l.topics)))];
     topics.forEach((x) => addReportRow('topic', x));
     done
       .filter((l) => l.testDone === 'yes' || l.score)
@@ -2670,6 +2668,9 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
   $('#testDoneToggle').addEventListener('change', updateTestFields);
   $('#previousHomeworkToggle').addEventListener('change', syncHomeworkFields);
   $('#addLessonTopic').addEventListener('click', addLessonTopicsFromDraft);
+  $('#lessonTopicDraft').addEventListener('input', (e) => {
+    $('#lessonTopicHint').classList.toggle('is-ready', !!e.target.value.trim());
+  });
   $('#lessonTopicDraft').addEventListener('keydown', (e) => {
     if (e.key !== 'Enter') return;
     e.preventDefault();

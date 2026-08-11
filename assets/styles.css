@@ -1582,14 +1582,59 @@ body {
 .goal-remove:hover {
   background: rgba(220, 82, 96, 0.12);
 }
-.lesson-topic-entry {
+.lesson-topic-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 7px;
+}
+.lesson-topic-heading label {
+  margin: 0;
+}
+.lesson-topic-add {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff;
+  font-family: inherit;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 5px 14px rgba(240, 107, 85, 0.24);
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
+}
+.lesson-topic-add:hover {
+  transform: scale(1.06);
+}
+.lesson-topic-add:active {
+  transform: scale(0.96);
+}
+.lesson-topic-add:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 2px;
+}
+.lesson-topic-hint {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  transition: color 0.15s ease;
+}
+.lesson-topic-hint.is-ready {
+  color: var(--brand-ink);
+  font-weight: 600;
 }
 .lesson-topic-list {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: 7px;
   margin-top: 9px;
 }
@@ -1597,13 +1642,14 @@ body {
   display: none;
 }
 .lesson-topic-chip {
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 6px;
-  max-width: 100%;
-  padding: 6px 7px 6px 10px;
+  width: 100%;
+  padding: 8px 9px 8px 12px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 12px;
   background: var(--neutral-chip);
   color: var(--text);
 }
@@ -1611,14 +1657,26 @@ body {
   overflow-wrap: anywhere;
 }
 .lesson-topic-remove {
-  width: 24px;
-  height: 24px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
   padding: 0;
   border: 0;
   border-radius: 50%;
   background: transparent;
   color: var(--bad);
   cursor: pointer;
+}
+.lesson-topic-remove svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .lesson-topic-remove:hover {
   background: rgba(220, 82, 96, 0.12);
@@ -2991,12 +3049,6 @@ body {
   }
 }
 @media (max-width: 620px) {
-  .lesson-topic-entry {
-    grid-template-columns: 1fr;
-  }
-  .lesson-topic-entry .btn {
-    width: 100%;
-  }
   .builder-item,
   .builder-item.topic {
     grid-template-columns: minmax(0, 1fr) 38px;
