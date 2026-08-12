@@ -54,6 +54,26 @@ describe('UI ownership boundaries', () => {
     expect(appJs).toMatch(/<button class="event custom-event"[^>]*data-edit-event=/);
   });
 
+  it('shows lessons and custom events together on the dashboard', () => {
+    expect(indexHtml).not.toContain('<h2>Занятия</h2>');
+    expect(indexHtml).toContain('<h2>Предстоящие сегодня события</h2>');
+    expect(indexHtml).toContain('<h2>Прошедшие сегодня события</h2>');
+    expect(indexHtml).toContain('<h2>Незаполненные занятия</h2>');
+    expect(appJs).toContain('function dashboardEventRow(item)');
+    expect(appJs).toContain('class="row event custom-event dashboard-event-row"');
+    expect(appJs).toContain('data-edit-event="${item.id}"');
+    expect(appJs).toContain('...events.filter((item) => !eventEnded(item))');
+    expect(appJs).toContain('...events.filter(eventEnded)');
+  });
+
+  it('requires explicit confirmation before saving an event over a busy time', () => {
+    expect(appJs).toMatch(/\$\('#eventForm'\)\.addEventListener\('submit', async \(e\)/);
+    expect(appJs).toContain("title: 'Время уже занято'");
+    expect(appJs).toContain("confirmText: 'Всё равно сохранить'");
+    expect(appJs).toContain("cancelText: 'Изменить время'");
+    expect(appJs).toMatch(/conflicts\.length[\s\S]*?await appDialog[\s\S]*?\)\)\s*return;/);
+  });
+
   it('editing a lesson cannot silently transfer it to another student', () => {
     expect(appJs).toMatch(/function defaultLesson[\s\S]*?f\.elements\.id\.value = ''/);
     expect(appJs).toContain('f.elements.targetId.disabled = true');

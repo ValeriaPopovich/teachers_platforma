@@ -2260,6 +2260,27 @@ body {
   gap: 18px;
   align-items: start;
 }
+.dashboard-calendar-action {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 18px;
+}
+.dashboard-event-row {
+  width: 100%;
+  margin-top: 0;
+  padding: 12px 14px;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.dashboard-event-row:hover {
+  border-color: #2878e8;
+}
+.dashboard-event-row .grow {
+  display: grid;
+  gap: 4px;
+}
 .dashboard-three > .card {
   height: auto;
   min-height: 0;

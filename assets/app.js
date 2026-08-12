@@ -413,15 +413,31 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
       needsInfo = button === 'Заполнить информацию';
     return `<div class="row"><div class="grow"><b>${when} · ${esc(name)}</b><small class="${l.prepNote ? 'lesson-note' : ''}">${l.prepNote ? `Подготовить: ${esc(l.prepNote)}` : esc(l.topics || statusName(l.status))}</small></div>${button ? (button === 'Заполнено' ? `<button class="pill ok lesson-done-pill" data-edit-lesson="${l.id}" title="Открыть занятие">✓ Заполнено</button>` : `<button class="btn ${needsInfo ? 'primary' : ''}" data-edit-lesson="${l.id}">${button}</button>`) : ''}</div>`;
   }
+  function dashboardEventRow(item) {
+    return `<button class="row event custom-event dashboard-event-row" type="button" data-edit-event="${item.id}"><span class="grow"><b>${fmtTime(item.date)} · ${esc(item.title)}</b><small class="sub">${item.note ? esc(item.note) : `Своё событие · ${item.duration || 60} мин`}</small></span></button>`;
+  }
   function renderDashboard() {
     const today = localDay(),
       sessions = uniqueSessions(data.lessons.filter((l) => localDay(l.date) === today)).sort(
         (a, b) => new Date(a.date) - new Date(b.date),
       ),
-      up = sessions.filter((l) => l.status === 'planned' && !lessonEnded(l)),
-      past = sessions.filter(
-        (l) => lessonEnded(l) && !['planned', 'moved', 'cancelled'].includes(l.status),
-      ),
+      events = data.events
+        .filter((item) => localDay(item.date) === today)
+        .sort((a, b) => new Date(a.date) - new Date(b.date)),
+      eventEnded = (item) =>
+        new Date(item.date).getTime() + (+item.duration || 60) * 60000 < Date.now(),
+      upcomingItems = [
+        ...sessions
+          .filter((l) => l.status === 'planned' && !lessonEnded(l))
+          .map((item) => ({ type: 'lesson', item })),
+        ...events.filter((item) => !eventEnded(item)).map((item) => ({ type: 'event', item })),
+      ].sort((a, b) => new Date(a.item.date) - new Date(b.item.date)),
+      pastItems = [
+        ...sessions
+          .filter((l) => lessonEnded(l) && !['planned', 'moved', 'cancelled'].includes(l.status))
+          .map((item) => ({ type: 'lesson', item })),
+        ...events.filter(eventEnded).map((item) => ({ type: 'event', item })),
+      ].sort((a, b) => new Date(a.item.date) - new Date(b.item.date)),
       unfilled = uniqueSessions(
         data.lessons.filter(
           (l) =>
@@ -433,14 +449,20 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
         ),
       ).sort((a, b) => new Date(b.date) - new Date(a.date)),
       alert = $('#dashboardUnfilledAlert');
-    $('#upcoming').innerHTML = up.length
-      ? up.map((l) => lessonRow(l)).join('')
-      : `<div class="empty"><div class="dashboard-empty-person">🧘‍♀️</div>Предстоящих занятий сегодня нет</div>`;
-    $('#todayCompleted').innerHTML = past.length
-      ? past
-          .map((l) => lessonRow(l, lessonFilled(l) ? 'Заполнено' : 'Заполнить информацию'))
+    $('#upcoming').innerHTML = upcomingItems.length
+      ? upcomingItems
+          .map(({ type, item }) => (type === 'event' ? dashboardEventRow(item) : lessonRow(item)))
           .join('')
-      : '<div class="empty">Прошедших занятий сегодня пока нет</div>';
+      : `<div class="empty"><div class="dashboard-empty-person">🧘‍♀️</div>Предстоящих событий сегодня нет</div>`;
+    $('#todayCompleted').innerHTML = pastItems.length
+      ? pastItems
+          .map(({ type, item }) =>
+            type === 'event'
+              ? dashboardEventRow(item)
+              : lessonRow(item, lessonFilled(item) ? 'Заполнено' : 'Заполнить информацию'),
+          )
+          .join('')
+      : '<div class="empty">Прошедших событий сегодня пока нет</div>';
     $('#unfilledLessons').innerHTML = unfilled.length
       ? unfilled.map((l) => lessonRow(l, 'Заполнить информацию', true)).join('')
       : '<div class="empty">Все занятия заполнены</div>';
@@ -1692,7 +1714,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     }
     el.textContent =
       kind === 'event'
-        ? `⚠ На это время уже запланировано: ${names.join(', ')}. Сохранить всё равно можно, но проверьте расписание.`
+        ? `⚠ На это время уже запланировано: ${names.join(', ')}. Измените время или подтвердите сохранение.`
         : `⚠ Это время уже занято: ${names.join(', ')}. Сохранить всё равно можно, но проверьте расписание.`;
     el.classList.add('show');
     return true;
@@ -2432,7 +2454,7 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     showConflict('#eventConflict', []);
     open('eventModal');
   }
-  $('#eventForm').addEventListener('submit', (e) => {
+  $('#eventForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const o = Object.fromEntries(new FormData(e.target));
     o.title = String(o.title || '').trim();
@@ -2442,6 +2464,17 @@ import { validateReferential, validateStructural } from '../src/state/validate.j
     }
     const conflicts = calendarConflicts(o.date, +o.duration || 60, '', o.id);
     showConflict('#eventConflict', conflicts, 'event');
+    if (
+      conflicts.length &&
+      !(await appDialog({
+        title: 'Время уже занято',
+        message: `Пересекается с: ${conflicts.join(', ')}. Можно изменить время события или сохранить его с пересечением.`,
+        confirmText: 'Всё равно сохранить',
+        cancelText: 'Изменить время',
+        danger: true,
+      }))
+    )
+      return;
     o.duration = +o.duration || 60;
     if (o.id) {
       const i = data.events.findIndex((x) => x.id === o.id);
