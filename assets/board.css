@@ -232,17 +232,6 @@
   font-size: 9px;
   color: var(--muted);
 }
-/* Инструмент «Ручка» — текстовая кнопка малинового цвета вместо иконки. */
-.board-tool--text {
-  grid-template-rows: none;
-}
-.board-tool--text .board-tool-word {
-  display: block;
-  font-size: 11px;
-  font-weight: 800;
-  line-height: 1;
-  color: var(--brand2);
-}
 .board-tool {
   grid-template-rows: 16px 10px;
   line-height: 1;
@@ -522,7 +511,7 @@
 }
 .board-library-screen .board-open-button {
   min-height: 82px;
-  padding: 14px 86px 14px 15px;
+  padding: 14px 145px 14px 15px;
   border: 0;
   background: transparent;
 }
@@ -534,19 +523,20 @@
   gap: 2px;
 }
 .board-card-rename {
-  display: grid;
-  place-items: center;
-  width: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   height: 34px;
-  padding: 0;
+  padding: 0 7px;
   border: 0;
   border-radius: 10px;
   background: transparent;
-  font-size: 15px;
+  color: var(--brand2);
+  font: 700 11px/1 Manrope, sans-serif;
   cursor: pointer;
 }
 .board-card-rename:hover {
-  background: var(--soft, #eef0f4);
+  background: rgba(239, 79, 145, 0.1);
 }
 .board-library-screen .board-open-button b {
   font-size: 15px;
@@ -716,12 +706,6 @@ body.board-editor-open {
 .board-page.board-fullscreen .board-tool span,
 .board-page.board-fullscreen .board-image-btn span {
   display: none;
-}
-.board-page.board-fullscreen .board-tool--text .board-tool-word {
-  display: block;
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--brand2);
 }
 .board-page.board-fullscreen .board-tool svg {
   display: block;

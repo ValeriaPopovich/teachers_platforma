@@ -804,7 +804,7 @@ if (page) {
       .sort((a, b) => b.updatedAt - a.updatedAt)
       .map(
         (item) =>
-          `<article class="board-list-item ${item.id === board?.id ? 'active' : ''}"><button type="button" class="board-open-button" data-board-id="${item.id}"><b>${escapeHtml(item.title)}</b><small>${new Date(item.updatedAt).toLocaleDateString('ru-RU')} · ${item.pages.length} стр.</small></button><div class="board-card-actions"><button type="button" class="board-card-rename" data-rename-board="${item.id}" title="Переименовать доску" aria-label="Переименовать доску">✏️</button><button type="button" class="board-card-delete" data-delete-board="${item.id}" title="Удалить доску" aria-label="Удалить доску">🗑</button></div></article>`,
+          `<article class="board-list-item ${item.id === board?.id ? 'active' : ''}"><button type="button" class="board-open-button" data-board-id="${item.id}"><b>${escapeHtml(item.title)}</b><small>${new Date(item.updatedAt).toLocaleDateString('ru-RU')} · ${item.pages.length} стр.</small></button><div class="board-card-actions"><button type="button" class="board-card-rename" data-rename-board="${item.id}" title="Переименовать доску" aria-label="Переименовать доску">Переименовать</button><button type="button" class="board-card-delete" data-delete-board="${item.id}" title="Удалить доску" aria-label="Удалить доску">🗑</button></div></article>`,
       )
       .join('');
   }
