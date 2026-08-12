@@ -2,5 +2,9 @@
   "singleQuote": true,
   "semi": true,
   "printWidth": 100,
-  "trailingComma": "all"
+  "trailingComma": "all",
+  "arrowParens": "always",
+  "bracketSameLine": false,
+  "endOfLine": "lf",
+  "vueIndentScriptAndStyle": false
 }

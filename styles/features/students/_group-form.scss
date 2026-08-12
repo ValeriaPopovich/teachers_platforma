@@ -1,0 +1,62 @@
+@use '../../tokens/breakpoints' as bp;
+
+/* Lesson-slot picker used inside the student/group creation forms, plus the groups grid empty state. */
+
+.schedule-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.schedule-slot {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 120px 36px;
+  gap: 8px;
+  align-items: center;
+}
+
+.schedule-slot select,
+.schedule-slot input {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: var(--panel2);
+  color: var(--text);
+  border-radius: 11px;
+  padding: 10px;
+}
+
+.slot-conflict {
+  grid-column: 1/-1;
+  color: var(--bad);
+  font-size: var(--font-size-caption);
+  padding: 7px 9px;
+  border-radius: 9px;
+  background: rgb(220, 82, 96, 8%);
+}
+
+.slot-suggestion {
+  border: 0;
+  background: transparent;
+  color: var(--brand2);
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.groups-empty {
+  grid-column: 1/-1;
+  text-align: center;
+  color: var(--muted);
+  padding: 32px 10px;
+}
+
+@include bp.till(bp.$tablet) {
+  .schedule-slot {
+    grid-template-columns: minmax(0, 1fr) 105px 36px;
+  }
+}
+
+@include bp.till(bp.$mobile-small) {
+  .schedule-slot {
+    grid-template-columns: 1fr 1fr 34px;
+  }
+}

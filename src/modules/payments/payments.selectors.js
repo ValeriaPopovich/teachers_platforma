@@ -51,11 +51,14 @@ export function getStudentPaymentState(state, student, date = new Date()) {
   if (student.payType === 'package') {
     const progress = getPackageProgress(state, student.id, date);
     if (!progress) return { kind: 'ok', finance };
-    if (progress.planned > 0 && progress.bought === 0)
+    const price = +student.price || 0;
+    const packageLessons = Math.max(0, +student.packageSize || progress.planned || 0);
+    const packageShortfall = Math.max(0, packageLessons - progress.bought);
+    if (progress.planned > 0 && packageShortfall > 0)
       return {
         kind: 'need',
         label: 'Нужно принять абонемент',
-        amountDue: progress.amount,
+        amountDue: Math.round(packageShortfall * price) + (+finance.extraDebt || 0),
         progress,
         finance,
       };
@@ -63,8 +66,7 @@ export function getStudentPaymentState(state, student, date = new Date()) {
       return {
         kind: 'ending',
         label: progress.remaining < 0 ? 'Абонемент закончился' : 'Абонемент заканчивается',
-        amountDue:
-          Math.max(0, -progress.remaining) * (+student.price || 0) + (+finance.extraDebt || 0),
+        amountDue: Math.round(packageLessons * price) + (+finance.extraDebt || 0),
         progress,
         finance,
       };

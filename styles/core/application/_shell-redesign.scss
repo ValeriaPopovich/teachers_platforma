@@ -1,0 +1,322 @@
+@use '../../tokens/breakpoints' as bp;
+
+/* stylelint-disable color-function-notation, declaration-block-single-line-max-declarations */
+
+/* Redesign v1: floating application shell */
+:root {
+  --bg: var(--color-background);
+  --panel: var(--color-surface);
+  --panel2: var(--color-surface-muted);
+  --text: var(--color-text);
+  --muted: var(--color-text-muted);
+  --line: var(--color-border);
+  --soft: var(--color-brand-soft);
+  --surface-raised: var(--color-surface-raised);
+  --surface-hover: color-mix(in sRGB, var(--color-surface-muted) 92%, var(--color-brand) 8%);
+  --overlay: rgb(31 22 25 / 32%);
+  --shell-shadow: 0 18px 50px rgb(60 37 43 / 12%);
+  --radius: 20px;
+}
+
+[data-theme='dark'] {
+  --surface-hover: color-mix(in sRGB, var(--color-surface-muted) 88%, var(--color-brand) 12%);
+  --overlay: rgb(4 2 3 / 58%);
+  --shell-shadow: 0 22px 65px rgb(0 0 0 / 42%);
+}
+
+body {
+  background: radial-gradient(circle at 8% 0%, rgb(240 107 85 / 7%), transparent 30rem), var(--bg);
+}
+
+.app,
+.app.sidebar-compact {
+  display: block;
+  min-height: 100vh;
+}
+
+.main {
+  width: 100%;
+  padding: 34px 42px 72px 118px;
+  transition: filter 0.24s ease;
+}
+
+.sidebar {
+  position: fixed;
+  inset: 18px auto 18px 18px;
+  z-index: 70;
+  width: 304px;
+  height: auto;
+  padding: 14px;
+  overflow: hidden;
+  border: 1px solid color-mix(in sRGB, var(--line) 82%, transparent);
+  border-radius: 24px;
+  background: color-mix(in sRGB, var(--panel) 96%, transparent);
+  box-shadow: var(--shell-shadow);
+  transform: translateX(0);
+  transition:
+    width 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    padding 0.28s ease;
+  backdrop-filter: blur(18px);
+}
+
+.sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 48px;
+  margin-bottom: 18px;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 11px;
+}
+
+.sidebar-brand-mark {
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  border-radius: 15px;
+  color: var(--color-on-accent);
+  background: linear-gradient(145deg, var(--brand), var(--brand2));
+  box-shadow: 0 10px 24px rgb(239 79 145 / 24%);
+  font-size: var(--font-size-title-small);
+  font-weight: 800;
+}
+
+.sidebar-brand b,
+.sidebar-brand small {
+  display: block;
+  white-space: nowrap;
+}
+
+.sidebar-brand b {
+  font-size: 15px;
+}
+
+.sidebar-brand small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.sidebar-toggle {
+  position: static;
+  display: grid;
+  place-items: center;
+  flex: 0 0 36px;
+  width: 36px !important;
+  height: 36px !important;
+  padding: 0 !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 11px !important;
+  background: var(--panel2) !important;
+  box-shadow: none;
+}
+
+.sidebar-toggle svg {
+  width: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.25s ease;
+}
+
+.nav {
+  gap: 5px;
+}
+
+.nav button {
+  min-height: 46px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  font-weight: 650;
+}
+
+.nav button:hover {
+  background: var(--surface-hover);
+}
+
+.nav button.active {
+  background: var(--soft);
+  box-shadow: inset 0 0 0 1px rgb(240 107 85 / 9%);
+}
+
+.nav .ico {
+  flex: 0 0 22px;
+}
+
+.nav-secondary {
+  margin-top: 13px;
+}
+
+.side-bottom {
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+}
+
+.side-actions {
+  display: grid;
+  gap: 6px;
+}
+
+.side-actions > button,
+.side-actions > a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+}
+
+.side-warning {
+  padding: 8px 4px 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  border: 0;
+  background: var(--overlay);
+  opacity: 1;
+  transition: opacity 0.24s ease;
+}
+
+.sidebar-compact .sidebar {
+  width: 76px;
+  padding: 14px 9px;
+}
+
+.sidebar-compact .sidebar-head {
+  justify-content: center;
+}
+
+.sidebar-compact .sidebar-brand {
+  display: none;
+}
+
+.sidebar-compact .sidebar-toggle svg {
+  transform: rotate(0);
+}
+
+.app:not(.sidebar-compact) .sidebar-toggle svg {
+  transform: rotate(180deg);
+}
+
+.sidebar-compact .nav button {
+  justify-content: center;
+  padding-inline: 8px;
+}
+
+.sidebar-compact .nav-label,
+.sidebar-compact .nav-badge,
+.sidebar-compact .side-label {
+  display: none;
+}
+
+.sidebar-compact .side-actions > button,
+.sidebar-compact .side-actions > a {
+  justify-content: center;
+  padding-inline: 8px;
+}
+
+.sidebar-compact .sidebar-overlay {
+  pointer-events: none;
+  opacity: 0;
+}
+
+@include bp.reduced-motion {
+  .sidebar,
+  .sidebar-overlay,
+  .main {
+    transition: none;
+  }
+}
+
+@include bp.till(bp.$tablet) {
+  body {
+    padding-bottom: calc(92px + env(safe-area-inset-bottom));
+  }
+
+  .main {
+    padding: 24px 18px 36px;
+  }
+
+  .sidebar,
+  .sidebar-compact .sidebar {
+    inset: auto 12px calc(12px + env(safe-area-inset-bottom));
+    width: auto;
+    height: 70px;
+    padding: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-radius: 22px;
+    background: color-mix(in sRGB, var(--panel) 94%, transparent);
+  }
+
+  .sidebar-head,
+  .side-bottom,
+  .sidebar-overlay {
+    display: none;
+  }
+
+  .nav {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(48px, 1fr));
+    gap: 3px;
+    min-width: 354px;
+  }
+
+  .nav button,
+  .sidebar-compact .nav button {
+    min-height: 52px;
+    justify-content: center;
+    padding: 7px 5px;
+    gap: 0;
+    border-radius: 16px;
+  }
+
+  .nav .ico {
+    width: auto;
+    flex-basis: auto;
+  }
+
+  .nav-label {
+    display: none !important;
+  }
+
+  .nav-secondary {
+    margin-top: 0;
+  }
+
+  .nav-badge.show {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    display: block;
+  }
+
+  .nav button {
+    position: relative;
+  }
+}
+
+@include bp.till(bp.$mobile) {
+  .main {
+    padding-inline: 14px;
+  }
+
+  .sidebar,
+  .sidebar-compact .sidebar {
+    inset-inline: 10px;
+  }
+}
+/* stylelint-enable color-function-notation, declaration-block-single-line-max-declarations */

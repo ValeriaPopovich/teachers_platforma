@@ -1,4 +1,4 @@
-import { $, escapeHtml, safeExternalUrl } from '../../shared/dom.js';
+import { $, safeExternalUrl } from '../../shared/dom.js';
 import { money } from '../../shared/format.js';
 import { finances } from '../payments/finances.js';
 import { scheduleText } from './students.selectors.js';
@@ -6,7 +6,7 @@ import { createStudentFormView } from './student-form.view.js';
 import { createGroupFormView } from './group-form.view.js';
 import { createProfileView } from './profile.view.js';
 
-export function createStudentsView({ store, service, modal, dialog, toast, schedule }) {
+export function createStudentsView({ store, service, modal, dialog, toast, schedule, payments }) {
   const studentForm = createStudentFormView({ store, service, modal, dialog, toast });
   const groupForm = createGroupFormView({ store, service, modal, dialog, toast });
   const profile = createProfileView({
@@ -32,13 +32,6 @@ export function createStudentsView({ store, service, modal, dialog, toast, sched
       return true;
     },
   });
-
-  const calendarIcon =
-    '<svg class="student-fact-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v3M17 3v3M4.5 9h15M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"/></svg>';
-  const clockIcon =
-    '<svg class="student-fact-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 2"/></svg>';
-  const videoIcon =
-    '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="6.5" width="11.5" height="11" rx="2"/><path d="m15 10 5-2.5v9L15 14"/></svg>';
 
   function lessonWord(value) {
     const count = Math.abs(Math.round(Number(value) || 0));
@@ -112,12 +105,6 @@ export function createStudentsView({ store, service, modal, dialog, toast, sched
         return [student.id, { finance, payment: paymentPresentation(student, finance) }];
       }),
     );
-    const debtCount = [...paymentById.values()].filter(
-      ({ payment }) => payment.kind !== 'paid',
-    ).length;
-    if ($('#studentsSummary'))
-      $('#studentsSummary').innerHTML =
-        `<span>${state.students.length} ${countWord(state.students.length, 'ученик', 'ученика', 'учеников')}</span><i>·</i><span>${state.groups.length} ${countWord(state.groups.length, 'группа', 'группы', 'групп')}</span><i>·</i><span class="has-debt">${debtCount} с долгом</span>`;
     const list = state.students.filter((student) => {
       const haystack =
         `${student.name || ''} ${student.grade || ''} ${student.contact || ''} ${student.parentContact || ''}`.toLowerCase();
@@ -150,25 +137,26 @@ export function createStudentsView({ store, service, modal, dialog, toast, sched
       }
       return String(a.name || '').localeCompare(String(b.name || ''), 'ru');
     });
-    if ($('#studentCount')) $('#studentCount').textContent = String(list.length);
-    const grid = $('#studentGrid');
-    if (!grid) return;
-    grid.innerHTML = list.length
-      ? list
-          .map((student) => {
-            const finance = paymentById.get(student.id).finance;
-            const lessonUrl = safeExternalUrl(student.lessonLink);
-            const payment = paymentPresentation(student, finance);
-            const schedule = scheduleText(student.scheduleSlots || []);
-            const stripe = payment.kind;
-            const contact =
-              student.contact || student.parentContact || student.grade || 'Класс не указан';
-            return `<article class="card student-card student-card-${stripe}"><details class="student-menu"><summary aria-label="Опции ученика ${escapeHtml(student.name)}" title="Опции">•••</summary><button type="button" data-delete-student="${student.id}">Удалить</button></details><div class="student-card-main" role="button" tabindex="0" aria-label="Открыть карточку: ${escapeHtml(student.name)}" data-student="${student.id}"><div class="student-top"><span class="student-avatar" aria-hidden="true">${escapeHtml(initials(student.name))}</span><div class="student-identity"><h3>${escapeHtml(student.name)}</h3><div class="meta">${escapeHtml(contact)}</div></div></div><div class="student-card-facts"><div class="student-card-grade">${escapeHtml(student.grade || 'Класс не указан')}</div><div class="student-fact student-fact-schedule">${calendarIcon}<b>${escapeHtml(schedule)}</b></div><div class="student-fact student-fact-terms">${clockIcon}<b>${money(student.price)} / ${+student.duration || 60} мин</b></div></div><div class="student-card-footer"><span class="student-payment-status is-${payment.kind}">${escapeHtml(payment.label)}</span>${lessonUrl ? `<a class="student-lesson-link has-video" href="${escapeHtml(lessonUrl)}" target="_blank" rel="noopener" aria-label="Открыть видеозвонок ученика ${escapeHtml(student.name)}" data-tooltip="Начать видеозвонок">${videoIcon}</a>` : `<button class="student-lesson-link is-empty" type="button" data-add-lesson-link="${student.id}" aria-label="Добавить видеозвонок для ${escapeHtml(student.name)}" data-tooltip="Добавить видеозвонок"><span aria-hidden="true">＋</span></button>`}</div></div></article>`;
-          })
-          .join('')
-      : state.students.length
-        ? '<div class="students-empty"><span aria-hidden="true">⌕</span><b>Ничего не нашли</b><p>Попробуйте изменить запрос или фильтр</p></div>'
-        : '<div class="students-empty"><span aria-hidden="true">☺</span><b>Здесь появятся ваши ученики</b><p>Добавьте первого ученика, чтобы настроить расписание и оплаты</p><button class="btn primary" type="button" data-open="student">+ Добавить первого ученика</button></div>';
+    const rows = list.map((student) => {
+      const finance = paymentById.get(student.id).finance;
+      return {
+        student,
+        initials: initials(student.name),
+        contact: student.contact || student.parentContact || student.grade || 'Класс не указан',
+        schedule: scheduleText(student.scheduleSlots || []),
+        terms: `${money(student.price)} / ${+student.duration || 60} мин`,
+        payment: paymentPresentation(student, finance),
+        lessonUrl: safeExternalUrl(student.lessonLink),
+      };
+    });
+    window.dispatchEvent(
+      new CustomEvent('app:students-list-change', {
+        detail: {
+          rows,
+          emptyReason: state.students.length ? 'filtered' : 'initial',
+        },
+      }),
+    );
   }
 
   function renderGroups() {
@@ -184,35 +172,40 @@ export function createStudentsView({ store, service, modal, dialog, toast, sched
         .toLowerCase()
         .includes(query);
     });
-    if ($('#groupCount')) $('#groupCount').textContent = String(groups.length);
-    grid.innerHTML = groups.length
-      ? groups
-          .map((group) => {
-            const members = (group.members || [])
-              .map((id) => state.students.find((student) => student.id === id)?.name)
-              .filter(Boolean);
-            return `<article class="card group-card"><details class="student-menu"><summary aria-label="Опции группы ${escapeHtml(group.name)}" title="Опции">•••</summary><button type="button" data-delete-group="${group.id}">Удалить</button></details><div class="student-card-main" role="button" tabindex="0" aria-label="Открыть группу: ${escapeHtml(group.name)}" data-group="${group.id}"><div class="student-top"><div class="group-direction">${escapeHtml(group.grade || 'Учебная группа')}</div><h3>${escapeHtml(group.name)}</h3></div><div class="student-card-facts"><div class="student-fact student-fact-schedule group-schedule">${calendarIcon}<b>${escapeHtml(scheduleText(group.scheduleSlots || []))}</b></div><div class="group-facts"><span><b>${members.length} ${countWord(members.length, 'участник', 'участника', 'участников')}</b></span><i>·</i><span>${+group.duration || 60} мин</span></div></div><div class="group-card-bottom"><div class="member-chips">${members
-              .slice(0, 5)
-              .map(
-                (name) =>
-                  `<span class="member-chip" title="${escapeHtml(name)}">${escapeHtml(firstLetters(name))}</span>`,
-              )
-              .join(
-                '',
-              )}${members.length > 5 ? `<span class="member-chip member-chip-more">+${members.length - 5}</span>` : ''}</div><span class="group-open-icon" aria-hidden="true">${videoIcon}</span></div></div></article>`;
-          })
-          .join('')
-      : state.groups.length
-        ? '<div class="students-empty"><span aria-hidden="true">⌕</span><b>Группы не найдены</b><p>Попробуйте изменить поисковый запрос</p></div>'
-        : '<div class="empty">Групп пока нет</div>';
+    const rows = groups.map((group) => {
+      const memberNames = (group.members || [])
+        .map((id) => state.students.find((student) => student.id === id)?.name)
+        .filter(Boolean);
+      return {
+        group,
+        direction: group.grade || 'Учебная группа',
+        schedule: scheduleText(group.scheduleSlots || []),
+        membersLabel: `${memberNames.length} ${countWord(memberNames.length, 'участник', 'участника', 'участников')}`,
+        durationLabel: `${+group.duration || 60} мин`,
+        members: memberNames.slice(0, 5).map((name) => ({ name, initials: firstLetters(name) })),
+        moreCount: Math.max(0, memberNames.length - 5),
+      };
+    });
+    window.dispatchEvent(
+      new CustomEvent('app:groups-list-change', {
+        detail: {
+          rows,
+          emptyReason: state.groups.length ? 'filtered' : 'initial',
+        },
+      }),
+    );
   }
 
   function render() {
     renderStudents();
     renderGroups();
-    if ($('#studentsUpdated'))
-      $('#studentsUpdated').lastChild.textContent =
-        ` Обновлено: сегодня в ${new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
+    window.dispatchEvent(
+      new CustomEvent('app:students-updated', {
+        detail: {
+          label: `Обновлено: сегодня в ${new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`,
+        },
+      }),
+    );
     const active = profile.getActiveStudentId();
     if (
       active &&
@@ -247,6 +240,34 @@ export function createStudentsView({ store, service, modal, dialog, toast, sched
     });
   });
   $('#studentGrid')?.addEventListener('click', async (event) => {
+    const menuAction = event.target.closest('[data-menu-action]')?.dataset.menuAction;
+    const menuOwnerId = event.target.closest('[data-menu-owner]')?.dataset.menuOwner;
+    if (menuAction === 'edit' && menuOwnerId) {
+      event.stopPropagation();
+      studentForm.openEdit(menuOwnerId);
+      return;
+    }
+    if (menuAction === 'payment' && menuOwnerId) {
+      event.stopPropagation();
+      payments?.openPayment?.(menuOwnerId);
+      return;
+    }
+    if (menuAction === 'delete' && menuOwnerId) {
+      event.stopPropagation();
+      const student = store.getState().students.find((item) => item.id === menuOwnerId);
+      if (
+        student &&
+        (await dialog.ask(
+          `Удалить ученика «${student.name}», его занятия и платежи? Это действие нельзя отменить.`,
+          'Удаление ученика',
+          'Удалить',
+        ))
+      ) {
+        service.removeStudent(menuOwnerId);
+        toast('Ученик удалён');
+      }
+      return;
+    }
     const addLinkId = event.target.closest('[data-add-lesson-link]')?.dataset.addLessonLink;
     if (addLinkId) {
       event.stopPropagation();
@@ -282,6 +303,29 @@ export function createStudentsView({ store, service, modal, dialog, toast, sched
     }
   });
   $('#groupGrid')?.addEventListener('click', async (event) => {
+    const menuAction = event.target.closest('[data-menu-action]')?.dataset.menuAction;
+    const menuOwnerId = event.target.closest('[data-menu-owner]')?.dataset.menuOwner;
+    if (menuAction === 'edit' && menuOwnerId) {
+      event.stopPropagation();
+      groupForm.openEdit(menuOwnerId);
+      return;
+    }
+    if (menuAction === 'delete' && menuOwnerId) {
+      event.stopPropagation();
+      const group = store.getState().groups.find((item) => item.id === menuOwnerId);
+      if (
+        group &&
+        (await dialog.ask(
+          `Удалить группу «${group.name}» и все её занятия?`,
+          'Удаление группы',
+          'Удалить',
+        ))
+      ) {
+        service.removeGroup(menuOwnerId);
+        toast('Группа удалена');
+      }
+      return;
+    }
     const deleteId = event.target.closest('[data-delete-group]')?.dataset.deleteGroup;
     if (deleteId) {
       event.stopPropagation();

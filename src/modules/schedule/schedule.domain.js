@@ -31,10 +31,7 @@ export function calendarViewRange(view, now = new Date()) {
   if (view === 'month') {
     start.setDate(1);
     start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    end.setHours(0, 0, 0, 0);
-    end.setDate(end.getDate() + ((7 - end.getDay()) % 7));
-    return { start, days: Math.round((end - start) / 864e5) + 1 };
+    return { start, days: 42 };
   }
   if (view === 'week') start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
   return { start, days: view === 'day' ? 1 : 7 };

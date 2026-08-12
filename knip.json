@@ -1,8 +1,16 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["scripts/*.mjs", "tests/**/*.test.js", "tests/e2e/**/*.js", "playwright.config.js"],
+  "entry": [
+    "scripts/*.mjs",
+    "tests/**/*.test.js",
+    "tests/e2e/**/*.js",
+    "playwright.config.js",
+    "packages/**/scripts/index.js",
+    "src/**/components/**/scripts/index.js"
+  ],
   "project": [
     "src/**/*.{js,vue}",
+    "packages/**/*.{js,vue}",
     "assets/**/*.js",
     "scripts/**/*.mjs",
     "tests/**/*.js",

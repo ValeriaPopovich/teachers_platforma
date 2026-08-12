@@ -328,7 +328,7 @@ export function createLessonFormView({ store, service, modal, dialog, toast }) {
     toast('Сообщение скопировано');
   });
 
-  function openEvent(id = '') {
+  function openEvent(id = '', date = '', duration = 60) {
     eventForm.reset();
     eventForm.elements.id.value = '';
     const event = id ? store.getState().events.find((item) => item.id === id) : null;
@@ -336,7 +336,10 @@ export function createLessonFormView({ store, service, modal, dialog, toast }) {
       Object.keys(event).forEach((key) => {
         if (eventForm.elements[key]) eventForm.elements[key].value = event[key] ?? '';
       });
-    if (!event) eventForm.elements.date.value = toLocalInput(new Date());
+    if (!event) {
+      eventForm.elements.date.value = date || toLocalInput(new Date());
+      eventForm.elements.duration.value = duration;
+    }
     $('#deleteEvent').style.display = event ? 'inline-block' : 'none';
     $('#eventModalTitle').textContent = event ? 'Редактировать событие' : 'Своё событие';
     $('#eventForm button[type="submit"]').textContent = event

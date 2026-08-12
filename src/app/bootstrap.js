@@ -67,10 +67,14 @@ const studentsService = createStudentsService({ store, uid });
 const scheduleService = createScheduleService({ store, uid });
 const paymentsService = createPaymentsService({ store, uid });
 let scheduleView;
+let paymentsView;
 const scheduleBridge = {
   openNewLesson: (...args) => scheduleView?.openNewLesson(...args),
   openLesson: (...args) => scheduleView?.openLesson(...args),
   deleteLesson: (...args) => scheduleView?.deleteLesson(...args),
+};
+const paymentsBridge = {
+  openPayment: (...args) => paymentsView?.openPayment(...args),
 };
 const studentsView = createStudentsView({
   store,
@@ -79,14 +83,17 @@ const studentsView = createStudentsView({
   dialog,
   toast,
   schedule: scheduleBridge,
+  payments: paymentsBridge,
 });
 scheduleView = createScheduleView({ store, service: scheduleService, modal, dialog, toast });
-const paymentsView = createPaymentsView({ store, service: paymentsService, modal, dialog, toast });
+paymentsView = createPaymentsView({ store, service: paymentsService, modal, dialog, toast });
 const settingsService = createSettingsService({ store });
 const settingsView = createSettingsView({ store, service: settingsService, toast });
 const dashboardView = createDashboardView({
   store,
   openLesson: (id) => scheduleView.openLesson(id),
+  openEvent: (id) => scheduleView.openEvent(id),
+  openPayment: (studentId) => paymentsView.openPayment(studentId),
   retentionDays: RETENTION_DAYS,
 });
 const reportsView = createReportsView({ store, toast, dialog });

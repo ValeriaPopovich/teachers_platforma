@@ -1,4 +1,6 @@
 @use '../core/application';
+@use '../features/dashboard';
+@use '../features/board';
 @use '../features/payments';
 @use '../features/students';
 @use '../features/reports';

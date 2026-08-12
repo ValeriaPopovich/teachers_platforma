@@ -1,0 +1,58 @@
+$family-base:
+  'Inter',
+  ui-sans-serif,
+  -apple-system,
+  'BlinkMacSystemFont',
+  'Segoe UI',
+  sans-serif;
+$family-display: 'Poppins', $family-base;
+$family-document: 'Manrope', system-ui, sans-serif;
+$family-monospace: ui-monospace, 'SFMono-Regular', 'Menlo', monospace;
+
+$size-caption: 12px;
+$size-body: 14px;
+$size-body-large: 16px;
+$size-title-small: 18px;
+$size-title: 20px;
+$size-title-large: 22px;
+$size-heading: 24px;
+$size-page-title: 28px;
+
+$weight-regular: 400;
+$weight-medium: 500;
+$weight-semibold: 600;
+$weight-bold: 700;
+$weight-extrabold: 800;
+
+@mixin properties {
+  --font-family-base: #{$family-base};
+  --font-family-display: #{$family-display};
+  --font-family-document: #{$family-document};
+  --font-family-monospace: #{$family-monospace};
+  --font-size-caption: #{$size-caption};
+  --font-size-body: #{$size-body};
+  --font-size-body-large: #{$size-body-large};
+  --font-size-title-small: #{$size-title-small};
+  --font-size-title: #{$size-title};
+  --font-size-title-large: #{$size-title-large};
+  --font-size-heading: #{$size-heading};
+  --font-size-page-title: #{$size-page-title};
+}
+
+@mixin body {
+  font-family: $family-base;
+  font-size: $size-body;
+  line-height: 1.45;
+}
+
+@mixin caption($weight: $weight-medium) {
+  font-size: $size-caption;
+  font-weight: $weight;
+  line-height: 1.4;
+}
+
+@mixin title($size: $size-title, $weight: $weight-bold) {
+  font-size: $size;
+  font-weight: $weight;
+  line-height: 1.2;
+}

@@ -83,5 +83,11 @@ export function createModalManager(root = document, { ask } = {}) {
     }
   });
 
+  root.addEventListener('click', async (event) => {
+    const wrap = event.target.closest?.('.modal-wrap.open');
+    if (!wrap || event.target !== wrap || wrap.classList.contains('app-dialog-wrap')) return;
+    await requestClose();
+  });
+
   return { open, closeAll, requestClose, formSnapshot };
 }

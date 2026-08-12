@@ -19,11 +19,11 @@
     "styles:check": "node scripts/build-styles.mjs --check",
     "lint": "run-p lint:js lint:styles",
     "lint:js": "eslint .",
-    "lint:styles": "stylelint \"styles/**/*.scss\"",
-    "lint:styles:fix": "stylelint \"styles/**/*.scss\" --fix",
+    "lint:styles": "stylelint \"{styles,src,packages}/**/*.{scss,vue}\" --allow-empty-input",
+    "lint:styles:fix": "stylelint \"{styles,src,packages}/**/*.{scss,vue}\" --allow-empty-input --fix",
     "format": "prettier --write \"**/*.{js,mjs,json,yml,yaml,scss,vue}\"",
     "format:check": "prettier --check \"**/*.{js,mjs,json,yml,yaml,scss,vue}\"",
-    "refactor:deps": "depcruise src assets --config dependency-cruiser.config.js",
+    "refactor:deps": "depcruise src packages assets --config dependency-cruiser.config.js",
     "refactor:unused": "knip --include files,dependencies",
     "refactor:check": "run-p refactor:deps refactor:unused",
     "check": "run-s format:check lint validate:stage0 test styles:check refactor:check"
@@ -36,20 +36,29 @@
     "dependency-cruiser": "^18.1.1",
     "eslint": "^9.13.0",
     "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-simple-import-sort": "^12.1.1",
     "eslint-plugin-vue": "^10.10.0",
     "globals": "^17.9.0",
     "knip": "^6.32.1",
     "npm-run-all2": "^9.0.3",
     "postcss": "^8.5.26",
+    "postcss-html": "^1.8.1",
     "postcss-scss": "^4.0.9",
     "prettier": "^3.3.3",
     "sass": "^1.102.0",
     "stylelint": "^17.14.1",
+    "stylelint-config-recommended-vue": "^1.6.1",
     "stylelint-config-standard-scss": "^17.0.0",
+    "stylelint-order": "^7.0.1",
     "vite": "^5.4.21",
     "vitest": "^2.1.4"
   },
   "dependencies": {
     "vue": "^3.5.41"
+  },
+  "overrides": {
+    "stylelint-config-recommended-vue": {
+      "stylelint-config-html": "1.1.0"
+    }
   }
 }

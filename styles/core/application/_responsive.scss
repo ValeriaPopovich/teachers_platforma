@@ -1,0 +1,485 @@
+@use '../../tokens/breakpoints' as bp;
+
+/* Responsive layout: desktop, laptop, tablet and phone */
+html {
+  min-width: 320px;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+.main {
+  min-width: 0;
+  max-width: 1800px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.grid,
+.card {
+  min-width: 0;
+}
+
+.brand {
+  padding-left: 10px;
+}
+
+.stat .badge {
+  display: none;
+}
+
+.stat .value {
+  margin-top: 0;
+}
+
+.quick {
+  display: none;
+}
+
+.resting-person {
+  font-size: 48px;
+  line-height: 1;
+  margin-bottom: 14px;
+  filter: drop-shadow(0 8px 14px rgb(34, 28, 45, 12%));
+}
+
+@include bp.till(bp.$desktop) {
+  .cols,
+  .report-builder {
+    grid-template-columns: 1fr;
+  }
+
+  .student-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .report-paper {
+    max-width: 820px;
+  }
+
+  .calendar-days {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@include bp.till(bp.$laptop) {
+  .app {
+    grid-template-columns: 215px minmax(0, 1fr);
+  }
+
+  .main {
+    padding: 24px;
+  }
+
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .calendar-days {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .row {
+    min-width: 0;
+  }
+
+  .grow {
+    min-width: 0;
+  }
+}
+
+@include bp.till(bp.$tablet) {
+  .app {
+    display: block;
+  }
+
+  .sidebar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: auto;
+    bottom: 0;
+    width: auto;
+    height: 72px;
+    padding: 8px;
+    background: var(--panel);
+    border: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .brand,
+  .side-bottom {
+    display: none;
+  }
+
+  .nav {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 2px;
+  }
+
+  .nav button {
+    padding: 7px 3px;
+    display: grid;
+    place-items: center;
+    font-size: 10px;
+    gap: 0;
+    min-width: 0;
+  }
+
+  .nav .ico {
+    font-size: 19px;
+  }
+
+  .main {
+    padding: 20px 18px 96px;
+    max-width: none;
+  }
+
+  .topbar {
+    align-items: flex-start;
+  }
+
+  .topbar h1 {
+    font-size: var(--font-size-heading);
+  }
+
+  .topbar .actions .btn:not(.primary) {
+    display: none;
+  }
+
+  .cols,
+  .settings-grid,
+  .report-builder {
+    grid-template-columns: 1fr;
+  }
+
+  .student-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .calendar-days {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 4px;
+  }
+
+  .day {
+    min-width: 160px;
+    scroll-snap-align: start;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .field.full {
+    grid-column: auto;
+  }
+
+  .modal {
+    max-height: 88vh;
+  }
+}
+
+/* Промежуточные ширины: полная неделя начинается с понедельника,
+   а панель действий занимает отдельную аккуратную строку. */
+@include bp.between(821px, bp.$laptop) {
+  .schedule-page .topbar {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .schedule-page .topbar .actions {
+    display: grid;
+    grid-template-columns: minmax(190px, 1fr) minmax(150px, auto) minmax(170px, auto);
+    width: 100%;
+    gap: 10px;
+  }
+
+  .schedule-page .topbar .actions .btn {
+    min-height: 48px;
+    padding-inline: 14px;
+  }
+
+  .schedule-page .calendar-days {
+    grid-template-columns: repeat(7, minmax(92px, 1fr)) !important;
+    min-width: 692px;
+  }
+
+  .schedule-page .calendar-weekday {
+    display: block !important;
+  }
+
+  .schedule-page .mobile-weekday {
+    display: none !important;
+  }
+
+  .schedule-page .day {
+    min-width: 0;
+    padding: 8px;
+  }
+
+  .schedule-page .day .date {
+    font-size: 11px;
+  }
+
+  .schedule-page .event {
+    padding: 7px;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    font-size: 11px;
+  }
+}
+
+/* На любой ширине календарь остаётся семидневной сеткой и при нехватке места
+   прокручивается горизонтально, а не переносит дни на новую строку. */
+.schedule-page .calendar-card {
+  overflow-x: auto;
+}
+
+.schedule-page .calendar-days {
+  display: grid !important;
+  grid-template-columns: repeat(7, minmax(105px, 1fr)) !important;
+  min-width: 735px;
+}
+
+.schedule-page .day.past-day {
+  background: color-mix(in sRGB, var(--panel2) 72%, var(--bg));
+  opacity: 0.58;
+}
+
+.schedule-page .day.past-day .event {
+  filter: grayscale(0.35);
+}
+
+.students-empty {
+  grid-column: 1 / -1;
+  padding: 22px 4px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.package-size-summary {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
+.package-size-summary span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.package-month-card {
+  margin-bottom: 18px;
+}
+
+.package-month-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.package-month-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 14px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: var(--panel2);
+}
+
+.package-month-item div {
+  min-width: 0;
+}
+
+.package-month-item small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+}
+
+.package-month-item strong {
+  font-size: var(--font-size-title-small);
+}
+
+.report-block-picker {
+  margin-bottom: 12px;
+}
+
+.report-block-picker h3 {
+  margin: 0 0 10px;
+}
+
+.report-block-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.report-block-checks label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel2);
+  font-size: var(--font-size-caption);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.report-block-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.report-include-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  height: 38px;
+  padding: 0 11px 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel2);
+  cursor: pointer;
+  transition: 0.18s ease;
+}
+
+.report-include-toggle input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.report-toggle-icon {
+  display: block;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--muted);
+  border-radius: 6px;
+  transition: 0.18s ease;
+}
+
+.report-include-toggle input:checked + .report-toggle-icon {
+  border-color: transparent;
+  background: linear-gradient(135deg, #ff706c, #ef3f91);
+  box-shadow: 0 5px 12px rgb(239, 63, 145, 24%);
+}
+
+.report-include-toggle input:checked + .report-toggle-icon::after {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 4px;
+  margin: 4px 0 0 3px;
+  border: solid var(--color-on-accent);
+  border-width: 0 0 2px 2px;
+  transform: rotate(-45deg);
+}
+
+.report-toggle-state {
+  color: var(--muted);
+  font-size: var(--font-size-caption);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.report-include-toggle:hover {
+  border-color: rgb(239, 63, 145, 35%);
+  background: var(--panel);
+}
+
+.report-include-toggle:has(input:focus-visible) {
+  outline: 3px solid rgb(239, 63, 145, 20%);
+  outline-offset: 2px;
+}
+
+@include bp.till(bp.$mobile-large) {
+  .main {
+    padding: 16px 12px 94px;
+  }
+
+  .topbar {
+    display: grid;
+  }
+
+  .topbar .actions {
+    width: 100%;
+  }
+
+  .topbar .actions .btn.primary {
+    width: 100%;
+  }
+
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .student-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .card {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .stat .value {
+    font-size: var(--font-size-title-large);
+  }
+
+  .section-head {
+    align-items: flex-start;
+  }
+
+  .section-head .btn {
+    padding: 8px 10px;
+  }
+
+  .report-tools .btn {
+    flex: 1;
+  }
+
+  .paper-head,
+  .paper-body {
+    padding: 15px;
+  }
+
+  .builder-item {
+    grid-template-columns: minmax(0, 1fr) 72px 34px;
+  }
+
+  .modal-wrap {
+    padding: 8px;
+  }
+
+  .modal {
+    border-radius: 18px;
+  }
+
+  .modal-body {
+    padding: 16px;
+  }
+
+  .modal-foot {
+    padding: 13px 16px;
+  }
+}

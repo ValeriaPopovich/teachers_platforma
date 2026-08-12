@@ -1,0 +1,49 @@
+$mobile-compact: 380px;
+$mobile-small: 420px;
+$mobile: 480px;
+$mobile-large: 600px;
+$tablet-small: 620px;
+$tablet-content: 720px;
+$tablet: 820px;
+$laptop: 1050px;
+$desktop: 1280px;
+
+// Main application layout ranges: mobile, tablet and desktop.
+$layout-mobile: 600px;
+$layout-desktop: 1024px;
+
+@mixin from($breakpoint) {
+  @media (width >= $breakpoint) {
+    @content;
+  }
+}
+
+@mixin till($breakpoint) {
+  @media (width <= $breakpoint) {
+    @content;
+  }
+}
+
+@mixin between($from, $to) {
+  @media (width >= $from) and (width <= $to) {
+    @content;
+  }
+}
+
+@mixin wide-and-short($min-width, $max-height) {
+  @media (width > $min-width) and (height <= $max-height) {
+    @content;
+  }
+}
+
+@mixin reduced-motion {
+  @media (prefers-reduced-motion: reduce) {
+    @content;
+  }
+}
+
+@mixin touch {
+  @media (hover: none) {
+    @content;
+  }
+}

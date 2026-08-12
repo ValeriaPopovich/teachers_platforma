@@ -57,6 +57,38 @@ function carryNextNote(draft, studentId, currentDate, note) {
   if (next) next.prepNote = note;
 }
 
+function recurringOccurrenceDate(draft, lesson) {
+  const owner = lesson.groupId
+    ? draft.groups.find((group) => group.id === lesson.groupId)
+    : draft.students.find((student) => student.id === lesson.studentId);
+  const date = new Date(lesson.date);
+  const slots = (owner?.scheduleSlots || []).filter((slot) => +slot.day === date.getDay());
+  if (!slots.length) return date;
+  const lessonMinutes = date.getHours() * 60 + date.getMinutes();
+  const nearest = slots
+    .map((slot) => {
+      const [hours = 0, minutes = 0] = String(slot.time || '00:00')
+        .split(':')
+        .map(Number);
+      return { hours, minutes, distance: Math.abs(hours * 60 + minutes - lessonMinutes) };
+    })
+    .sort((a, b) => a.distance - b.distance)[0];
+  date.setHours(nearest.hours, nearest.minutes, 0, 0);
+  return date;
+}
+
+function syncRecurringExclusion(draft, lesson) {
+  if (!lesson || (!lesson.auto && lesson.lessonKind !== 'regular')) return;
+  const type = lesson.groupId ? 'group' : 'student';
+  const ownerId = lesson.groupId || lesson.studentId;
+  const key = recurringScheduleKey(type, ownerId, recurringOccurrenceDate(draft, lesson));
+  const exclusions = new Set(draft.settings?.scheduleExclusions || []);
+  if (['cancelled', 'missed', 'moved'].includes(lesson.status)) exclusions.add(key);
+  else if (['planned', 'unconfirmed', 'done', 'paid_missed'].includes(lesson.status))
+    exclusions.delete(key);
+  draft.settings.scheduleExclusions = [...exclusions];
+}
+
 function baseLesson(input, student, ownerPatch, id) {
   return {
     id,
@@ -164,6 +196,7 @@ export function createScheduleService({ store, uid, now = () => Date.now() }) {
         if (input.previousHomework === 'yes')
           applyPreviousHomeworkGrade(draft, studentId, input.date, input.homeworkGrade);
         carryNextNote(draft, studentId, input.date, input.nextNote);
+        syncRecurringExclusion(draft, lesson);
         created.push(lesson);
       }
       draft.lessons.push(...created);
@@ -202,14 +235,8 @@ export function createScheduleService({ store, uid, now = () => Date.now() }) {
     store.update('schedule:lesson-remove', (draft) => {
       const records = groupLessonRecords(draft, lesson);
       const ids = new Set(records.map((item) => item.id));
-      if (lesson.auto || lesson.lessonKind === 'regular') {
-        const type = lesson.groupId ? 'group' : 'student';
-        const ownerId = lesson.groupId || lesson.studentId;
-        const key = recurringScheduleKey(type, ownerId, lesson.date);
-        draft.settings.scheduleExclusions = [
-          ...new Set([...(draft.settings.scheduleExclusions || []), key]),
-        ];
-      }
+      if (lesson.auto || lesson.lessonKind === 'regular')
+        syncRecurringExclusion(draft, { ...lesson, status: 'cancelled' });
       draft.lessons = draft.lessons.filter((item) => !ids.has(item.id));
       draft.payments = draft.payments.filter((payment) => !ids.has(payment.lessonId));
     });

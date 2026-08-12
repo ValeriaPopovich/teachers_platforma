@@ -1,3 +1,5 @@
+@use '../tokens/breakpoints' as bp;
+
 .custom-select {
   position: relative;
   width: 100%;
@@ -14,7 +16,7 @@
   background: var(--panel);
 }
 
-#page-payments .payments-history-controls .custom-select {
+.payments-page .payments-history-controls .custom-select {
   width: min(220px, 100%);
 }
 
@@ -174,7 +176,7 @@
   border-radius: 10px;
 }
 
-@media (width <= 620px) {
+@include bp.till(bp.$tablet-small) {
   .custom-select-popover {
     max-height: min(300px, calc(100vh - 18px));
   }
@@ -184,7 +186,7 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
+@include bp.reduced-motion {
   .custom-select-trigger,
   .custom-select-chevron {
     transition: none;

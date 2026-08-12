@@ -1,3 +1,5 @@
+@use '../tokens/breakpoints' as bp;
+
 /* Final cascade layer for the redesign v1 application shell. */
 .app,
 .app.sidebar-compact {
@@ -14,8 +16,12 @@
 .app .main {
   width: 100%;
   min-width: 0;
-  padding: 34px 42px 72px 18px;
+  padding: 18px 42px 72px 18px;
   transition: padding 0.56s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.app .main > .page {
+  min-width: 0;
 }
 
 .app .sidebar {
@@ -214,7 +220,7 @@
   padding-inline: 8px;
 }
 
-@media (width <= 820px) {
+@include bp.till(bp.$tablet) {
   body {
     padding-bottom: calc(92px + env(safe-area-inset-bottom));
   }
@@ -237,7 +243,7 @@
     width: auto;
     height: 70px;
     padding: 8px;
-    overflow-x: auto;
+    overflow-x: hidden;
     overflow-y: hidden;
     border-radius: 22px;
     background: color-mix(in sRGB, var(--panel) 94%, transparent);
@@ -252,7 +258,7 @@
     display: grid;
     grid-template-columns: repeat(6, minmax(48px, 1fr));
     gap: 3px;
-    min-width: 354px;
+    min-width: 0;
   }
 
   .app .nav button,
@@ -290,7 +296,7 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
+@include bp.reduced-motion {
   .app,
   .app .main,
   .app .sidebar,
@@ -302,7 +308,7 @@
   }
 }
 
-@media (width <= 480px) {
+@include bp.till(bp.$mobile) {
   .app .main,
   .app.sidebar-compact .main {
     padding-inline: 14px;

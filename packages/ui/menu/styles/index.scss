@@ -1,0 +1,68 @@
+.ui-menu {
+  position: relative;
+
+  &-trigger {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    min-height: 32px;
+    padding: 0;
+    border: 0;
+    border-radius: 9px;
+    color: var(--text);
+    background: transparent;
+    box-shadow: none;
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    line-height: 1;
+
+    &:hover,
+    &[aria-expanded='true'] {
+      background: var(--panel2);
+      box-shadow: none;
+      transform: none;
+    }
+  }
+
+  &-panel {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 6px);
+    right: 0;
+    display: grid;
+    min-width: 190px;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--panel);
+    box-shadow: 0 12px 30px rgb(36, 28, 31, 14%);
+  }
+
+  &-item {
+    width: 100%;
+    padding: 10px 12px;
+    border: 0;
+    border-radius: 9px;
+    color: var(--text);
+    background: transparent;
+    box-shadow: none;
+    font-size: var(--font-size-body);
+    font-weight: 500;
+    text-align: left;
+
+    &:hover,
+    &:focus-visible {
+      background: var(--panel2);
+      box-shadow: none;
+      transform: none;
+    }
+
+    &.is-danger {
+      color: var(--bad);
+    }
+  }
+}

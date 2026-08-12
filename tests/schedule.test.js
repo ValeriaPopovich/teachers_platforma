@@ -173,6 +173,11 @@ describe('calendarViewRange', () => {
       month.days,
     ]).toEqual([2026, 6, 27, 1, 42]);
   });
+
+  it('для короткого месяца также возвращает ровно шесть строк', () => {
+    const month = calendarViewRange('month', new Date(2026, 1, 10));
+    expect(month.days).toBe(42);
+  });
 });
 
 describe('generateSchedule', () => {

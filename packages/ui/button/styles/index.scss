@@ -1,0 +1,45 @@
+@use '../../../../styles/tokens/breakpoints' as bp;
+
+.ui-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+
+  &--block {
+    width: 100%;
+  }
+
+  &--loading &__content {
+    opacity: 0;
+  }
+
+  &__icon {
+    display: inline-flex;
+  }
+
+  &__loader {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: ui-button-spin 700ms linear infinite;
+  }
+}
+
+@keyframes ui-button-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@include bp.reduced-motion {
+  .ui-button {
+    &__loader {
+      animation-duration: 1400ms;
+    }
+  }
+}

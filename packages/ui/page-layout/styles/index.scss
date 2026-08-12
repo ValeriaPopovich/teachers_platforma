@@ -1,0 +1,24 @@
+.ui-page-layout {
+  display: grid;
+  min-width: 0;
+  gap: 20px;
+}
+
+.ui-page-layout--aside {
+  grid-template-columns: minmax(0, 1fr) 318px;
+}
+
+.ui-page-layout__header {
+  grid-column: 1 / -1;
+}
+
+.ui-page-layout__content,
+.ui-page-layout__aside {
+  min-width: 0;
+}
+
+@media (width <= 1024px) {
+  .ui-page-layout--aside {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -1,5 +1,5 @@
 import { escapeHtml, safeExternalUrl } from '../../shared/dom.js';
-import { formatDate, initials, money } from '../../shared/format.js';
+import { formatDate, money } from '../../shared/format.js';
 import { finances } from '../payments/finances.js';
 import {
   getStudentById,
@@ -96,7 +96,7 @@ export function createProfileView({
 
     body.innerHTML = `<div class="profile-redesign">
       <section class="profile-hero">
-        <div class="profile-identity"><div class="profile-summary"><div class="avatar">${escapeHtml(initials(student.name))}</div><div><h2 style="margin:0">${escapeHtml(student.name)}</h2><div class="sub">${escapeHtml(student.grade || 'Класс не указан')}</div>${lessonUrl ? `<a class="btn profile-lesson-link" href="${escapeHtml(lessonUrl)}" target="_blank" rel="noopener">Открыть занятие ↗</a>` : ''}</div></div></div>
+        <div class="profile-identity"><div class="profile-summary"><div><div class="profile-kicker">Ученик</div><h2 style="margin:0">${escapeHtml(student.name)}</h2><div class="sub">${escapeHtml(student.grade || 'Класс не указан')}</div>${lessonUrl ? `<a class="btn profile-lesson-link" href="${escapeHtml(lessonUrl)}" target="_blank" rel="noopener">Открыть занятие ↗</a>` : ''}</div></div></div>
         <div class="profile-meta"><div class="profile-meta-item"><span class="profile-meta-icon">${icon('user')}</span><span><small>Имя родителя</small><b>${escapeHtml(student.parentName || 'Не указано')}</b></span></div><div class="profile-meta-item"><span class="profile-meta-icon">${icon('clock')}</span><span><small>Условия занятий</small><b>${money(student.price)} · ${+student.duration || 60} мин · ${paymentFormat}</b></span></div>${student.contact || student.parentContact ? `<div class="profile-extra-contacts">${student.contact ? `<div><span>Контакт ученика</span><b>${escapeHtml(student.contact)}</b></div>` : ''}${student.parentContact ? `<div><span>Контакт родителя</span><b>${escapeHtml(student.parentContact)}</b></div>` : ''}</div>` : ''}</div>
       </section>
       <div class="student-metrics"><div class="profile-kpi"><span class="profile-kpi-icon profile-kpi-icon-attendance">${icon('attendance')}</span><b>${metrics.attendance}%</b><small>Посещаемость</small></div><div class="profile-kpi"><span class="profile-kpi-icon profile-kpi-icon-homework">${icon('homework')}</span><b>${metrics.homework == null ? '—' : `${String(metrics.homework).replace('.', ',')}/5`}</b><small>Средняя оценка ДЗ</small></div><div class="profile-kpi"><span class="profile-kpi-icon profile-kpi-icon-tests">${icon('tests')}</span><b>${tests}</b><small>Проверочных</small></div></div>

@@ -41,9 +41,10 @@ export function createPaymentFormView({ store, service, modal, dialog, toast }) 
     }
   }
 
-  function open(studentId = '') {
+  function open(studentId = '', amount = 0) {
     form.reset();
     fillStudents(studentId);
+    form.elements.amount.value = +amount > 0 ? Math.round(+amount) : '';
     syncPaymentForm();
     modal.open('paymentModal');
   }

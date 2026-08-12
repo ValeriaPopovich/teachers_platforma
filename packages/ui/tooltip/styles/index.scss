@@ -1,0 +1,44 @@
+.ui-tooltip-trigger {
+  display: inline-flex;
+}
+
+.ui-tooltip {
+  position: fixed;
+  z-index: 1000;
+  max-width: min(280px, calc(100vw - 24px));
+  padding: 10px 16px;
+  border-radius: 14px;
+  color: var(--color-on-accent);
+  background: var(--brand2);
+  box-shadow: 0 8px 24px color-mix(in sRGB, var(--brand2) 22%, transparent);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.25;
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 10px));
+  white-space: nowrap;
+
+  &::after {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    width: 12px;
+    height: 12px;
+    background: inherit;
+    content: '';
+    transform: translate(-50%, -7px) rotate(45deg);
+  }
+
+  &-enter-active,
+  &-leave-active {
+    transition:
+      opacity 0.14s ease,
+      transform 0.14s ease;
+  }
+
+  &-enter-from,
+  &-leave-to {
+    opacity: 0;
+    transform: translate(-50%, calc(-100% - 5px));
+  }
+}

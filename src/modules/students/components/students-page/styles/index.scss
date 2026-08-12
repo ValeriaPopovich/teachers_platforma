@@ -1,0 +1,81 @@
+@use '../../../../../../styles/tokens/breakpoints' as bp;
+
+.students-page-layout {
+  display: flex;
+  flex-direction: column;
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+
+  .students-topbar {
+    flex: 0 0 auto;
+    margin-bottom: 12px;
+    padding-bottom: 14px;
+  }
+
+  .students-toolbar {
+    flex: 0 0 auto;
+    margin-bottom: 16px;
+  }
+
+  .students-section-head {
+    flex: 0 0 auto;
+    margin-bottom: 10px;
+  }
+
+  .student-grid {
+    flex: 0 0 auto;
+    padding-bottom: 10px;
+  }
+
+  .subsection {
+    min-height: 0;
+    margin-top: 10px;
+
+    .student-grid {
+      padding-bottom: 4px;
+    }
+  }
+}
+
+@include bp.till(bp.$tablet) {
+  .students-page-layout {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+
+    .students-toolbar {
+      margin-bottom: 28px;
+    }
+
+    .students-section-head {
+      margin-bottom: 18px;
+    }
+
+    .subsection {
+      margin-top: 32px;
+    }
+  }
+}
+
+@include bp.wide-and-short(bp.$tablet, bp.$tablet) {
+  .students-page-layout {
+    .students-topbar {
+      margin-bottom: 8px;
+      padding-bottom: 10px;
+    }
+
+    .students-toolbar {
+      margin-bottom: 10px;
+      padding-block: 7px;
+    }
+
+    .students-section-head {
+      margin-bottom: 6px;
+    }
+
+    .subsection {
+      margin-top: 8px;
+    }
+  }
+}

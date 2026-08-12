@@ -1,0 +1,29 @@
+.schedule-create-sheet__actions {
+  display: grid;
+  gap: 14px;
+}
+
+.schedule-create-sheet__action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 64px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  background: linear-gradient(110deg, #7255df, #835ee7);
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.schedule-create-sheet__action.is-event {
+  color: #252525;
+  background: #cbd4ff;
+}
+
+.schedule-create-sheet__action span:last-child {
+  font-size: 24px;
+}
