@@ -6918,7 +6918,7 @@ body.board-editor-open {
    and reference-layout.scss, which silently overrode most of it). */
 body:has(.students-page.active),
 body:has(.students-page.active) .main {
-  background: #f9f7f6;
+  background: var(--bg);
 }
 
 .students-page {
