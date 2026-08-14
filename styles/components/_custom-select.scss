@@ -91,8 +91,8 @@
   height: 9px;
   justify-self: center;
   margin-top: -4px;
-  border-right: 2px solid var(--muted);
-  border-bottom: 2px solid var(--muted);
+  border-right: 2px solid var(--text-muted);
+  border-bottom: 2px solid var(--text-muted);
   transform: rotate(45deg);
   transition: transform 0.16s ease;
 }

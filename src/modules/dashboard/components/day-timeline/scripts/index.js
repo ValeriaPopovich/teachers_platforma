@@ -1,9 +1,12 @@
-import { UiBadge, UiCard } from '@ui';
+import { UiIcon } from '@icons';
+import { UiCard } from '@ui';
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+
+import { openEvent, openLesson } from '../../../../schedule/schedule-ui.js';
 
 export default {
   name: 'DayTimeline',
-  components: { UiBadge, UiCard },
+  components: { UiCard, UiIcon },
   props: {
     /** Слоты дня с занятиями и маркером текущего времени. */
     timeline: { type: Array, default: () => [] },
@@ -33,18 +36,17 @@ export default {
     }
 
     function beadClass(row) {
+      const { lessons } = row;
+      if (lessons.some((lesson) => lesson.kind === 'in_progress')) return 'bead--in-progress';
+      if (lessons.some((lesson) => lesson.kind === 'next')) return 'bead--next';
+      if (lessons.some((lesson) => lesson.kind === 'unconfirmed')) return 'bead--unconfirmed';
       if (row.isPast) return 'bead--done';
-      if (row.lessons.some((lesson) => lesson.kind === 'next')) return 'bead--next';
       return 'bead--planned';
     }
 
     function onItemClick(item) {
-      window.dispatchEvent(
-        new CustomEvent(
-          item.type === 'event' ? 'app:dashboard-open-event' : 'app:dashboard-open-lesson',
-          { detail: { id: item.id } },
-        ),
-      );
+      if (item.type === 'event') openEvent(item.id);
+      else openLesson(item.id);
     }
 
     onMounted(() => {
@@ -57,6 +59,14 @@ export default {
       () => nextTick(measure),
     );
 
-    return { beadClass, isScrollable, onItemClick, onScroll, rowKey, scrollEl, showScrollHint };
+    return {
+      beadClass,
+      isScrollable,
+      onItemClick,
+      onScroll,
+      rowKey,
+      scrollEl,
+      showScrollHint,
+    };
   },
 };

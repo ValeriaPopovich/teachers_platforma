@@ -4,70 +4,91 @@ import { periodAnalytics } from '../src/domain/analytics.js';
 describe('periodAnalytics', () => {
   const from = Date.parse('2026-08-01T00:00:00');
   const to = Date.parse('2026-08-31T23:59:59');
-
-  it('планирует стоимость абонемента по расписанию независимо от оплаты', () => {
-    const result = periodAnalytics(
-      {
-        students: [
-          { id: 's1', payType: 'package', price: 1800, scheduleSlots: [{ day: 1, time: '16:00' }] },
-        ],
-        payments: [],
-        lessons: [],
-      },
-      from,
-      to,
-    );
-    expect(result.paid).toBe(0);
-    expect(result.charged).toBe(9000);
+  const lesson = (id, status, amount, extra = {}) => ({
+    id,
+    studentId: 's1',
+    date: '2026-08-10T17:00',
+    status,
+    amount,
+    ...extra,
   });
 
-  it('не начисляет урок из уже оплаченного абонемента повторно', () => {
+  it('начисляет проведённые занятия по их собственной цене', () => {
     const result = periodAnalytics(
       {
-        students: [
-          { id: 's1', payType: 'package', price: 1800, scheduleSlots: [{ day: 1, time: '16:00' }] },
-        ],
-        payments: [
-          {
-            id: 'p1',
-            studentId: 's1',
-            date: '2026-08-05',
-            amount: 9000,
-            packageLessons: 5,
-          },
-        ],
-        lessons: [
-          {
-            id: 'l1',
-            studentId: 's1',
-            date: '2026-08-06T10:00',
-            status: 'done',
-            payment: 'package',
-            amount: 1800,
-          },
-        ],
+        students: [{ id: 's1', price: 1800 }],
+        payments: [],
+        lessons: [lesson('l1', 'done', 1800), lesson('l2', 'done', 1200)],
       },
       from,
       to,
     );
-    expect(result.paid).toBe(9000);
-    expect(result.charged).toBe(9000);
+    expect(result.charged).toBe(3000);
+    expect(result.lessonsCount).toBe(2);
+    expect(result.byStudent.s1.charged).toBe(3000);
+  });
+
+  it('пропуск с оплатой начисляется, пропуск без оплаты — нет', () => {
+    const result = periodAnalytics(
+      {
+        students: [{ id: 's1', price: 1000 }],
+        payments: [],
+        lessons: [lesson('l1', 'paid_missed', 1000), lesson('l2', 'missed', 1000)],
+      },
+      from,
+      to,
+    );
+    expect(result.charged).toBe(1000);
+  });
+
+  it('запланированное занятие попадает в reserved, а не в charged', () => {
+    const result = periodAnalytics(
+      {
+        students: [{ id: 's1', price: 1800 }],
+        payments: [],
+        lessons: [lesson('l1', 'planned', 1800), lesson('l2', 'unconfirmed', 1800)],
+      },
+      from,
+      to,
+    );
+    expect(result.charged).toBe(0);
+    expect(result.reserved).toBe(3600);
+  });
+
+  it('пробное занятие не начисляется', () => {
+    const result = periodAnalytics(
+      {
+        students: [{ id: 's1', price: 1800 }],
+        payments: [],
+        lessons: [lesson('l1', 'done', 1800, { lessonKind: 'trial' })],
+      },
+      from,
+      to,
+    );
+    expect(result.charged).toBe(0);
     expect(result.lessonsCount).toBe(1);
   });
 
-  it('учитывает внутреннюю запись оплаченного разового занятия как реальный доход', () => {
+  it('отмены и переносы не начисляются', () => {
     const result = periodAnalytics(
       {
-        students: [{ id: 's1', payType: 'single', price: 1800 }],
+        students: [{ id: 's1', price: 1800 }],
+        payments: [],
+        lessons: [lesson('l1', 'cancelled', 1800), lesson('l2', 'moved', 1800)],
+      },
+      from,
+      to,
+    );
+    expect(result.charged).toBe(0);
+    expect(result.reserved).toBe(0);
+  });
+
+  it('учитывает внутреннюю запись оплаченного занятия как реальный доход', () => {
+    const result = periodAnalytics(
+      {
+        students: [{ id: 's1', price: 1800 }],
         payments: [
-          {
-            id: 'p1',
-            studentId: 's1',
-            date: '2026-08-05',
-            amount: 1800,
-            ledgerOnly: true,
-            billingType: 'single',
-          },
+          { id: 'p1', studentId: 's1', date: '2026-08-05', amount: 1800, ledgerOnly: true },
         ],
         lessons: [],
       },
@@ -78,135 +99,16 @@ describe('periodAnalytics', () => {
     expect(result.pays).toHaveLength(1);
   });
 
-  it('не включает даты до начала работы ученика в первый абонемент', () => {
+  it('не учитывает занятия и платежи вне периода', () => {
     const result = periodAnalytics(
       {
-        students: [
-          {
-            id: 's1',
-            payType: 'package',
-            price: 1800,
-            createdAt: Date.parse('2026-08-20T00:00:00'),
-            scheduleSlots: [{ day: 1, time: '16:00' }],
-          },
-        ],
-        payments: [],
-        lessons: [],
+        students: [{ id: 's1', price: 1000 }],
+        payments: [{ id: 'p1', studentId: 's1', date: '2026-07-05', amount: 1000 }],
+        lessons: [lesson('l1', 'done', 1000, { date: '2026-07-10T17:00' })],
       },
       from,
       to,
     );
-    expect(result.charged).toBe(3600);
-  });
-
-  it('не начисляет удалённое повторение регулярного занятия', () => {
-    const result = periodAnalytics(
-      {
-        students: [
-          { id: 's1', payType: 'package', price: 1800, scheduleSlots: [{ day: 1, time: '16:00' }] },
-        ],
-        payments: [],
-        lessons: [],
-        settings: { scheduleExclusions: ['student|s1|2026-08-03T16:00'] },
-      },
-      from,
-      to,
-    );
-    expect(result.charged).toBe(7200);
-    expect(result.byStudent.s1.charged).toBe(7200);
-  });
-
-  it('добавляет разовое занятие из абонемента к стоимости месяца', () => {
-    const result = periodAnalytics(
-      {
-        students: [
-          { id: 's1', payType: 'package', price: 1800, scheduleSlots: [{ day: 1, time: '16:00' }] },
-        ],
-        payments: [],
-        lessons: [
-          {
-            studentId: 's1',
-            date: '2026-08-20T17:00',
-            status: 'done',
-            lessonKind: 'oneoff',
-            payment: 'package',
-          },
-        ],
-        settings: {},
-      },
-      from,
-      to,
-    );
-    expect(result.charged).toBe(10800);
-    expect(result.byStudent.s1.charged).toBe(10800);
-  });
-
-  it('включает запланированные разовые занятия в начисления месяца', () => {
-    const result = periodAnalytics(
-      {
-        students: [{ id: 's1', payType: 'single', price: 1800 }],
-        payments: [],
-        lessons: [
-          {
-            id: 'l1',
-            studentId: 's1',
-            date: '2026-08-20T17:00',
-            status: 'planned',
-            payment: 'unpaid',
-            amount: 1800,
-          },
-          {
-            id: 'l2',
-            studentId: 's1',
-            date: '2026-08-27T17:00',
-            status: 'unconfirmed',
-            payment: 'unpaid',
-            amount: 1800,
-          },
-        ],
-      },
-      from,
-      to,
-    );
-    expect(result.charged).toBe(3600);
-    expect(result.lessonsCount).toBe(0);
-  });
-
-  it('не включает в начисления отмены, пропуски без оплаты и not_charged', () => {
-    const result = periodAnalytics(
-      {
-        students: [{ id: 's1', payType: 'single', price: 1800 }],
-        payments: [],
-        lessons: [
-          {
-            id: 'l1',
-            studentId: 's1',
-            date: '2026-08-10T17:00',
-            status: 'cancelled',
-            payment: 'unpaid',
-            amount: 1800,
-          },
-          {
-            id: 'l2',
-            studentId: 's1',
-            date: '2026-08-12T17:00',
-            status: 'missed',
-            payment: 'unpaid',
-            amount: 1800,
-          },
-          {
-            id: 'l3',
-            studentId: 's1',
-            date: '2026-08-14T17:00',
-            status: 'planned',
-            payment: 'not_charged',
-            amount: 1800,
-          },
-        ],
-      },
-      from,
-      to,
-    );
-    expect(result.charged).toBe(0);
+    expect(result).toMatchObject({ paid: 0, charged: 0, lessonsCount: 0 });
   });
 });

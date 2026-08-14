@@ -1,7 +1,7 @@
 import { UiIcon } from '@icons';
 import { computed } from 'vue';
 
-import { formatDate, lessonCountWord, money } from '../../../../../shared/format.js';
+import { formatDate, money } from '../../../../../shared/format.js';
 
 export default {
   name: 'PaymentHistoryItem',
@@ -12,14 +12,7 @@ export default {
   },
   emits: ['delete'],
   setup(props, { emit }) {
-    const paymentType = computed(() => {
-      const { note, billingType, coveredLessons } = props.payment;
-      if (note) return note;
-      if (billingType !== 'package') return 'Разовая оплата';
-      return coveredLessons
-        ? `Абонемент · ${coveredLessons} ${lessonCountWord(coveredLessons)}`
-        : 'Абонемент';
-    });
+    const paymentType = computed(() => props.payment.note || 'Оплата на баланс');
     const dateLabel = computed(() => formatDate(props.payment.date, true));
     const amountLabel = computed(() => `+${money(props.payment.amount)}`);
 

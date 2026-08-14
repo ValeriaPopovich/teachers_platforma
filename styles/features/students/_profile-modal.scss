@@ -1,6 +1,6 @@
 @use '../../tokens/breakpoints' as bp;
 
-.modal-wrap:has(.profile-modal-card) {
+.ui-modal-wrap:has(.profile-modal-card) {
   /* Student profile modal — Hybrid 3 adapted to the project brand book. */
   --profile-warm: color-mix(in sRGB, var(--brand) 7%, var(--panel));
   --profile-warm-line: color-mix(in sRGB, var(--brand) 22%, var(--line));
@@ -137,7 +137,7 @@
   .profile-meta-item small,
   .profile-next-card small,
   .profile-preview-row small {
-    color: var(--muted);
+    color: var(--text-muted);
     font-size: var(--font-size-caption);
     font-weight: 600;
   }
@@ -197,7 +197,7 @@
   }
 
   .profile-extra-contacts span {
-    color: var(--muted);
+    color: var(--text-muted);
     font-size: 11px;
   }
 
@@ -272,7 +272,7 @@
     border: 0;
     padding: 0 2px 13px;
     background: transparent;
-    color: var(--muted);
+    color: var(--text-muted);
     font-weight: 800;
   }
 
@@ -392,7 +392,7 @@
 
   .profile-info-card p {
     margin: 5px 0 0;
-    color: var(--muted);
+    color: var(--text-muted);
     overflow-wrap: anywhere;
   }
 
@@ -442,7 +442,7 @@
 
   .profile-empty-history {
     margin: 0;
-    color: var(--muted);
+    color: var(--text-muted);
   }
 
   .profile-history-heading {
@@ -686,7 +686,7 @@
 
     .profile-panel-history .mini-table td::before {
       content: attr(data-label);
-      color: var(--muted);
+      color: var(--text-muted);
       font-size: 11px;
       font-weight: 700;
     }

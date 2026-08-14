@@ -1,22 +1,24 @@
 <script src="./scripts/index.js" />
 
 <template>
-  <article class="payment-history-item">
-    <span class="payment-history-status" aria-hidden="true"><UiIcon name="check" /></span>
+  <article class="payment-history-item border border-border bg-card">
+    <span class="payment-history-status text-secondary" aria-hidden="true"
+      ><UiIcon name="check"
+    /></span>
     <div class="payment-history-main">
-      <b>{{ payment.studentName }}</b>
-      <small>{{ paymentType }}</small>
+      <b class="text-foreground">{{ payment.studentName }}</b>
+      <small class="text-muted-foreground">{{ paymentType }}</small>
     </div>
-    <time :datetime="payment.date">{{ dateLabel }}</time>
-    <strong class="payment-history-amount">{{ amountLabel }}</strong>
-    <span class="payment-history-badge">Проведён</span>
+    <time class="text-muted-foreground" :datetime="payment.date">{{ dateLabel }}</time>
+    <strong class="payment-history-amount text-secondary">{{ amountLabel }}</strong>
+    <span class="payment-history-badge border border-border text-muted-foreground">Проведён</span>
     <button
       class="icon-btn payment-history-delete"
       type="button"
       aria-label="Удалить платёж"
       @click="onDeleteClick"
     >
-      <span class="student-delete-icon" aria-hidden="true"></span>
+      <UiIcon name="trash" />
     </button>
   </article>
 </template>

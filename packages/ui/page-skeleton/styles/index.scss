@@ -1,0 +1,45 @@
+.ui-page-skeleton {
+  display: grid;
+  gap: 20px;
+  width: 100%;
+  padding-block: 4px;
+}
+
+.ui-page-skeleton__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ui-page-skeleton__content {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(190px, 1fr);
+  gap: 18px;
+  min-height: 460px;
+}
+
+.ui-page-skeleton--dashboard .ui-page-skeleton__content,
+.ui-page-skeleton--payments .ui-page-skeleton__content {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.ui-page-skeleton--students .ui-page-skeleton__content,
+.ui-page-skeleton--settings .ui-page-skeleton__content {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ui-page-skeleton--schedule .ui-page-skeleton__block:first-child,
+.ui-page-skeleton--reports .ui-page-skeleton__block:first-child {
+  min-height: 520px;
+}
+
+@media (width <= 768px) {
+  .ui-page-skeleton__content,
+  .ui-page-skeleton--dashboard .ui-page-skeleton__content,
+  .ui-page-skeleton--payments .ui-page-skeleton__content,
+  .ui-page-skeleton--students .ui-page-skeleton__content,
+  .ui-page-skeleton--settings .ui-page-skeleton__content {
+    grid-template-columns: 1fr;
+  }
+}

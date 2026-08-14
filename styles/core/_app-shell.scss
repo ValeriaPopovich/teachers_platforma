@@ -14,9 +14,12 @@
 }
 
 .app .main {
+  container-name: app-content;
+  container-type: inline-size;
+  box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  padding: 18px 42px 72px 18px;
+  padding: 18px 42px 18px 18px;
   transition: padding 0.56s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -26,18 +29,24 @@
 
 .app .sidebar {
   position: sticky;
-  inset: 18px auto auto 18px;
+  inset: auto;
+  top: 50vh;
+  align-self: start;
   z-index: 70;
   width: 304px;
-  height: calc(100vh - 36px);
+  height: auto;
+  max-height: calc(100vh - 36px);
+  margin-left: 18px;
   padding: 14px;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   border: 1px solid color-mix(in sRGB, var(--line) 82%, transparent);
   border-radius: 24px;
   background: color-mix(in sRGB, var(--panel) 96%, transparent);
   box-shadow: var(--shell-shadow);
   backdrop-filter: blur(18px);
   isolation: isolate;
+  transform: translateY(-50%);
   transition:
     width 0.56s cubic-bezier(0.16, 1, 0.3, 1),
     padding 0.56s cubic-bezier(0.16, 1, 0.3, 1),
@@ -87,7 +96,7 @@
 }
 
 .app .sidebar-toggle:focus-visible {
-  outline: 2px solid var(--muted);
+  outline: 2px solid var(--text-muted);
   outline-offset: 2px;
 }
 
@@ -222,7 +231,7 @@
 
 @include bp.till(bp.$tablet) {
   body {
-    padding-bottom: calc(92px + env(safe-area-inset-bottom));
+    padding-bottom: calc(74px + env(safe-area-inset-bottom));
   }
 
   .app .main,
@@ -241,12 +250,14 @@
     inset: auto 12px calc(12px + env(safe-area-inset-bottom));
     display: block;
     width: auto;
-    height: 70px;
-    padding: 8px;
+    height: 54px;
+    padding: 5px;
     overflow-x: hidden;
     overflow-y: hidden;
     border-radius: 22px;
     background: color-mix(in sRGB, var(--panel) 94%, transparent);
+    animation: sidebar-island-float 4.8s ease-in-out infinite;
+    transform: none;
   }
 
   .app .sidebar-head,
@@ -256,7 +267,7 @@
 
   .app .nav {
     display: grid;
-    grid-template-columns: repeat(6, minmax(48px, 1fr));
+    grid-template-columns: repeat(7, minmax(42px, 1fr));
     gap: 3px;
     min-width: 0;
   }
@@ -264,9 +275,9 @@
   .app .nav button,
   .app.sidebar-compact .nav button {
     display: flex;
-    min-height: 52px;
+    min-height: 44px;
     justify-content: center;
-    padding: 7px 5px;
+    padding: 5px;
     gap: 0;
     border-radius: 16px;
   }
@@ -296,6 +307,19 @@
   }
 }
 
+@keyframes sidebar-island-float {
+  0%,
+  100% {
+    box-shadow: 0 9px 24px rgb(60, 37, 43, 11%);
+    transform: translateY(1px);
+  }
+
+  50% {
+    box-shadow: 0 16px 34px rgb(60, 37, 43, 19%);
+    transform: translateY(-2px);
+  }
+}
+
 @include bp.reduced-motion {
   .app,
   .app .main,
@@ -305,6 +329,10 @@
   .app .nav-label,
   .app .side-label {
     transition: none;
+  }
+
+  .app .sidebar {
+    animation: none;
   }
 }
 
@@ -318,4 +346,34 @@
   .app.sidebar-compact .sidebar {
     inset-inline: 10px;
   }
+}
+body.app-is-hydrating [id$='PageRoot'] > :not(.ui-page-skeleton),
+body.app-is-hydrating #page-board > :not(.ui-page-skeleton) {
+  display: none !important;
+}
+
+.board-page > .ui-page-skeleton {
+  display: none;
+}
+
+body.app-is-hydrating .board-page > .ui-page-skeleton {
+  display: grid;
+}
+
+.skeleton-board-title,
+.skeleton-board-grid > i {
+  border-radius: var(--radius-lg);
+  background: var(--muted);
+}
+
+.skeleton-board-title {
+  width: min(300px, 62%);
+  height: 34px;
+}
+
+.skeleton-board-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  min-height: 460px;
 }

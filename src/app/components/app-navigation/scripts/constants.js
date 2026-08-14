@@ -33,13 +33,13 @@ export const NAVIGATION_PAGES = Object.freeze([
     name: 'board',
     label: 'Доска',
     title: 'Доска',
-    icon: '<rect x="3.5" y="4" width="17" height="14" rx="2"/><path d="m8 20 1.5-2h5L16 20M8 9h8M8 13h5"/>',
+    icon: '<rect x="3.5" y="4" width="17" height="14" rx="2"/><path d="m8 20 1.5-2h5L16 20"/><path d="m8 14.5.7-2.8 6.9-6.9 2.1 2.1-6.9 6.9-2.8.7Z"/><path d="m14.8 5.6 2.1 2.1"/>',
   },
   {
     name: 'settings',
     label: 'Профиль',
     title: 'Профиль',
     secondary: true,
-    icon: '<circle cx="12" cy="12" r="3.1"/><path d="M12 2.6v2.4M12 19v2.4M21.4 12H19M5 12H2.6M18.6 5.4l-1.7 1.7M7.1 16.9l-1.7 1.7M18.6 18.6l-1.7-1.7M7.1 7.1 5.4 5.4"/>',
+    icon: '<circle cx="12" cy="8" r="3.4"/><path d="M5.2 20c0-4 2.9-6.5 6.8-6.5s6.8 2.5 6.8 6.5"/>',
   },
 ]);

@@ -67,10 +67,9 @@
 
   function choose(option) {
     if (!openSelect || option.disabled) return;
-    const changed = openSelect.value !== option.value;
     openSelect.value = option.value;
     sync(openSelect);
-    if (changed) openSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    openSelect.dispatchEvent(new Event('change', { bubbles: true }));
     close({ focus: true });
   }
 

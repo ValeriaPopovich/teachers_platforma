@@ -1,0 +1,15 @@
+{
+  "extends": ["stylelint-config-recommended-scss", "stylelint-config-recommended-vue/scss"],
+  "rules": {
+    "declaration-property-value-disallowed-list": [
+      {
+        "border-radius": ["/^(?!var\\(|0$|inherit$).+/"],
+        "box-shadow": ["/^(?!var\\(|none$).+/"]
+      },
+      {
+        "severity": "warning",
+        "message": "Use a radius/shadow token (see docs/ANTI_AI_UI_MIGRATION_PLAN.md §4) instead of a raw value."
+      }
+    ]
+  }
+}

@@ -1,0 +1,278 @@
+@use '../../../../styles/tokens/breakpoints' as bp;
+
+.ui-modal-wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgb(22, 18, 27, 58%);
+  overscroll-behavior: contain;
+}
+
+.ui-modal-wrap--side {
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 16px;
+
+  .modal {
+    width: min(460px, calc(100vw - 48px));
+    max-width: none;
+    height: auto;
+    max-height: calc(100dvh - 32px);
+    border-radius: 24px;
+  }
+}
+
+.modal-content-stage {
+  display: contents;
+}
+
+.ui-modal-wrap:has(.modal-discard) .modal.modal--discard {
+  width: min(480px, 100%);
+  height: auto;
+  max-height: min(520px, calc(100dvh - 36px));
+}
+
+.modal-discard {
+  display: grid;
+  min-height: 360px;
+  align-content: center;
+  justify-items: center;
+  padding: 36px 28px;
+  text-align: center;
+}
+
+.modal-discard__icon {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  margin-bottom: 18px;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in sRGB, var(--danger) 11%, var(--panel));
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.modal-discard h2 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.modal-discard p {
+  max-width: 360px;
+  margin: 10px 0 24px;
+}
+
+.modal-discard__actions {
+  display: grid;
+  width: min(100%, 380px);
+  gap: 10px;
+}
+
+.modal-discard__actions .btn {
+  min-height: 48px;
+  border-radius: 15px;
+}
+
+/* Whole-modal enter/leave: backdrop fades, card slides in — no pop. */
+.ui-modal-enter-active,
+.ui-modal-leave-active {
+  transition: opacity 200ms ease;
+}
+
+.ui-modal-enter-active .modal,
+.ui-modal-leave-active .modal {
+  transition: transform 280ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+.ui-modal-enter-from,
+.ui-modal-leave-to {
+  opacity: 0;
+}
+
+/* Centered modals: gentle rise. */
+.ui-modal-enter-from .modal,
+.ui-modal-leave-to .modal {
+  transform: translateY(14px);
+}
+
+/* Side drawers: slide from the right edge. */
+.ui-modal-wrap--side.ui-modal-enter-from .modal,
+.ui-modal-wrap--side.ui-modal-leave-to .modal {
+  transform: translateX(100%);
+}
+
+.modal-content-flow-enter-active,
+.modal-content-flow-leave-active {
+  transition:
+    opacity 180ms ease,
+    transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-content-flow-enter-from {
+  opacity: 0;
+  transform: translateY(12px) scale(0.985);
+}
+
+.modal-content-flow-leave-to {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.99);
+}
+
+.lesson-form-modal {
+  background: linear-gradient(
+    180deg,
+    color-mix(in sRGB, var(--brand2) 3%, var(--panel)),
+    var(--panel)
+  );
+
+  .modal-head {
+    padding: 24px 28px 20px;
+  }
+
+  .modal-heading {
+    min-width: 0;
+  }
+
+  .modal-head h2 {
+    overflow: hidden;
+    font-size: 24px;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .modal-subtitle {
+    margin: 5px 0 0;
+    font-size: 13px;
+  }
+
+  .close {
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    box-shadow: 0 3px 10px rgb(0, 0, 0, 9%);
+  }
+
+  .modal-body {
+    padding: 22px 28px 28px;
+  }
+
+  .modal-foot {
+    padding: 18px 28px;
+  }
+
+  .field:not(:has(> input, > select, > textarea)) > label:not(.toggle-row) {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .field > input,
+  .field > select,
+  .field > textarea {
+    background: var(--panel2);
+    border-color: transparent;
+    border-radius: 16px;
+    box-shadow: 0 2px 7px rgb(0, 0, 0, 7%);
+  }
+
+  .member-chip {
+    border-radius: 999px;
+  }
+
+  .lesson-homework-card {
+    border-radius: 18px;
+    background: color-mix(in sRGB, var(--brand2) 4%, var(--panel));
+  }
+
+  .modal-foot .btn {
+    min-height: 44px;
+    border-radius: 15px;
+  }
+}
+
+@include bp.till(bp.$layout-desktop) {
+  .ui-modal-wrap--side {
+    align-items: flex-end;
+    padding: 0;
+
+    .modal {
+      position: relative;
+      width: 100%;
+      height: auto;
+      max-height: 92dvh;
+      padding-top: 18px;
+      border-radius: 38px 38px 0 0;
+    }
+
+    .modal::before {
+      content: '';
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      width: 44px;
+      height: 5px;
+      border-radius: 999px;
+      background: var(--color-border, var(--line));
+      transform: translateX(-50%);
+    }
+
+    .lesson-form-modal {
+      .close {
+        display: none;
+      }
+
+      .modal-head,
+      .modal-body,
+      .modal-foot {
+        padding-right: 18px;
+        padding-left: 18px;
+      }
+
+      .modal-head h2 {
+        font-size: 21px;
+      }
+
+      .modal-foot {
+        flex-wrap: wrap;
+      }
+
+      .modal-foot .btn {
+        flex: 1 1 120px;
+      }
+    }
+  }
+
+  .modal-discard {
+    min-height: min(360px, 70dvh);
+    padding: 30px 18px calc(24px + env(safe-area-inset-bottom));
+  }
+
+  /* On mobile every modal reads as a bottom sheet — slide up from below. */
+  .ui-modal-enter-from .modal,
+  .ui-modal-leave-to .modal,
+  .ui-modal-wrap--side.ui-modal-enter-from .modal,
+  .ui-modal-wrap--side.ui-modal-leave-to .modal {
+    transform: translateY(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-content-flow-enter-active,
+  .modal-content-flow-leave-active,
+  .ui-modal-enter-active,
+  .ui-modal-leave-active,
+  .ui-modal-enter-active .modal,
+  .ui-modal-leave-active .modal {
+    transition: none;
+  }
+}

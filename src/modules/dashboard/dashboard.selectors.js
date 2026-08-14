@@ -6,6 +6,9 @@ import {
 import { lessonDuration, lessonName, uniqueSessions } from '../schedule/schedule.selectors.js';
 
 const CONDUCTED_HIDDEN = ['cancelled', 'moved'];
+const DAY_MS = 86400000;
+// Всё-дневные дела не должны склеивать день в один кластер: длинные пункты живут отдельным слотом.
+const LONG_ITEM_MS = 4 * 3600000;
 
 function sessionBounds(state, lesson) {
   const start = new Date(lesson.date).getTime();
@@ -18,62 +21,137 @@ function eventBounds(event) {
 }
 
 function nextLabel(startMs, nowMs) {
-  const minutes = Math.round((startMs - nowMs) / 60000);
-  if (minutes <= 0) return '';
+  const minutes = Math.max(1, Math.round((startMs - nowMs) / 60000));
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
-  return `Ближайший через ${hours ? `${hours}ч ` : ''}${rest}м`;
+  return `Ближайший через ${hours ? `${hours}ч` : ''}${hours && rest ? ' ' : ''}${rest ? `${rest}м` : ''}`;
+}
+
+function gapLabel(minutes) {
+  if (minutes === null) return '';
+  if (minutes === 0) return 'Без перерыва';
+  if (minutes <= 30) return `Перерыв ${minutes} мин`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return `Окно ${[hours && `${hours} ч`, rest && `${rest} мин`].filter(Boolean).join(' ')}`;
+}
+
+function slotOverlapStats(group) {
+  if (group.items.length < 2) return { maxConcurrent: 1, overlapMinutes: 0 };
+
+  const deltas = new Map();
+  group.items.forEach((item) => {
+    deltas.set(item.start, (deltas.get(item.start) || 0) + 1);
+    deltas.set(item.end, (deltas.get(item.end) || 0) - 1);
+  });
+
+  let active = 0;
+  let maxConcurrent = 0;
+  let overlapMs = 0;
+  let previousTime = null;
+  [...deltas.entries()]
+    .sort(([timeA], [timeB]) => timeA - timeB)
+    .forEach(([time, delta]) => {
+      if (previousTime !== null && active > 1) overlapMs += time - previousTime;
+      active += delta;
+      maxConcurrent = Math.max(maxConcurrent, active);
+      previousTime = time;
+    });
+
+  return { maxConcurrent, overlapMinutes: Math.round(overlapMs / 60000) };
 }
 
 /**
  * Groups today's overlapping sessions into slots (interval merge) and marks the
  * current-time position. Two lessons overlap when `startA < endB && startB < endA`.
+ * ponytail: merge остаётся транзитивным (A↔B, B↔C склеиваются в один слот) — это
+ * терпимо для обычных занятий; всё, что длиннее LONG_ITEM_MS, вынесено в свой слот.
  */
 export function buildTimeline(state, now = new Date()) {
-  const today = localDay(now);
   const nowMs = now.getTime();
+  const dayStart = new Date(now).setHours(0, 0, 0, 0);
+  const dayEnd = dayStart + DAY_MS;
+  // Занятие, начавшееся вчера вечером, может идти прямо сейчас — берём и вчерашнюю дату тоже.
+  const days = new Set([localDay(new Date(dayStart - DAY_MS)), localDay(now)]);
+  const spansToday = (item) => item.end > dayStart && item.start < dayEnd;
 
   const sessions = uniqueSessions(state.lessons)
     .filter(
       (lesson) =>
-        String(lesson.date).slice(0, 10) === today && !CONDUCTED_HIDDEN.includes(lesson.status),
+        days.has(String(lesson.date).slice(0, 10)) && !CONDUCTED_HIDDEN.includes(lesson.status),
     )
     .map((lesson) => ({ lesson, ...sessionBounds(state, lesson) }))
-    .sort((a, b) => a.start - b.start);
+    .filter(spansToday);
 
   const events = (state.events || [])
-    .filter((event) => String(event.date).slice(0, 10) === today)
-    .map((event) => ({ event, ...eventBounds(event) }));
+    .filter((event) => days.has(String(event.date).slice(0, 10)))
+    .map((event) => ({ event, ...eventBounds(event) }))
+    .filter(spansToday);
   const items = [...sessions, ...events].sort((a, b) => a.start - b.start);
 
   const total = items.length;
   const done = items.filter((item) => item.end <= nowMs).length;
   const minutes = items.reduce((sum, item) => sum + (item.end - item.start) / 60000, 0);
   const next = items.find((item) => item.start > nowMs) || null;
+  const nextStart = next ? next.start : null;
 
+  const isLong = (item) => item.end - item.start >= LONG_ITEM_MS;
   const groups = [];
   items.forEach((session) => {
     const current = groups[groups.length - 1];
-    if (current && session.start < current.end) {
+    if (current && !current.hasLong && !isLong(session) && session.start < current.end) {
       current.items.push(session);
       current.end = Math.max(current.end, session.end);
     } else {
-      groups.push({ start: session.start, end: session.end, items: [session] });
+      groups.push({
+        start: session.start,
+        end: session.end,
+        items: [session],
+        hasLong: isLong(session),
+      });
     }
   });
 
-  const slots = groups.map((group) => ({
-    kind: 'slot',
-    time: formatTime(new Date(group.start)),
-    isPast: group.end <= nowMs,
-    lessons: group.items.map((session) => toTimelineItem(state, session, { next, nowMs })),
-  }));
+  // Окно считаем от самого позднего конца, а не от предыдущего слота: длинное дело
+  // может перекрывать несколько следующих слотов, и тогда паузы между ними нет.
+  let busyUntil = null;
+  const slots = groups.map((group) => {
+    const gapMinutes =
+      busyUntil !== null && group.start >= busyUntil
+        ? Math.round((group.start - busyUntil) / 60000)
+        : null;
+    busyUntil = busyUntil === null ? group.end : Math.max(busyUntil, group.end);
+    const activeCount = group.items.filter(
+      (item) => item.start <= nowMs && nowMs < item.end,
+    ).length;
 
-  const marker = { kind: 'now', time: formatTime(now) };
-  const insertAt = groups.findIndex((group) => group.start > nowMs);
+    return {
+      kind: 'slot',
+      time: formatTime(new Date(group.start)),
+      endTime: formatTime(new Date(group.end)),
+      isPast: group.end <= nowMs,
+      gapLabel: gapLabel(gapMinutes),
+      activeCount,
+      ...slotOverlapStats(group),
+      lessons: group.items.map((session) => toTimelineItem(state, session, { nextStart, nowMs })),
+    };
+  });
+
+  const active = items.filter((item) => item.start <= nowMs && nowMs < item.end);
   const timeline = [...slots];
-  if (insertAt === -1) timeline.push(marker);
-  else timeline.splice(insertAt, 0, marker);
+  if (items.length) {
+    const marker = {
+      kind: 'now',
+      time: formatTime(now),
+      activeCount: active.length,
+      remainingMinutes: active.length
+        ? Math.ceil((Math.min(...active.map((item) => item.end)) - nowMs) / 60000)
+        : 0,
+    };
+    const insertAt = groups.findIndex((group) => group.start > nowMs);
+    if (insertAt === -1) timeline.push(marker);
+    else timeline.splice(insertAt, 0, marker);
+  }
 
   return {
     timeline,
@@ -83,43 +161,57 @@ export function buildTimeline(state, now = new Date()) {
   };
 }
 
-function toTimelineItem(state, session, { next, nowMs }) {
+const STATUS_LABEL = {
+  next: 'Скоро',
+  in_progress: 'В процессе',
+  done: 'Проведено',
+  unconfirmed: 'Ждёт отчёта',
+  planned: 'Запланировано',
+};
+
+function toTimelineItem(state, session, { nextStart, nowMs }) {
+  const inProgress = session.start <= nowMs && nowMs < session.end;
+  const conducted = session.end <= nowMs;
+  // Одинаковый старт = все «Скоро», а не только первый в списке.
+  const isNext = nextStart !== null && session.start === nextStart;
+  const startTime = formatTime(new Date(session.start));
+  const endTime = formatTime(new Date(session.end));
+
+  let kind = 'planned';
+  if (inProgress) kind = 'in_progress';
+  else if (isNext) kind = 'next';
+  else if (conducted) kind = session.lesson?.status === 'unconfirmed' ? 'unconfirmed' : 'done';
+
   if (session.event) {
     return {
       id: session.event.id,
       name: session.event.title,
       type: 'event',
       duration: +session.event.duration || 60,
+      startTime,
+      endTime,
+      timeRange: `${startTime}–${endTime}`,
       topic: String(session.event.note || '').trim(),
-      kind: session === next ? 'next' : session.end <= nowMs ? 'done' : 'planned',
-      statusLabel:
-        session.end <= nowMs ? 'Завершено' : session === next ? 'Следующее' : 'Запланировано',
+      kind,
+      statusLabel: kind === 'done' ? 'Завершено' : STATUS_LABEL[kind],
     };
   }
+
   const { lesson } = session;
   const isGroup = Boolean(lesson.groupId);
-  const isNext = session === next;
-  const conducted = session.end <= nowMs;
-
-  let kind = 'planned';
-  if (isNext) kind = 'next';
-  else if (conducted) kind = lesson.status === 'unconfirmed' ? 'unconfirmed' : 'done';
-
-  const statusLabel = {
-    next: 'Следующее',
-    done: 'Проведено',
-    unconfirmed: 'Заполнить',
-    planned: 'Запланировано',
-  }[kind];
+  const statusLabel = STATUS_LABEL[kind];
 
   return {
     id: lesson.seriesId || lesson.id,
     name: lessonName(state, lesson),
     type: isGroup ? 'group' : 'individual',
     duration: lessonDuration(state, lesson),
+    startTime,
+    endTime,
+    timeRange: `${startTime}–${endTime}`,
     topic: String(lesson.topics || '').trim(),
     groupSize: isGroup
-      ? state.groups.find((group) => group.id === lesson.groupId)?.students?.length || 0
+      ? state.groups.find((group) => group.id === lesson.groupId)?.members?.length || 0
       : 0,
     kind,
     statusLabel,
@@ -142,20 +234,23 @@ export function buildAttention(state, now, retentionDays) {
     .map((lesson) => ({
       id: `fill:${lesson.seriesId || lesson.id}`,
       kind: 'fill',
-      title: 'Занятие не заполнено',
+      title: 'Заполнить занятие',
       subtitle: `${lessonName(state, lesson)} · ${formatDate(lesson.date, true)}`,
       actionLabel: 'Заполнить',
       lessonId: lesson.seriesId || lesson.id,
     }));
 
-  const payments = getPaymentAttentionRows(state, now).map((row) => ({
-    id: `pay:${row.student.id}`,
-    kind: 'pay',
-    title: row.label,
-    subtitle: row.student.name,
-    actionLabel: 'Принять оплату',
-    studentId: row.student.id,
-  }));
+  const payments = getPaymentAttentionRows(state, now)
+    .filter((row) => row.finance.debt > 0)
+    .map((row) => ({
+      id: `pay:${row.student.id}`,
+      kind: 'pay',
+      title: 'Долг',
+      subtitle: row.student.name,
+      actionLabel: 'Принять оплату',
+      studentId: row.student.id,
+      amountDue: row.finance.debt,
+    }));
 
   return [...unfilled, ...payments];
 }

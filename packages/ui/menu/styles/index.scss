@@ -11,7 +11,6 @@
     padding: 0;
     border: 0;
     border-radius: 9px;
-    color: var(--text);
     background: transparent;
     box-shadow: none;
     cursor: pointer;
@@ -20,9 +19,17 @@
     letter-spacing: 1px;
     line-height: 1;
 
+    // 32px is under the 44px touch-target minimum; grow the hit area on
+    // touch devices without changing the compact desktop/mouse footprint.
+    @media (hover: none) and (pointer: coarse) {
+      width: 44px;
+      min-width: 44px;
+      height: 44px;
+      min-height: 44px;
+    }
+
     &:hover,
     &[aria-expanded='true'] {
-      background: var(--panel2);
       box-shadow: none;
       transform: none;
     }
@@ -36,10 +43,8 @@
     display: grid;
     min-width: 190px;
     padding: 8px;
-    border: 1px solid var(--line);
     border-radius: 16px;
-    background: var(--panel);
-    box-shadow: 0 12px 30px rgb(36, 28, 31, 14%);
+    box-shadow: var(--card-shadow);
   }
 
   &-item {
@@ -47,16 +52,17 @@
     padding: 10px 12px;
     border: 0;
     border-radius: 9px;
-    color: var(--text);
     background: transparent;
     box-shadow: none;
+    cursor: pointer;
     font-size: var(--font-size-body);
     font-weight: 500;
     text-align: left;
+    transition: background-color 160ms ease;
 
     &:hover,
     &:focus-visible {
-      background: var(--panel2);
+      background: var(--muted);
       box-shadow: none;
       transform: none;
     }

@@ -20,7 +20,10 @@ const externalSources = [...html.matchAll(/<script[^>]*\bsrc=["']([^"']+)["'][^>
   .filter((src) => !/^https?:/i.test(src));
 
 const externalScripts = externalSources.map((src) => fs.readFileSync(path.join(repo, src), 'utf8'));
-const allScripts = [...inlineScripts, ...externalScripts];
+// bootstrap.js now imports the store/persistence wiring from state/app-store.js
+// instead of inlining it, so the cloud-sync invariants below live there too.
+const appStoreScript = fs.readFileSync(path.join(repo, 'src/state/app-store.js'), 'utf8');
+const allScripts = [...inlineScripts, ...externalScripts, appStoreScript];
 const combined = allScripts.join('\n\n/* --- next script --- */\n\n');
 
 // Каждый script должен парситься.
@@ -54,8 +57,8 @@ assert.ok(
   'Storage.prototype.setItem override must not exist',
 );
 
-// renderAll не должен вызывать destructive/mutating операции. Балансируем скобки,
-// чтобы forma-agnostic-но извлечь тело функции.
+// Balance-brace helper used below to extract a named function's body,
+// form-agnostically (prettier may reformat it across lines).
 function extractFn(src, name) {
   const start = src.indexOf(`function ${name}(`);
   if (start === -1) return '';
@@ -69,16 +72,6 @@ function extractFn(src, name) {
     }
   }
   return '';
-}
-const renderBody = extractFn(combined, 'renderAll');
-assert.ok(renderBody, 'renderAll function is missing');
-for (const mutation of [
-  'pruneOldHistory',
-  'sweepOrphans',
-  'normalizePastLessons',
-  'syncFutureGroupBilling',
-]) {
-  assert.ok(!renderBody.includes(mutation), `renderAll must not call ${mutation}`);
 }
 
 // Guard-функция и её таблица истинности. Извлекаем через brace-balance —

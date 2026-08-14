@@ -1,3 +1,5 @@
+import { migrateLegacyLedger } from '../state/migrations.js';
+import { CURRENT_SCHEMA_VERSION } from '../state/schema.js';
 import { validateReferential, validateStructural } from '../state/validate.js';
 export const MAX_BACKUP_BYTES = 10 * 1024 * 1024;
 const SAFE_ID = /^[A-Za-z0-9._:-]{1,128}$/;
@@ -8,7 +10,7 @@ export function makeBackup(data, { appVersion = 'unknown', now = () => new Date(
   return {
     app: 'teachers-platforma',
     appVersion,
-    schemaVersion: 1,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     exportedAt: now().toISOString(),
     data,
   };
@@ -102,7 +104,10 @@ export function validateBackup(obj) {
   errors.push(...structural.errors, ...referential.errors);
   return { ok: errors.length === 0, errors };
 }
-export function mergeImported(data, src, uid) {
+export function mergeImported(data, source, uid) {
+  // Бэкап может быть снят на старой схеме — приводим его к текущей книге учёта,
+  // иначе свёрнутый архив и списания из абонемента потеряют деньги при импорте.
+  const src = migrateLegacyLedger(source);
   const next = structuredClone(data),
     usedIds = new Set([
       ...['students', 'groups', 'lessons', 'events', 'payments'].flatMap((key) =>
@@ -182,18 +187,8 @@ export function mergeImported(data, src, uid) {
         : []),
     ];
   }
-  for (const [oldId, value] of Object.entries(src.financeArchive || {})) {
-    const id = studentMap.get(oldId) || oldId,
-      current = next.financeArchive[id] || {};
-    next.financeArchive[id] = {
-      packageBought: (+current.packageBought || 0) + (+value.packageBought || 0),
-      packageUsed: (+current.packageUsed || 0) + (+value.packageUsed || 0),
-      singleCharged: (+current.singleCharged || 0) + (+value.singleCharged || 0),
-      paidAmount: (+current.paidAmount || 0) + (+value.paidAmount || 0),
-    };
-  }
   return next;
 }
 export function replaceImported(currentData, src) {
-  return { nextData: structuredClone(src), recovery: structuredClone(currentData) };
+  return { nextData: migrateLegacyLedger(src), recovery: structuredClone(currentData) };
 }

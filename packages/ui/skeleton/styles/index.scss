@@ -1,0 +1,34 @@
+.ui-skeleton {
+  display: block;
+  max-width: 100%;
+  border-radius: var(--radius-lg, 10px);
+  background: linear-gradient(
+    100deg,
+    var(--muted) 20%,
+    color-mix(in sRGB, var(--muted-foreground) 12%, var(--muted)) 38%,
+    var(--muted) 56%
+  );
+  background-size: 220% 100%;
+  animation: ui-skeleton-shimmer 1.45s ease-in-out infinite;
+}
+
+.ui-skeleton--text {
+  border-radius: 999px;
+}
+
+.ui-skeleton--circle {
+  aspect-ratio: 1;
+  border-radius: 50%;
+}
+
+@keyframes ui-skeleton-shimmer {
+  to {
+    background-position-x: -220%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-skeleton {
+    animation: none;
+  }
+}

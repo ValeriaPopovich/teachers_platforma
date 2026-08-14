@@ -1,41 +1,38 @@
 import { UiIcon } from '@icons';
+import { UiHint } from '@ui';
 import { computed } from 'vue';
 
 import { lessonCountWord, money } from '../../../../../shared/format.js';
 
 export default {
   name: 'PaymentBalanceItem',
-  components: { UiIcon },
+  components: { UiHint, UiIcon },
   props: {
-    /** Строка расчёта: ученик, статус оплаты и прогресс абонемента. */
+    /** Строка расчёта: ученик, статус оплаты и план месяца. */
     row: { type: Object, required: true },
   },
   emits: ['pay'],
   setup(props, { emit }) {
     const student = computed(() => props.row.student);
-    const bought = computed(() => {
-      if (student.value.payType !== 'package') return 1;
-      const rawBought = props.row.progress?.bought || 0;
-      const used = props.row.progress?.used || 0;
-      return Math.max(1, Math.round(student.value.packageSize || rawBought || used));
-    });
-    const used = computed(() => props.row.progress?.used || (props.row.kind === 'ok' ? 1 : 0));
+    const plan = computed(() => props.row.plan || { lessons: 0, conducted: 0 });
+    const total = computed(() => Math.max(1, plan.value.lessons));
+    const used = computed(() => plan.value.conducted);
     const percent = computed(() =>
-      Math.max(4, Math.min(100, Math.round((used.value / bought.value) * 100))),
+      Math.max(4, Math.min(100, Math.round((used.value / total.value) * 100))),
     );
     const priceLabel = computed(() =>
       student.value.payType === 'package'
         ? `Абонемент · ${money(student.value.price)}`
         : `Разовые занятия · ${money(student.value.price)}`,
     );
-    const packageLabel = computed(() =>
-      student.value.payType === 'package' ? `Абонемент ${bought.value} занятий` : 'Разовая оплата',
-    );
-    const progressText = computed(() =>
-      student.value.payType === 'package'
-        ? `Проведено ${used.value} из ${bought.value} ${lessonCountWord(bought.value)}`
-        : props.row.label,
-    );
+    const packageLabel = 'Проведено в этом месяце';
+    const progressText = computed(() => {
+      const covered = +props.row.covered || 0;
+      if (props.row.kind === 'empty') return props.row.label;
+      return covered > 0
+        ? `Баланса хватает ещё на ${covered} ${lessonCountWord(covered)}`
+        : props.row.label;
+    });
     const stateText = computed(() => {
       const { kind, label, amountDue } = props.row;
       if (kind === 'ok' || !(amountDue > 0)) return label;
@@ -70,7 +67,7 @@ export default {
       progressText,
       paymentText,
       used,
-      bought,
+      total,
     };
   },
 };

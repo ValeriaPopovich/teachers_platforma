@@ -1,4 +1,4 @@
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 2;
 export function blankData() {
   return {
     students: [],
@@ -6,7 +6,6 @@ export function blankData() {
     lessons: [],
     events: [],
     payments: [],
-    financeArchive: {},
     topicLog: {},
     settings: {
       tutor: '',

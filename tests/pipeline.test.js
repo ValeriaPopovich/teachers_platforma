@@ -12,16 +12,16 @@ describe('loadState pipeline', () => {
     expect(r.envelope.data.settings.theme).toBe('light');
   });
 
-  it('legacy flat object оборачивается в envelope v1 без изменения содержимого', () => {
-    // fixture — legacy flat (без meta). Проверим, что финансовое содержимое сохраняется.
+  it('legacy flat object мигрирует в текущую схему без потери денег', () => {
+    // fixture — legacy flat (без meta). Архив расчётов разворачивается в платежи,
+    // поэтому их может стать больше, но ни один платёж не теряется.
     const r = loadState(JSON.stringify(baseline));
     expect(r.ok).toBe(true);
-    expect(r.envelope.meta.schemaVersion).toBe(1);
+    expect(r.envelope.meta.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(r.envelope.data.students).toHaveLength(baseline.students.length);
     expect(r.envelope.data.lessons).toHaveLength(baseline.lessons.length);
-    expect(r.envelope.data.payments).toHaveLength(baseline.payments.length);
-    // financeArchive сохранён точно
-    expect(r.envelope.data.financeArchive).toEqual(baseline.financeArchive);
+    expect(r.envelope.data.payments.length).toBeGreaterThanOrEqual(baseline.payments.length);
+    expect(r.envelope.data.financeArchive).toBeUndefined();
   });
 
   it('envelope v1 проходит без изменений', () => {

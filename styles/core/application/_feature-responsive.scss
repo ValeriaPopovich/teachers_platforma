@@ -7,7 +7,7 @@
     padding: 10px;
     background: var(--panel);
     border: 1px solid var(--line);
-    box-shadow: var(--shadow);
+    box-shadow: var(--card-shadow);
   }
 
   .schedule-page .calendar-days {
@@ -102,15 +102,15 @@
 }
 
 .notice {
-  background: rgb(231, 154, 37, 12%);
-  color: #94620d;
-  border: 1px solid rgb(231, 154, 37, 24%);
+  background: color-mix(in sRGB, var(--brand) 12%, transparent);
+  color: var(--brand-ink);
+  border: 1px solid color-mix(in sRGB, var(--brand) 24%, transparent);
 }
 
 .notice.success {
-  background: rgb(44, 166, 111, 11%);
+  background: color-mix(in sRGB, var(--ok) 11%, transparent);
   color: var(--ok);
-  border-color: rgb(44, 166, 111, 22%);
+  border-color: color-mix(in sRGB, var(--ok) 22%, transparent);
 }
 
 .today-done {
@@ -217,7 +217,7 @@
 
 .app-dialog-message {
   margin: 0;
-  color: var(--muted);
+  color: var(--text-muted);
   white-space: pre-line;
 }
 
@@ -236,10 +236,6 @@
 }
 
 .goal-remove-mobile-hint {
-  display: none;
-}
-
-.mobile-profile-actions {
   display: none;
 }
 
@@ -276,13 +272,9 @@
 
   .goal-remove-mobile-hint {
     display: block;
-    color: var(--muted);
+    color: var(--text-muted);
     font-size: var(--font-size-caption);
     margin-top: 7px;
-  }
-
-  .mobile-profile-actions {
-    display: block;
   }
 
   .topbar .actions .btn.keep-mobile {
@@ -334,16 +326,6 @@
   display: none;
 }
 
-@include bp.till(bp.$desktop) {
-  .schedule-page .calendar-weekday {
-    display: none;
-  }
-
-  .schedule-page .mobile-weekday {
-    display: inline;
-  }
-}
-
 @include bp.till(bp.$tablet) {
   .schedule-page .calendar-card {
     overflow: visible;
@@ -372,7 +354,7 @@
     padding: 14px;
     border-radius: 17px;
     background: var(--panel);
-    box-shadow: var(--shadow);
+    box-shadow: var(--card-shadow);
   }
 
   .schedule-page .day.has-events,
@@ -449,7 +431,7 @@
     display: block;
     padding: 2px 1px 5px;
     border: 0;
-    color: var(--muted);
+    color: var(--text-muted);
     font-size: var(--font-size-caption);
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -475,7 +457,7 @@
 
   .payment-balance-list .payment-card-row td::before {
     content: attr(data-label);
-    color: var(--muted);
+    color: var(--text-muted);
     font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
@@ -508,7 +490,7 @@
     display: block;
     border: 0;
     text-align: center;
-    color: var(--muted);
+    color: var(--text-muted);
   }
 
   .payment-history-list .row {
@@ -585,11 +567,11 @@
 .event {
   background: var(--panel2);
   border: 1px solid var(--line);
-  border-left: 3px solid var(--muted);
+  border-left: 3px solid var(--text-muted);
 }
 
 .event .sub {
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .day .event--planned {
@@ -712,7 +694,7 @@
 }
 
 .toggle-row small {
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 11px;
 }
 
@@ -748,65 +730,8 @@
 }
 
 .toggle-row > input:focus-visible + .toggle-ui {
-  outline: 3px solid var(--ring);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
-}
-
-.help-tip {
-  position: relative;
-  display: inline-grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  margin-left: 4px;
-  border-radius: 50%;
-  border: 1px solid var(--line);
-  background: var(--panel2);
-  color: var(--muted);
-  font-size: var(--font-size-caption);
-  font-weight: 800;
-  cursor: help;
-  vertical-align: middle;
-}
-
-.help-tip::after {
-  content: attr(data-tip);
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 9px);
-  z-index: 30;
-  width: min(280px, 75vw);
-  padding: 10px 11px;
-  border: 1px solid var(--line);
-  border-radius: 11px;
-  background: var(--text);
-  color: var(--panel);
-  box-shadow: var(--shadow);
-  font-size: var(--font-size-caption);
-  font-weight: 500;
-  line-height: 1.4;
-  opacity: 0;
-  visibility: hidden;
-  transform: translate(-50%, 5px);
-  transition: 0.16s;
-  pointer-events: none;
-}
-
-.help-tip:hover::after,
-.help-tip:focus::after {
-  opacity: 1;
-  visibility: visible;
-  transform: translate(-50%, 0);
-}
-
-.modal .help-tip::after {
-  left: 0;
-  transform: translate(0, 5px);
-}
-
-.modal .help-tip:hover::after,
-.modal .help-tip:focus::after {
-  transform: none;
 }
 
 .textarea-copy {
@@ -829,7 +754,7 @@
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--panel);
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 21px;
   line-height: 1;
   box-shadow: 0 4px 12px rgb(24, 22, 30, 8%);
@@ -863,16 +788,6 @@
   margin-top: 13px;
 }
 
-.report-history-action .help-tip::after {
-  left: 0;
-  transform: translate(0, 5px);
-}
-
-.report-history-action .help-tip:hover::after,
-.report-history-action .help-tip:focus::after {
-  transform: none;
-}
-
 .tutorial-modal {
   width: min(620px, 100%);
 }
@@ -894,7 +809,7 @@
 
 .tutorial-step-count {
   margin-top: 12px;
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: var(--font-size-caption);
   font-weight: 800;
   text-transform: uppercase;
@@ -919,7 +834,7 @@
 
 .tutorial-modal p {
   font-size: 15px;
-  color: var(--muted);
+  color: var(--text-muted);
   white-space: pre-line;
 }
 
@@ -956,22 +871,6 @@
 @include bp.till(bp.$tablet) {
   .sidebar-toggle {
     display: none !important;
-  }
-
-  .help-tip::after {
-    position: fixed;
-    left: 12px;
-    right: 12px;
-    bottom: 90px;
-    width: auto;
-    transform: translateY(5px);
-  }
-
-  .help-tip:hover::after,
-  .help-tip:focus::after,
-  .report-history-action .help-tip:hover::after,
-  .report-history-action .help-tip:focus::after {
-    transform: none;
   }
 }
 
@@ -1023,6 +922,21 @@
     radial-gradient(circle at 85% 80%, rgb(240, 107, 85, 16%), transparent 36%), var(--bg);
 }
 
+.auth-header {
+  position: absolute;
+  inset: 18px 20px auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 58px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in sRGB, var(--line) 82%, transparent);
+  border-radius: 20px;
+  background: color-mix(in sRGB, var(--panel) 92%, transparent);
+  box-shadow: 0 14px 40px rgb(34 28 45 / 10%);
+  backdrop-filter: blur(18px);
+}
+
 [hidden] {
   display: none !important;
 }
@@ -1048,7 +962,7 @@
 
 .auth-card p {
   margin: 0 0 20px;
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .auth-card .field {
@@ -1101,7 +1015,7 @@
   padding-top: 16px;
   border-top: 1px solid var(--line);
   text-align: center;
-  color: var(--muted);
+  color: var(--text-muted);
   font-weight: 500;
   font-size: 12.5px;
   text-decoration: none;
@@ -1143,13 +1057,13 @@
 }
 
 .auth-link:disabled {
-  color: var(--muted);
+  color: var(--text-muted);
   cursor: default;
   background: transparent;
 }
 
 .auth-sep {
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 13px;
   user-select: none;
 }
@@ -1159,7 +1073,7 @@
   padding: 10px 12px;
   border-radius: 11px;
   background: var(--panel2);
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: var(--font-size-caption);
   line-height: 1.45;
 }
@@ -1176,8 +1090,8 @@
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--panel);
-  color: var(--muted);
-  box-shadow: var(--shadow);
+  color: var(--text-muted);
+  box-shadow: var(--card-shadow);
   font-size: var(--font-size-caption);
 }
 
@@ -1236,7 +1150,7 @@
 }
 
 .cloud-conflict-help {
-  color: var(--muted);
+  color: var(--text-muted);
   line-height: 1.35;
 }
 
@@ -1257,6 +1171,18 @@
 }
 
 @include bp.till(bp.$tablet-small) {
+  .auth-gate {
+    align-items: start;
+    padding: 92px 12px 20px;
+    overflow-y: auto;
+  }
+
+  .auth-header {
+    position: fixed;
+    inset: 10px 12px auto;
+    z-index: 1;
+  }
+
   .auth-card {
     padding: 23px;
     border-radius: 22px;
@@ -1287,7 +1213,7 @@
   overflow: visible;
 }
 
-.stat > .help-tip {
+.stat > .ui-hint {
   position: absolute;
   top: 14px;
   right: 14px;
@@ -1310,7 +1236,7 @@
   cursor: pointer;
   border: 1px solid var(--line);
   background: var(--panel2);
-  color: var(--muted);
+  color: var(--text-muted);
   padding: 8px 13px;
   font-weight: 700;
   font-size: 13px;
@@ -1346,7 +1272,7 @@
 .analytics-monthly h3 {
   margin: 0 0 10px;
   font-size: var(--font-size-body);
-  color: var(--muted);
+  color: var(--text-muted);
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -1366,7 +1292,7 @@
 }
 
 .month-bar-label {
-  color: var(--muted);
+  color: var(--text-muted);
   text-transform: capitalize;
 }
 
@@ -1393,7 +1319,7 @@
 
 .analytics-empty {
   text-align: center;
-  color: var(--muted);
+  color: var(--text-muted);
   padding: 24px 10px;
 }
 

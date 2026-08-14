@@ -11,8 +11,12 @@
     ),
     linear-gradient(135deg, var(--color-brand-soft), var(--color-surface) 72%);
   border-color: color-mix(in sRGB, var(--color-brand) 22%, var(--color-border));
-  border-radius: 30px 30px 12px;
+  border-radius: 46px 88px 38px 72px / 58px 42px 74px 34px;
   box-shadow: 0 18px 38px color-mix(in sRGB, var(--color-brand) 10%, transparent);
+
+  &.ui-card--padding-lg {
+    padding-block: 18px;
+  }
 
   &::after {
     position: absolute;
@@ -35,13 +39,11 @@
   &__label {
     font-size: 15px;
     font-weight: 600;
-    color: var(--color-text-muted);
   }
 
   &__stats {
     margin-top: 5px;
     font-size: 14px;
-    color: var(--color-text-muted);
   }
 
   &__grid {
@@ -49,7 +51,7 @@
     grid-template-columns: minmax(0, 1.3fr) minmax(180px, 0.7fr);
     gap: 32px;
     align-items: center;
-    margin-top: 20px;
+    margin-top: 14px;
   }
 
   &__progress {
@@ -62,20 +64,17 @@
     display: block;
     font-size: 17px;
     font-weight: 600;
-    color: var(--color-text);
   }
 
   &__progress-text small {
     display: block;
     margin-top: 3px;
     font-size: 14px;
-    color: var(--color-text-muted);
   }
 
   &__income-cap {
     font-size: 14px;
     font-weight: 600;
-    color: var(--color-text-muted);
   }
 
   &__income-value {
@@ -83,27 +82,21 @@
     font-size: 26px;
     font-weight: 700;
     letter-spacing: -0.4px;
-    color: var(--color-text-strong);
   }
 
   &__goal-bar {
     height: 7px;
     overflow: hidden;
-    background: var(--color-neutral-chip);
-    border-radius: 999px;
   }
 
   &__goal-earned {
     display: block;
     height: 100%;
-    background: var(--color-brand);
-    border-radius: 999px;
   }
 
   &__income-hint {
     margin-top: 7px;
     font-size: 11.5px;
-    color: var(--color-text-muted);
   }
 }
 
@@ -120,13 +113,11 @@
 
   &__track {
     fill: none;
-    stroke: var(--color-neutral-chip);
     stroke-width: 8;
   }
 
   &__value {
     fill: none;
-    stroke: var(--color-success);
     stroke-width: 8;
     stroke-linecap: round;
     transition: stroke-dashoffset 0.8s ease;
@@ -141,19 +132,21 @@
     font-size: 24px;
     font-weight: 700;
     letter-spacing: -0.5px;
-    color: var(--color-text-strong);
 
     small {
       margin-left: 1px;
       transform: translateY(4px);
       font-size: 13px;
       font-weight: 600;
-      color: var(--color-text-muted);
     }
   }
 }
 
 @media (width <= 560px) {
+  .day-summary {
+    border-radius: 34px 54px 30px 46px / 42px 30px 48px 28px;
+  }
+
   .day-summary__grid {
     grid-template-columns: 1fr;
     gap: 18px;

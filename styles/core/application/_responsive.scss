@@ -260,7 +260,7 @@ body {
   grid-column: 1 / -1;
   padding: 22px 4px;
   text-align: center;
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .package-size-summary {
@@ -270,7 +270,7 @@ body {
 }
 
 .package-size-summary span {
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 13px;
 }
 
@@ -302,7 +302,7 @@ body {
 .package-month-item small {
   display: block;
   margin-top: 3px;
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .package-month-item strong {
@@ -372,14 +372,14 @@ body {
   flex: 0 0 auto;
   width: 18px;
   height: 18px;
-  border: 2px solid var(--muted);
+  border: 2px solid var(--text-muted);
   border-radius: 6px;
   transition: 0.18s ease;
 }
 
 .report-include-toggle input:checked + .report-toggle-icon {
   border-color: transparent;
-  background: linear-gradient(135deg, #ff706c, #ef3f91);
+  background: linear-gradient(135deg, var(--brand), var(--brand2));
   box-shadow: 0 5px 12px rgb(239, 63, 145, 24%);
 }
 
@@ -395,7 +395,7 @@ body {
 }
 
 .report-toggle-state {
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: var(--font-size-caption);
   font-weight: 800;
   white-space: nowrap;

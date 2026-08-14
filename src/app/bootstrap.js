@@ -1,3 +1,5 @@
+import '../../styles/design-system.css';
+
 import {
   MAX_BACKUP_BYTES,
   makeBackup,
@@ -7,112 +9,76 @@ import {
   validateBackup,
   validateBackupSize,
 } from '../domain/backup.js';
-import { createBrowserPersistence } from '../state/persistence.js';
 import { blankData } from '../state/schema.js';
-import { createStore } from '../state/store.js';
-import { validateReferential, validateStructural } from '../state/validate.js';
+import { persistence, persistenceState, store, uid } from '../state/app-store.js';
 import {
   normalizePastLessons,
-  pruneOldHistory,
+  pruneOldEvents,
   syncFutureGroupBilling,
 } from '../state/maintenance.js';
 import { extendAllSchedules } from '../modules/schedule/schedule.domain.js';
-import { createStudentsService } from '../modules/students/students.service.js';
-import { createStudentsView } from '../modules/students/students.view.js';
-import { createScheduleService } from '../modules/schedule/schedule.service.js';
-import { createScheduleView } from '../modules/schedule/schedule.view.js';
-import { createPaymentsService } from '../modules/payments/payments.service.js';
-import { createPaymentsView } from '../modules/payments/payments.view.js';
 import {
   lessonName,
   lessonDuration,
   uniqueSessions,
 } from '../modules/schedule/schedule.selectors.js';
-import { createReportsView } from '../modules/reports/reports.view.js';
-import { createSettingsService } from '../modules/settings/settings.service.js';
-import { createSettingsView } from '../modules/settings/settings.view.js';
-import { createDashboardView } from '../modules/dashboard/dashboard.view.js';
+import { settingsService } from '../modules/settings/settings.service.js';
 import { $, $$ } from '../shared/dom.js';
-import { createToast } from '../shared/toast.js';
-import { createDialog } from '../shared/dialog.js';
-import { createModalManager } from '../shared/modal.js';
+import { dialog, modal, toast } from '../shared/app-ui.js';
 import { formatTime, localDay } from '../shared/format.js';
 import './mount-vue-islands.js';
+import {
+  ACTIVE_PAGE_STORAGE_KEY,
+  DEFAULT_PAGE,
+  pageFromPath,
+  pagePath,
+  resolveInitialPage,
+  SPA_REDIRECT_STORAGE_KEY,
+} from './navigation-state.js';
 
-const STORAGE_KEY = 'tutorCabinet_v1';
-const RETENTION_DAYS = 45;
-const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-const toast = createToast();
-const dialog = createDialog();
-const modal = createModalManager(document, { ask: dialog.ask });
-const persistence = createBrowserPersistence({
-  key: STORAGE_KEY,
-  onPersist: (raw) => window.tutorCloud?.queueSave?.(raw),
-});
-const loaded = persistence.load();
-const store = createStore(loaded.ok ? loaded.envelope.data : blankData(), {
-  validate(candidate) {
-    const structural = validateStructural(candidate);
-    return structural.ok ? validateReferential(candidate) : structural;
-  },
-});
-let persistenceEnabled = loaded.ok;
-if (!loaded.ok)
-  console.error(
-    `Local state rejected at ${loaded.stage}; the last copy was not overwritten.`,
-    loaded.errors,
-  );
+// The sidebar shell (theme/collapse buttons) lives outside every Vue page
+// root, so it stays wired here rather than owned by SettingsPage.
+function applySidebarChrome() {
+  const isCompact = !!store.getState().settings.sidebarCompact;
+  const isDark = store.getState().settings.theme === 'dark';
+  const sidebarToggle = $('#sidebarToggle');
+  if (!sidebarToggle) return;
+  sidebarToggle.setAttribute('aria-expanded', String(!isCompact));
+  sidebarToggle.setAttribute('aria-label', isCompact ? 'Открыть меню' : 'Закрыть меню');
+  sidebarToggle.title = isCompact ? 'Открыть меню' : 'Закрыть меню';
+  $$('[data-theme-icon]').forEach((icon) => {
+    icon.textContent = isDark ? '☀' : '☾';
+  });
+  $$('[data-theme-toggle]').forEach((button) => {
+    const label = isDark ? 'Включить светлую тему' : 'Включить тёмную тему';
+    button.setAttribute('aria-label', label);
+    button.title = label;
+  });
+}
+$$('[data-theme-toggle]').forEach((button) =>
+  button.addEventListener('click', settingsService.toggleTheme),
+);
+$('#sidebarToggle')?.addEventListener('click', settingsService.toggleSidebar);
+store.subscribe(applySidebarChrome);
+applySidebarChrome();
 
-const studentsService = createStudentsService({ store, uid });
-const scheduleService = createScheduleService({ store, uid });
-const paymentsService = createPaymentsService({ store, uid });
-let scheduleView;
-let paymentsView;
-const scheduleBridge = {
-  openNewLesson: (...args) => scheduleView?.openNewLesson(...args),
-  openLesson: (...args) => scheduleView?.openLesson(...args),
-  deleteLesson: (...args) => scheduleView?.deleteLesson(...args),
-};
-const paymentsBridge = {
-  openPayment: (...args) => paymentsView?.openPayment(...args),
-};
-const studentsView = createStudentsView({
-  store,
-  service: studentsService,
-  modal,
-  dialog,
-  toast,
-  schedule: scheduleBridge,
-  payments: paymentsBridge,
-});
-scheduleView = createScheduleView({ store, service: scheduleService, modal, dialog, toast });
-paymentsView = createPaymentsView({ store, service: paymentsService, modal, dialog, toast });
-const settingsService = createSettingsService({ store });
-const settingsView = createSettingsView({ store, service: settingsService, toast });
-const dashboardView = createDashboardView({
-  store,
-  openLesson: (id) => scheduleView.openLesson(id),
-  openEvent: (id) => scheduleView.openEvent(id),
-  openPayment: (studentId) => paymentsView.openPayment(studentId),
-  retentionDays: RETENTION_DAYS,
-});
-const reportsView = createReportsView({ store, toast, dialog });
+const availablePages = new Set($$('#nav [data-page]').map((item) => item.dataset.page));
 
-store.subscribe((nextState, actionName) => {
-  if (!persistenceEnabled) return;
-  const result = persistence.save(nextState);
-  if (!result.ok) console.error(`Persistence rejected action "${actionName}".`, result.errors);
-});
-store.subscribe(() => renderAll());
-
-function setPage(name) {
+function setPage(name, { historyMode = 'push' } = {}) {
+  if (!availablePages.has(name)) return;
   $$('.page').forEach((page) => page.classList.toggle('active', page.id === `page-${name}`));
-  $$('#nav [data-page]').forEach((button) =>
-    button.classList.toggle('active', button.dataset.page === name),
-  );
-  sessionStorage.setItem('tutorCabinet_activePage', name);
+  $$('#nav [data-page]').forEach((button) => {
+    const isActive = button.dataset.page === name;
+    button.classList.toggle('active', isActive);
+    if (isActive) button.setAttribute('aria-current', 'page');
+    else button.removeAttribute('aria-current');
+  });
+  sessionStorage.setItem(ACTIVE_PAGE_STORAGE_KEY, name);
+  const nextPath = pagePath(name);
+  if (historyMode !== 'none' && window.location.pathname !== nextPath) {
+    window.history[historyMode === 'replace' ? 'replaceState' : 'pushState'](null, '', nextPath);
+  }
   window.dispatchEvent(new CustomEvent('app:page-change', { detail: { page: name } }));
-  renderAll();
 }
 
 $('#nav')?.addEventListener('click', (event) => {
@@ -120,6 +86,13 @@ $('#nav')?.addEventListener('click', (event) => {
   if (name) {
     setPage(name);
   }
+});
+window.addEventListener('app:navigate-request', (event) => {
+  if (event.detail?.page) setPage(event.detail.page);
+});
+window.addEventListener('popstate', () => {
+  const page = pageFromPath(window.location.pathname);
+  setPage(page || DEFAULT_PAGE, { historyMode: page ? 'none' : 'replace' });
 });
 document.addEventListener('click', (event) => {
   const name = event.target.closest('[data-page-go]')?.dataset.pageGo;
@@ -142,7 +115,6 @@ function exportBackup() {
   );
   toast('Резервная копия скачана');
 }
-$('#backupBtn')?.addEventListener('click', exportBackup);
 $('#exportBtn')?.addEventListener('click', exportBackup);
 let pendingImport = null;
 $('#importFile')?.addEventListener('change', async (event) => {
@@ -183,7 +155,7 @@ $$('[data-import-mode]').forEach((button) =>
         persistence.saveRecovery(result.recovery);
         store.replace(result.nextData, 'backup:replace');
       } else store.replace(mergeImported(store.getState(), pendingImport, uid), 'backup:merge');
-      persistenceEnabled = true;
+      persistenceState.enabled = true;
       pendingImport = null;
       modal.closeAll();
       toast('Резервная копия загружена');
@@ -207,22 +179,7 @@ $('#clearBtn')?.addEventListener('click', async () => {
   toast('Данные удалены');
 });
 
-function renderAll() {
-  settingsView.render();
-  dashboardView.render();
-  studentsView.render();
-  scheduleView.render();
-  paymentsView.render();
-  reportsView.render();
-}
-
 document.addEventListener('click', async (event) => {
-  const open = event.target.closest('[data-open]')?.dataset.open;
-  if (open === 'student') studentsView.openNewStudent();
-  if (open === 'group') studentsView.openNewGroup();
-  if (open === 'lesson') scheduleView.openNewLesson();
-  if (open === 'event') scheduleView.openEvent();
-  if (open === 'payment') paymentsView.openPayment();
   if (event.target.closest('[data-close]')) await modal.requestClose();
 });
 document.addEventListener('keydown', (event) => {
@@ -276,7 +233,7 @@ function runMaintenance() {
     let next = extendAllSchedules(store.getState(), { uid });
     next = normalizePastLessons(next, Date.now(), (lesson) => lessonDuration(next, lesson)).data;
     next = syncFutureGroupBilling(next).data;
-    next = pruneOldHistory(next, RETENTION_DAYS).data;
+    next = pruneOldEvents(next).data;
     if (JSON.stringify(next) !== JSON.stringify(store.getState()))
       store.replace(next, 'maintenance:bootstrap');
   } catch (error) {
@@ -287,7 +244,10 @@ function runMaintenance() {
 const notified = new Set();
 setInterval(() => {
   const minutes = +store.getState().settings.reminder || 0;
-  if (!minutes || Notification.permission !== 'granted') return;
+  // Notification нет в незащищённом контексте и на части мобильных браузеров —
+  // без проверки интервал падал бы с ReferenceError каждые 30 секунд.
+  if (!minutes || typeof Notification === 'undefined' || Notification.permission !== 'granted')
+    return;
   const now = Date.now();
   uniqueSessions(store.getState().lessons)
     .filter((lesson) => lesson.status === 'planned')
@@ -304,8 +264,14 @@ setInterval(() => {
 }, 30000);
 
 runMaintenance();
-const savedPage = sessionStorage.getItem('tutorCabinet_activePage');
-const availablePages = new Set($$('#nav [data-page]').map((item) => item.dataset.page));
-if (savedPage && availablePages.has(savedPage)) setPage(savedPage);
-else renderAll();
+const redirectedPath = sessionStorage.getItem(SPA_REDIRECT_STORAGE_KEY);
+if (redirectedPath) {
+  sessionStorage.removeItem(SPA_REDIRECT_STORAGE_KEY);
+  const redirectedUrl = new URL(redirectedPath, window.location.origin);
+  if (pageFromPath(redirectedUrl.pathname)) {
+    window.history.replaceState(null, '', redirectedUrl);
+  }
+}
+const initialPage = resolveInitialPage(window.location.pathname, window.location.hash);
+setPage(availablePages.has(initialPage) ? initialPage : DEFAULT_PAGE, { historyMode: 'replace' });
 if (!store.getState().settings.tutor) modal.open('onboardingModal');

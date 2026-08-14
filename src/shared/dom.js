@@ -1,3 +1,7 @@
+export const LAYOUT_DESKTOP_BREAKPOINT = 1024;
+export const isMobileLayout = () =>
+  window.matchMedia(`(width <= ${LAYOUT_DESKTOP_BREAKPOINT}px)`).matches;
+
 export const $ = (selector, root = document) => root.querySelector(selector);
 export const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 

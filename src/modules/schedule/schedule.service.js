@@ -1,5 +1,6 @@
 import { existingLessonOwnerPatch, recurringScheduleKey } from './schedule.domain.js';
 import { groupLessonRecords } from './schedule.selectors.js';
+import { store as appStore, uid as appUid } from '../../state/app-store.js';
 
 function syncLinkedPayment(draft, lesson, { paid, amount, uid, now }) {
   const linked = draft.payments.filter((payment) => payment.lessonId === lesson.id);
@@ -9,16 +10,16 @@ function syncLinkedPayment(draft, lesson, { paid, amount, uid, now }) {
     if (existing) {
       existing.studentId = lesson.studentId;
       existing.amount = +amount || +lesson.amount || 0;
-      existing.date = String(lesson.date).slice(0, 10);
-      existing.billingType = 'single';
+      // Полная дата-время занятия (локальная), а не только день: обрезка до
+      // 10 символов парсилась как UTC-полночь и в западных TZ уезжала на день.
+      existing.date = String(lesson.date);
     } else {
       draft.payments.push({
         id: uid(),
         studentId: lesson.studentId,
         amount: +amount || +lesson.amount || 0,
-        date: String(lesson.date).slice(0, 10),
+        date: String(lesson.date),
         createdAt: now(),
-        billingType: 'single',
         lessonId: lesson.id,
         note: 'Оплата занятия',
       });
@@ -90,14 +91,17 @@ function syncRecurringExclusion(draft, lesson) {
 }
 
 function baseLesson(input, student, ownerPatch, id) {
+  const lessonKind = input.lessonKind || 'oneoff';
   return {
     id,
     ...ownerPatch,
     studentId: student.id,
     date: input.date,
+    duration: +input.duration || 60,
     status: input.status || 'planned',
-    lessonKind: input.lessonKind || 'oneoff',
-    amount: +input.amount || +student.price || 0,
+    lessonKind,
+    // Цена живёт в занятии: поднятие тарифа в карточке не переписывает историю.
+    amount: lessonKind === 'trial' ? 0 : +input.amount || +student.price || 0,
     topics: input.topics || '',
     homework: input.homework || '',
     comment: input.comment || '',
@@ -132,6 +136,13 @@ export function createScheduleService({ store, uid, now = () => Date.now() }) {
         code: 'OWNER_CHANGE',
         message:
           'Групповое занятие нельзя превратить в индивидуальное и наоборот. Создайте новое занятие.',
+      };
+    }
+    if (existing && input.lessonKind !== (existing.lessonKind || 'oneoff')) {
+      return {
+        ok: false,
+        code: 'LESSON_KIND_CHANGE',
+        message: 'Тип существующего занятия изменить нельзя.',
       };
     }
     const group = targetType === 'g' ? state.groups.find((item) => item.id === targetId) : null;
@@ -174,25 +185,12 @@ export function createScheduleService({ store, uid, now = () => Date.now() }) {
               ? 'paid_missed'
               : 'missed';
         }
-        if (member.payType === 'package') {
-          const oneoff = (input.lessonKind || 'oneoff') === 'oneoff';
-          if (oneoff && input.packageOneoffBilling === 'extra_paid')
-            syncLinkedPayment(draft, lesson, { paid: true, amount: lesson.amount, uid, now });
-          else if (oneoff && input.packageOneoffBilling === 'extra_unpaid') {
-            lesson.payment = 'unpaid';
-            draft.payments = draft.payments.filter((payment) => payment.lessonId !== lesson.id);
-          } else {
-            lesson.payment =
-              input.lessonPaymentChoice === 'not_charged' ? 'not_charged' : 'package';
-            draft.payments = draft.payments.filter((payment) => payment.lessonId !== lesson.id);
-          }
-        } else
-          syncLinkedPayment(draft, lesson, {
-            paid: input.lessonPaymentChoice === 'paid',
-            amount: lesson.amount,
-            uid,
-            now,
-          });
+        syncLinkedPayment(draft, lesson, {
+          paid: input.lessonPaymentChoice === 'paid' && lesson.amount > 0,
+          amount: lesson.amount,
+          uid,
+          now,
+        });
         if (input.previousHomework === 'yes')
           applyPreviousHomeworkGrade(draft, studentId, input.date, input.homeworkGrade);
         carryNextNote(draft, studentId, input.date, input.nextNote);
@@ -209,7 +207,9 @@ export function createScheduleService({ store, uid, now = () => Date.now() }) {
           if (group) moved.seriesId = movedSeriesId;
           moved.date = input.movedTo;
           moved.status = 'planned';
-          moved.lessonKind = 'oneoff';
+          // Перенос наследует тип и цену оригинала: регулярное занятие не должно
+          // превращаться в разовое и выпадать из плана месяца.
+          moved.payment = 'unpaid';
           moved.reportFilled = false;
           moved.manualEdited = true;
           moved.movedFrom = source.id;
@@ -273,3 +273,5 @@ export function createScheduleService({ store, uid, now = () => Date.now() }) {
 
   return { saveLesson, removeLesson, saveEvent, removeEvent };
 }
+
+export const scheduleService = createScheduleService({ store: appStore, uid: appUid });

@@ -1,12 +1,9 @@
 <script src="./scripts/index.js" />
 
 <template>
-  <div :class="rootClass">
-    <template v-if="showDetails">
-      <span aria-hidden="true">⌕</span>
-      <b>Группы не найдены</b>
-      <p>Попробуйте изменить поисковый запрос</p>
+  <UiEmptyState :title="content.title" :description="content.description" compact>
+    <template v-if="reason === 'initial'" #action>
+      <UiButton variant="secondary" @click="onActionClick">{{ content.action }}</UiButton>
     </template>
-    <template v-else>Групп пока нет</template>
-  </div>
+  </UiEmptyState>
 </template>

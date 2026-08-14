@@ -9,14 +9,14 @@
     @focusin="show"
     @focusout="hide"
   >
-    <slot />
+    <slot :tooltip-id="tooltipId" />
   </span>
   <Teleport to="body">
     <Transition name="ui-tooltip">
       <span
         v-if="isVisible"
         :id="tooltipId"
-        class="ui-tooltip"
+        class="ui-tooltip text-primary-foreground"
         role="tooltip"
         :style="tooltipStyle"
       >

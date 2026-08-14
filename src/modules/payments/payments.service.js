@@ -1,4 +1,4 @@
-import { finances } from './finances.js';
+import { store as appStore, uid as appUid } from '../../state/app-store.js';
 
 export function createPaymentsService({ store, uid, now = () => Date.now() }) {
   function recordPayment(input) {
@@ -6,6 +6,8 @@ export function createPaymentsService({ store, uid, now = () => Date.now() }) {
     if (!student) return { ok: false, code: 'STUDENT_NOT_FOUND', message: 'Выберите ученика.' };
     const amount = +input.amount || 0;
     if (amount <= 0) return { ok: false, code: 'INVALID_AMOUNT', message: 'Введите сумму оплаты.' };
+    // Платёж — это просто деньги на баланс. Сколько занятий он покроет, решает
+    // расписание: см. coveredLessons в payments.selectors.js.
     const payment = {
       id: input.id || uid(),
       studentId: student.id,
@@ -13,24 +15,7 @@ export function createPaymentsService({ store, uid, now = () => Date.now() }) {
       amount,
       note: String(input.note || '').trim(),
       createdAt: input.createdAt || now(),
-      billingType: student.payType === 'package' ? 'package' : 'single',
     };
-    if (student.payType === 'package') {
-      const price = +student.price || 0;
-      if (!price)
-        return {
-          ok: false,
-          code: 'PRICE_REQUIRED',
-          message: 'Сначала укажите стоимость одного занятия в карточке ученика.',
-        };
-      const paidBefore = +finances(store.getState(), student.id).paid || 0;
-      const creditBefore = ((paidBefore % price) + price) % price;
-      const combined = creditBefore + amount;
-      payment.packageLessons = amount / price;
-      payment.priceAtPayment = price;
-      payment.coveredLessons = Math.floor(combined / price + 1e-9);
-      payment.creditAfter = Math.round(combined % price);
-    }
     store.update(input.id ? 'payments:update' : 'payments:record', (draft) => {
       if (input.id) {
         const index = draft.payments.findIndex((item) => item.id === input.id);
@@ -55,3 +40,5 @@ export function createPaymentsService({ store, uid, now = () => Date.now() }) {
 
   return { recordPayment, removePayment };
 }
+
+export const paymentsService = createPaymentsService({ store: appStore, uid: appUid });

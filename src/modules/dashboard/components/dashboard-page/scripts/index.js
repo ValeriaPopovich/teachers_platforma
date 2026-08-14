@@ -1,11 +1,17 @@
-import { UiButton, UiPageLayout } from '@ui';
+import { UiIcon } from '@icons';
+import { UiButton, UiEmptyState, UiPageLayout } from '@ui';
 import { computed } from 'vue';
 
 import { lessonCountWord } from '../../../../../shared/format.js';
+import { useMinuteNow } from '../../../../../shared/minute-clock.js';
+import { RETENTION_DAYS } from '../../../../../state/app-store.js';
+import { useAppState } from '../../../../../state/use-app-state.js';
+import { openNewLesson } from '../../../../schedule/schedule-ui.js';
+import { openNewStudent } from '../../../../students/students-ui.js';
+import { buildDashboard } from '../../../dashboard.selectors.js';
 import AttentionPanel from '../../attention-panel/index.vue';
 import DaySummary from '../../day-summary/index.vue';
 import DayTimeline from '../../day-timeline/index.vue';
-import { useDashboardBridge } from './composables/index.js';
 
 function hoursWord(hours) {
   const mod10 = hours % 10;
@@ -17,9 +23,21 @@ function hoursWord(hours) {
 
 export default {
   name: 'DashboardPage',
-  components: { AttentionPanel, DaySummary, DayTimeline, UiButton, UiPageLayout },
+  components: {
+    AttentionPanel,
+    DaySummary,
+    DayTimeline,
+    UiButton,
+    UiEmptyState,
+    UiIcon,
+    UiPageLayout,
+  },
   setup() {
-    const { model } = useDashboardBridge();
+    const state = useAppState();
+    const now = useMinuteNow();
+    const model = computed(() =>
+      buildDashboard(state.value, { now: now.value, retentionDays: RETENTION_DAYS }),
+    );
 
     const statsLabel = computed(() => {
       const { lessons, hours } = model.value.stats;
@@ -27,6 +45,13 @@ export default {
       return `${lessons} ${lessonCountWord(lessons)} · ${hours} ${hoursWord(hours)} практики`;
     });
 
-    return { model, statsLabel };
+    const hasStudents = computed(() => state.value.students.length > 0);
+    return {
+      hasStudents,
+      model,
+      onAddLessonButtonClick: () => openNewLesson(),
+      openNewStudent,
+      statsLabel,
+    };
   },
 };

@@ -36,11 +36,19 @@ function lessonInput(status) {
     status,
     lessonKind: 'regular',
     amount: 1000,
+    duration: 45,
     lessonPaymentChoice: 'package',
   };
 }
 
 describe('schedule service recurring exclusions', () => {
+  it('сохраняет длительность конкретного занятия', () => {
+    const { store, service } = setup();
+    service.saveLesson(lessonInput('planned'));
+
+    expect(store.getState().lessons[0].duration).toBe(45);
+  });
+
   it('при отмене связывает исключение с исходным слотом расписания', () => {
     const { store, service } = setup();
     service.saveLesson(lessonInput('cancelled'));

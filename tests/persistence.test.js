@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createLocalPersistence, RECOVERY_KEY } from '../src/state/persistence.js';
-import { blankData } from '../src/state/schema.js';
+import { blankData, CURRENT_SCHEMA_VERSION } from '../src/state/schema.js';
 
 function memoryStorage(initial = {}) {
   const values = new Map(Object.entries(initial));
@@ -34,7 +34,7 @@ describe('local persistence boundary', () => {
     const result = persistence.save(blankData());
     expect(result.ok).toBe(true);
     expect(JSON.parse(storage.value('app')).meta).toEqual({
-      schemaVersion: 1,
+      schemaVersion: CURRENT_SCHEMA_VERSION,
       updatedAt: '2026-08-09T10:00:00.000Z',
     });
     expect(onPersist).toHaveBeenCalledWith(storage.value('app'));

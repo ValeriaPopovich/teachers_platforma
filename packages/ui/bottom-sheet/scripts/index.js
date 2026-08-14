@@ -1,12 +1,17 @@
 import { nextTick } from 'vue';
 
+import UiButton from '../../button/index.vue';
+
 let sheetSequence = 0;
 
 export default {
   name: 'UiBottomSheet',
+  components: { UiButton },
   props: {
     open: { type: Boolean, default: false },
     title: { type: String, required: true },
+    cancelLabel: { type: String, default: 'Отмена' },
+    showCancel: { type: Boolean, default: true },
   },
   emits: ['close'],
   data() {

@@ -2,6 +2,10 @@ import { UiIcon } from '@icons';
 import { UiBadge, UiCard, UiMenu, UiTooltip } from '@ui';
 import { computed } from 'vue';
 
+import { dialog, toast } from '../../../../../shared/app-ui.js';
+import { openPaymentForm } from '../../../../payments/index.js';
+import { studentsService } from '../../../students.service.js';
+import { openEditStudent, openStudentProfile } from '../../../students-ui.js';
 import { STUDENT_CARD_MENU_ITEMS, STUDENT_PAYMENT_BADGE_VARIANTS } from './constants.js';
 
 export default {
@@ -31,6 +35,32 @@ export default {
       event.stopPropagation();
     }
 
+    function onCardClick() {
+      openStudentProfile(studentId.value);
+    }
+
+    function onAddLessonLinkClick(event) {
+      event.stopPropagation();
+      openEditStudent(studentId.value);
+    }
+
+    async function onMenuSelect(action) {
+      if (action === 'edit') openEditStudent(studentId.value);
+      if (action === 'payment') openPaymentForm(studentId.value);
+      if (action === 'delete') {
+        if (
+          !(await dialog.ask(
+            `Удалить ученика «${studentName.value}», его занятия и платежи? Это действие нельзя отменить.`,
+            'Удаление ученика',
+            'Удалить',
+          ))
+        )
+          return;
+        studentsService.removeStudent(studentId.value);
+        toast('Ученик удалён');
+      }
+    }
+
     return {
       addVideoCallLabel,
       badgeVariant,
@@ -39,6 +69,9 @@ export default {
       hasLessonUrl,
       handleInteractiveClick,
       menuItems,
+      onAddLessonLinkClick,
+      onCardClick,
+      onMenuSelect,
       openCardLabel,
       optionsLabel,
       paymentClass,

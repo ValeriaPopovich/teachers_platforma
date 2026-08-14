@@ -7,7 +7,7 @@ import {
   replaceImported,
   validateBackupSize,
 } from '../src/domain/backup.js';
-import { blankData } from '../src/state/schema.js';
+import { blankData, CURRENT_SCHEMA_VERSION } from '../src/state/schema.js';
 
 let counter = 0;
 const uid = () => `id-${++counter}`;
@@ -21,7 +21,7 @@ describe('makeBackup / unwrapBackup', () => {
     const data = blankData();
     const b = makeBackup(data, { appVersion: '0.1.0', now: () => new Date('2026-08-09') });
     expect(b.app).toBe('teachers-platforma');
-    expect(b.schemaVersion).toBe(1);
+    expect(b.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(b.appVersion).toBe('0.1.0');
     expect(unwrapBackup(b)).toEqual(data);
   });
@@ -121,32 +121,20 @@ describe('mergeImported — remap payment.lessonId (fix §2.4)', () => {
     expect(merged.payments[0].lessonId).toBeUndefined();
   });
 
-  it('financeArchive полностью суммируется (packageBought и paidAmount тоже)', () => {
+  it('архив расчётов из старого бэкапа превращается в платёж, а не теряется', () => {
     reset();
-    const target = {
-      ...blankData(),
-      students: [{ id: 't-s1', name: 'A' }],
-      financeArchive: {
-        't-s1': { packageBought: 4, packageUsed: 2, singleCharged: 100, paidAmount: 500 },
-      },
-    };
+    const target = { ...blankData(), students: [{ id: 't-s1', name: 'A' }] };
     const src = {
       ...blankData(),
-      students: [{ id: 'S1', name: 'A' }],
-      financeArchive: {
-        S1: { packageBought: 8, packageUsed: 6, singleCharged: 200, paidAmount: 1000 },
-      },
+      students: [{ id: 'S1', name: 'B', price: 500 }],
+      financeArchive: { S1: { packageUsed: 6, singleCharged: 200, paidAmount: 4000 } },
     };
     const merged = mergeImported(target, src, uid);
-    // t-s1 не пересекся с S1 (после remap S1 стал новым id), поэтому оба ключа остались:
-    expect(Object.keys(merged.financeArchive).length).toBe(2);
-    const remapped = merged.financeArchive[merged.students.at(-1).id];
-    expect(remapped).toEqual({
-      packageBought: 8,
-      packageUsed: 6,
-      singleCharged: 200,
-      paidAmount: 1000,
-    });
+    const importedId = merged.students.at(-1).id;
+    // 4000 оплачено минус 6 × 500 списанных и 200 долга = 800 остатка на балансе.
+    expect(merged.payments).toHaveLength(1);
+    expect(merged.payments[0]).toMatchObject({ studentId: importedId, amount: 800 });
+    expect(merged.financeArchive).toBeUndefined();
   });
 
   it('не создаёт ID collisions даже при одинаковых ID в target и src (инвариант §5.6)', () => {
@@ -183,7 +171,7 @@ describe('replaceImported — recovery copy', () => {
     const current = { ...blankData(), students: [{ id: 'keep', name: 'Old' }] };
     const src = { ...blankData(), students: [{ id: 'new', name: 'New' }] };
     const { nextData, recovery } = replaceImported(current, src);
-    expect(nextData.students).toEqual([{ id: 'new', name: 'New' }]);
+    expect(nextData.students).toEqual([{ id: 'new', name: 'New', status: 'active' }]);
     expect(recovery.students).toEqual([{ id: 'keep', name: 'Old' }]);
   });
 

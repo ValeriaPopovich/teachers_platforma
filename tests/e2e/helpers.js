@@ -98,4 +98,5 @@ export async function persistedData(page) {
 export async function go(page, name) {
   await page.locator(`#nav [data-page="${name}"]`).click();
   await expect(page.locator(`#page-${name}`)).toHaveClass(/active/);
+  await expect(page).toHaveURL(new RegExp(`/${name}$`));
 }

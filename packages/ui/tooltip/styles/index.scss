@@ -8,15 +8,15 @@
   max-width: min(280px, calc(100vw - 24px));
   padding: 10px 16px;
   border-radius: 14px;
-  color: var(--color-on-accent);
   background: var(--brand2);
-  box-shadow: 0 8px 24px color-mix(in sRGB, var(--brand2) 22%, transparent);
+  box-shadow: var(--card-shadow);
   font-size: 13px;
   font-weight: 650;
   line-height: 1.25;
   pointer-events: none;
   transform: translate(-50%, calc(-100% - 10px));
-  white-space: nowrap;
+  width: max-content;
+  white-space: normal;
 
   &::after {
     position: absolute;

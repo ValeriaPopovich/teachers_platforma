@@ -18,7 +18,7 @@ describe('finances final ownership', () => {
     expect(compatibilitySource).toContain(
       "export { finances } from '../modules/payments/finances.js'",
     );
-    expect(selectorSource).toContain("import { finances } from './finances.js'");
+    expect(selectorSource).toContain("} from './finances.js'");
     expect(selectorSource).toContain('const finance = finances(state, student.id)');
   });
 

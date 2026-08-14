@@ -1,6 +1,9 @@
 import { createSupabaseCloudClient } from '../src/cloud/supabase-adapter.js';
 import { initialLoad, saveWithCas, SYNC_STATUS } from '../src/cloud/sync-protocol.js';
 import { createAuthFlow } from '../src/auth/auth-flow.js';
+import { bindLogoutHandler } from '../src/auth/logout-handler.js';
+import { setAppHydrating } from '../src/app/app-ui-state.js';
+import { clearActivePage } from '../src/app/navigation-state.js';
 
 (() => {
   const SUPABASE_URL = 'https://rbpxlzwycacrfupsthdn.supabase.co';
@@ -251,6 +254,7 @@ import { createAuthFlow } from '../src/auth/auth-flow.js';
     window.tutorCloud.profile = profile;
     const expired = profile.access_until && new Date(profile.access_until) <= new Date();
     if (profile.status !== 'active' || expired) {
+      setAppHydrating(false);
       openingUser = '';
       loginView.hidden = true;
       accessView.hidden = false;
@@ -262,6 +266,7 @@ import { createAuthFlow } from '../src/auth/auth-flow.js';
           : `Доступ закончился ${new Date(profile.access_until).toLocaleDateString('ru-RU')}. Напишите администратору для продления.`;
       return;
     }
+    setAppHydrating(true);
     let cloudLoad = await initialLoad(cloudClient, user.id);
     if (
       !cloudLoad.ok &&
@@ -284,6 +289,7 @@ import { createAuthFlow } from '../src/auth/auth-flow.js';
       }
     }
     if (!cloudLoad.ok) {
+      setAppHydrating(false);
       openingUser = '';
       showMessage('Не удалось загрузить ваши данные. Обновите страницу чуть позже.', true);
       console.error(cloudLoad.error);
@@ -301,6 +307,7 @@ import { createAuthFlow } from '../src/auth/auth-flow.js';
     }
     const owner = localOwner();
     if (!hasCloud && owner && owner !== user.id) {
+      setAppHydrating(false);
       openingUser = '';
       loginView.hidden = true;
       setPwdView.hidden = true;
@@ -320,6 +327,7 @@ import { createAuthFlow } from '../src/auth/auth-flow.js';
       setLocalOwner(user.id);
       pendingRaw = '';
     } else if (window.tutorCloud.casAvailable && !(await flushCloudSave())) {
+      setAppHydrating(false);
       openingUser = '';
       return;
     }
@@ -328,12 +336,13 @@ import { createAuthFlow } from '../src/auth/auth-flow.js';
       ? `до ${new Date(profile.access_until).toLocaleDateString('ru-RU')}`
       : 'Без ограничения';
     openingUser = '';
+    setAppHydrating(false);
     gate.hidden = true;
     if (!window.tutorCloud.casAvailable)
       showSync('Изменения пока сохраняются только на этом устройстве', 'error');
   }
   document.getElementById('cloudDownloadBackup').addEventListener('click', () => {
-    document.getElementById('backupBtn').click();
+    document.getElementById('exportBtn')?.click();
   });
   document.getElementById('cloudLoadVersion').addEventListener('click', () => {
     sessionStorage.removeItem('tutor_cloud_loaded_user');
@@ -465,6 +474,7 @@ import { createAuthFlow } from '../src/auth/auth-flow.js';
       return;
     }
     await client.auth.signOut();
+    clearActivePage();
     sessionStorage.removeItem('tutor_cloud_loaded_user');
     location.reload();
   }
@@ -473,7 +483,7 @@ import { createAuthFlow } from '../src/auth/auth-flow.js';
     await signOutSafely();
   });
   document.getElementById('authOtherAccount').addEventListener('click', signOutSafely);
-  document.getElementById('logoutBtn').addEventListener('click', signOutSafely);
+  bindLogoutHandler(document, signOutSafely);
   client.auth.onAuthStateChange((event, session) => {
     authFlow.handleEvent(event);
     if (event === 'PASSWORD_RECOVERY') {

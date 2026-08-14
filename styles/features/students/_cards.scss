@@ -16,6 +16,28 @@ body:has(.students-page.active) .main {
   font-family: var(--font-family-display);
   letter-spacing: -0.01em;
 
+  .entity-card-enter-active,
+  .entity-card-leave-active,
+  .entity-card-move {
+    transition:
+      opacity 0.24s ease,
+      transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .entity-card-enter-from,
+  .entity-card-leave-to {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .entity-card-enter-active,
+    .entity-card-leave-active,
+    .entity-card-move {
+      transition: none;
+    }
+  }
+
   .students-topbar {
     margin-bottom: 12px;
     align-items: center;
@@ -53,7 +75,7 @@ body:has(.students-page.active) .main {
     position: absolute;
     z-index: 1;
     left: 16px;
-    color: var(--muted);
+    color: var(--text-muted);
     content: '⌕';
     font-size: var(--font-size-title);
     pointer-events: none;
@@ -119,7 +141,7 @@ body:has(.students-page.active) .main {
     overflow: visible;
     border: 1px solid rgb(220, 223, 229, 70%);
     border-radius: 20px;
-    background: var(--color-on-accent);
+    background: var(--panel);
     box-shadow:
       0 1px 3px rgb(24, 29, 37, 10%),
       0 1px 2px -1px rgb(24, 29, 37, 10%);
@@ -185,7 +207,7 @@ body:has(.students-page.active) .main {
   .group-member-names {
     min-width: 0;
     overflow: hidden;
-    color: var(--muted);
+    color: var(--text-muted);
     font-size: 13px;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -307,7 +329,7 @@ body:has(.students-page.active) .main {
 
   .student-lesson-link.is-empty {
     color: var(--color-text-strong);
-    background: var(--color-on-accent);
+    background: var(--panel);
     font-weight: 500;
     display: grid;
     place-items: center;
@@ -336,7 +358,7 @@ body:has(.students-page.active) .main {
 
   .student-lesson-link.is-empty:hover {
     color: var(--brand-ink);
-    background: var(--color-on-accent);
+    background: var(--panel);
     border-color: rgb(238, 43, 101, 45%);
     box-shadow: 0 8px 18px rgb(24, 29, 37, 12%);
   }
@@ -386,7 +408,7 @@ body:has(.students-page.active) .main {
   }
 
   .group-card {
-    background: var(--color-on-accent);
+    background: var(--panel);
     flex: 0 0 470px;
     position: relative;
     align-self: start;
@@ -460,10 +482,10 @@ body:has(.students-page.active) .main {
     gap: 12px;
     margin-bottom: 16px;
     padding: 12px;
-    border: 1px solid rgb(220, 223, 229, 40%);
+    border: 1px solid var(--line);
     border-radius: 20px;
-    background: rgb(255, 255, 255, 70%);
-    box-shadow: 0 1px 3px rgb(24, 29, 37, 5%);
+    background: color-mix(in sRGB, var(--panel) 70%, transparent);
+    box-shadow: var(--card-shadow);
     align-items: center;
     flex-wrap: nowrap;
   }
@@ -496,7 +518,7 @@ body:has(.students-page.active) .main {
     left: 15px;
     width: 18px;
     height: 18px;
-    background: var(--muted);
+    background: var(--text-muted);
     content: '';
     mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='6.5' fill='none' stroke='black' stroke-width='1.8'/%3E%3Cpath d='m16 16 4 4' fill='none' stroke='black' stroke-linecap='round' stroke-width='1.8'/%3E%3C/svg%3E")
       center/contain no-repeat;
@@ -506,13 +528,13 @@ body:has(.students-page.active) .main {
 
   .student-search input {
     min-height: 40px;
-    background: rgb(249, 247, 246, 80%);
+    background: var(--panel2);
     font-size: var(--font-size-body);
-    box-shadow: 0 1px 3px rgb(24, 29, 37, 5%);
+    box-shadow: none;
     width: 100%;
     border-radius: 16px;
     padding: 8px 12px 8px 40px;
-    border: 1px solid rgb(220, 223, 229, 50%);
+    border: 1px solid var(--line);
     color: var(--color-text-strong);
     font-family: inherit;
   }
@@ -522,7 +544,7 @@ body:has(.students-page.active) .main {
     padding: 3px;
     border: 0;
     border-radius: 16px;
-    background: #eeebe8;
+    background: var(--panel2);
     flex: 0 0 auto;
     min-height: 40px;
   }
@@ -542,6 +564,15 @@ body:has(.students-page.active) .main {
     font-family: inherit;
   }
 
+  .student-filter button::after {
+    display: block;
+    height: 0;
+    overflow: hidden;
+    content: attr(data-label);
+    font-weight: 600;
+    visibility: hidden;
+  }
+
   .student-filter button:hover {
     color: var(--text);
     background: color-mix(in sRGB, var(--panel) 60%, transparent);
@@ -550,7 +581,7 @@ body:has(.students-page.active) .main {
 
   .student-filter button.is-active {
     color: var(--color-text-strong);
-    background: var(--color-on-accent);
+    background: var(--panel);
     box-shadow: 0 1px 3px rgb(24, 29, 37, 8%);
     font-weight: 600;
   }
@@ -571,7 +602,7 @@ body:has(.students-page.active) .main {
     background:
       radial-gradient(
         circle,
-        color-mix(in sRGB, var(--muted) 55%, transparent) 0 2px,
+        color-mix(in sRGB, var(--text-muted) 55%, transparent) 0 2px,
         transparent 2.5px
       ),
       var(--panel);
@@ -594,7 +625,7 @@ body:has(.students-page.active) .main {
     background:
       radial-gradient(
         circle,
-        color-mix(in sRGB, var(--muted) 55%, transparent) 0 2px,
+        color-mix(in sRGB, var(--text-muted) 55%, transparent) 0 2px,
         transparent 2.5px
       ),
       color-mix(in sRGB, var(--brand) 4%, var(--panel));
@@ -618,7 +649,7 @@ body:has(.students-page.active) .main {
   }
 
   .student-card-neutral::before {
-    background: color-mix(in sRGB, var(--muted) 58%, var(--line));
+    background: color-mix(in sRGB, var(--text-muted) 58%, var(--line));
   }
 
   .student-avatar {
@@ -684,7 +715,7 @@ body:has(.students-page.active) .main {
   }
 
   .student-fact-terms i {
-    color: color-mix(in sRGB, var(--muted) 60%, transparent);
+    color: color-mix(in sRGB, var(--text-muted) 60%, transparent);
   }
 
   .student-card-footer {
@@ -835,7 +866,7 @@ body:has(.students-page.active) .main {
     display: none;
     align-items: center;
     gap: 7px;
-    color: var(--muted);
+    color: var(--text-muted);
     font-size: 13px;
   }
 
@@ -873,7 +904,7 @@ body:has(.students-page.active) .main {
   }
 
   .member-chip-more {
-    color: var(--muted);
+    color: var(--text-muted);
     background: var(--panel2);
   }
 
@@ -900,7 +931,7 @@ body:has(.students-page.active) .main {
     padding: 28px;
     border: 1px dashed color-mix(in sRGB, var(--line) 85%, transparent);
     border-radius: 20px;
-    color: var(--muted);
+    color: var(--text-muted);
     background: color-mix(in sRGB, var(--panel) 58%, transparent);
   }
 
@@ -932,24 +963,6 @@ body:has(.students-page.active) .main {
     font-size: 13px;
   }
 
-  .students-updated {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 7px 11px;
-    border: 1px solid color-mix(in sRGB, var(--line) 72%, transparent);
-    border-radius: 999px;
-    color: var(--muted);
-    background: color-mix(in sRGB, var(--panel2) 62%, transparent);
-    font-size: 11px;
-    white-space: nowrap;
-  }
-
-  .students-updated span {
-    color: var(--text);
-    font-size: var(--font-size-body);
-  }
-
   .students-toolbar-actions {
     display: flex;
     flex: 0 0 auto;
@@ -966,7 +979,7 @@ body:has(.students-page.active) .main {
     font-size: var(--font-size-caption);
     border-color: rgb(220, 223, 229, 70%);
     color: var(--color-text-strong);
-    background: var(--color-on-accent);
+    background: var(--panel);
     box-shadow: 0 1px 3px rgb(24, 29, 37, 7%);
     font-family: inherit;
     font-weight: 600;
@@ -983,10 +996,10 @@ body:has(.students-page.active) .main {
   }
 
   .students-toolbar-actions .btn.primary {
-    border-color: transparent;
-    color: var(--color-on-accent);
-    background: linear-gradient(120deg, var(--color-brand-strong), #f45a34);
-    box-shadow: 0 7px 18px rgb(238, 43, 101, 18%);
+    border-color: var(--primary);
+    color: var(--primary-foreground);
+    background: var(--primary);
+    box-shadow: none;
   }
 
   .student-menu summary {
@@ -1020,7 +1033,7 @@ body:has(.students-page.active) .main {
     padding: 9px 11px;
     border-color: #dcdfe5;
     color: var(--color-brand-danger);
-    background: var(--color-on-accent);
+    background: var(--panel);
     box-shadow: 0 8px 22px rgb(24, 29, 37, 12%);
     font-family: inherit;
     font-size: 11px;
@@ -1070,7 +1083,7 @@ body:has(.students-page.active) .main {
 
   .student-lesson-link.is-empty:focus-visible {
     border-color: rgb(238, 43, 101, 45%);
-    background: var(--color-on-accent);
+    background: var(--panel);
     box-shadow: 0 8px 18px rgb(24, 29, 37, 12%);
   }
 
@@ -1185,10 +1198,6 @@ body:has(.students-page.active) .main {
       flex-direction: column;
     }
 
-    .students-updated {
-      display: none;
-    }
-
     .students-toolbar-actions .btn {
       flex: 1;
       justify-content: center;
@@ -1256,6 +1265,40 @@ body:has(.students-page.active) .main {
     }
   }
 
+  /* The expanded sidebar reduces the page independently of the viewport.
+     Keep the toolbar responsive to the space it actually receives. */
+  @container app-content (width <= 1050px) {
+    .students-toolbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+    }
+
+    .student-search {
+      grid-column: 1 / -1;
+      width: 100%;
+    }
+
+    .student-filter {
+      min-width: 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .student-filter::-webkit-scrollbar {
+      display: none;
+    }
+
+    .students-toolbar-actions {
+      justify-self: end;
+    }
+
+    .student-card,
+    .group-card {
+      flex-basis: min(44cqw, 350px);
+    }
+  }
+
   @include bp.till(bp.$tablet) {
     overflow-x: clip;
 
@@ -1266,10 +1309,6 @@ body:has(.students-page.active) .main {
 
     .students-topbar h1 {
       font-size: 24px;
-    }
-
-    .students-updated {
-      display: none;
     }
 
     .students-toolbar {

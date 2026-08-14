@@ -1,27 +1,36 @@
-import { UiIcon } from '@icons';
 import { UiButton, UiInput } from '@ui';
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 
+import { openNewGroup, openNewStudent } from '../../../students-ui.js';
 import { STUDENT_FILTER_OPTIONS } from './constants.js';
 
 export default {
   name: 'StudentsToolbar',
-  components: { UiButton, UiIcon, UiInput },
-  setup() {
-    const query = ref('');
-    const activeFilter = ref('all');
+  components: { UiButton, UiInput },
+  props: {
+    /** Текущий поисковый запрос. */
+    query: { type: String, default: '' },
+    /** Активный фильтр списка учеников. */
+    filter: { type: String, default: 'all' },
+  },
+  emits: ['update:query', 'update:filter'],
+  setup(props, { emit }) {
     const filters = computed(() =>
       STUDENT_FILTER_OPTIONS.map((filter) => ({
         ...filter,
-        classes: { 'is-active': activeFilter.value === filter.value },
-        isActive: activeFilter.value === filter.value,
+        classes: { 'is-active': props.filter === filter.value },
+        isActive: props.filter === filter.value,
       })),
     );
 
     function onFilterButtonClick(value) {
-      activeFilter.value = value;
+      emit('update:filter', value);
     }
 
-    return { filters, onFilterButtonClick, query };
+    function onSearchInput(value) {
+      emit('update:query', value);
+    }
+
+    return { filters, onFilterButtonClick, onSearchInput, openNewGroup, openNewStudent };
   },
 };

@@ -6,7 +6,7 @@
       class="group-card-menu"
       :aria-label="optionsLabel"
       :items="menuItems"
-      :owner-id="groupId"
+      @select="onMenuSelect"
     />
 
     <div
@@ -15,6 +15,9 @@
       tabindex="0"
       :aria-label="openGroupLabel"
       :data-group="groupId"
+      @click="onCardClick"
+      @keydown.enter="onCardClick"
+      @keydown.space.prevent="onCardClick"
     >
       <div class="student-top">
         <div class="group-direction">{{ row.direction }}</div>

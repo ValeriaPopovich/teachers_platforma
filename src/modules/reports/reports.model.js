@@ -1,4 +1,4 @@
-import { getPackageProgress } from '../payments/payments.selectors.js';
+import { getMonthPlan } from '../payments/payments.selectors.js';
 import { formatDate, localDay, money } from '../../shared/format.js';
 
 const REPORT_STATUSES = new Set(['done', 'missed', 'paid_missed']);
@@ -71,8 +71,7 @@ export function buildReportSource(state, studentId, bounds) {
 export function getNextPackageSummary(state, studentId, now = new Date()) {
   const student = state.students.find((item) => item.id === studentId);
   if (!student || student.payType !== 'package') return '';
-  const nextMonth = new Date(now);
-  nextMonth.setMonth(nextMonth.getMonth() + 1, 1);
-  const progress = getPackageProgress(state, studentId, nextMonth);
-  return `В следующем месяце по регулярному расписанию запланировано ${progress?.planned || 0} занятий на сумму ${money(progress?.amount || 0)}.`;
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const plan = getMonthPlan(state, studentId, nextMonth);
+  return `В следующем месяце запланировано ${plan.lessons} занятий на сумму ${money(plan.amount)}.`;
 }

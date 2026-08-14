@@ -1,8 +1,15 @@
-import { finances } from './finances.js';
 import {
-  countMonthlyRecurringLessons,
-  countMonthlyRecurringLessonsFrom,
-} from '../schedule/schedule.domain.js';
+  ACTIVE_STATUSES,
+  CHARGED_STATUSES,
+  RESERVED_STATUSES,
+  chargedLessons,
+  countedPayments,
+  finances,
+  isChargeable,
+  lessonCharge,
+} from './finances.js';
+import { periodAnalytics } from '../../domain/analytics.js';
+import { monthName } from '../../shared/format.js';
 
 function monthBounds(date = new Date()) {
   const start = new Date(date.getFullYear(), date.getMonth(), 1);
@@ -10,91 +17,111 @@ function monthBounds(date = new Date()) {
   return { start: start.getTime(), end: end.getTime() };
 }
 
-export function getPackageProgress(state, studentId, date = new Date()) {
-  const student = state.students.find((item) => item.id === studentId);
-  if (!student || student.payType !== 'package') return null;
-  const { start, end } = monthBounds(date);
-  const billingSince = +student.billingSince || +student.createdAt || 0;
-  const effectiveStart = Math.max(start, billingSince);
-  const planned =
-    effectiveStart >= end
-      ? 0
-      : countMonthlyRecurringLessonsFrom(student.scheduleSlots || [], date, effectiveStart);
-  const payments = state.payments.filter(
-    (payment) =>
-      payment.studentId === studentId &&
-      (payment.billingType === 'package' || +payment.packageLessons > 0) &&
-      new Date(payment.date).getTime() >= start &&
-      new Date(payment.date).getTime() < end,
+export function hasFinancialActivity(state, student) {
+  const cutoff = +student?.billingSince || 0;
+  return (
+    chargedLessons(state, student.id, cutoff).length > 0 ||
+    countedPayments(state, student.id, cutoff).length > 0
   );
-  const bought = payments.reduce((sum, payment) => sum + (+payment.packageLessons || 0), 0);
-  const used = state.lessons.filter(
-    (lesson) =>
+}
+
+/**
+ * План месяца строится по реальным занятиям ученика — и индивидуальным, и
+ * групповым, — а не по слотам расписания. Цена берётся из каждого занятия,
+ * поэтому группа по 500 и индивидуальные по 1500 складываются корректно.
+ */
+export function getMonthPlan(state, studentId, date = new Date()) {
+  const { start, end } = monthBounds(date);
+  const student = state.students.find((item) => item.id === studentId);
+  const from = Math.max(start, +student?.billingSince || 0);
+  const lessons = state.lessons.filter((lesson) => {
+    const at = new Date(lesson.date).getTime();
+    return (
       lesson.studentId === studentId &&
-      ['done', 'paid_missed'].includes(lesson.status) &&
-      lesson.payment === 'package' &&
-      new Date(lesson.date).getTime() >= start &&
-      new Date(lesson.date).getTime() < end,
-  ).length;
+      at >= from &&
+      at < end &&
+      ACTIVE_STATUSES.includes(lesson.status) &&
+      isChargeable(lesson)
+    );
+  });
+  const conducted = lessons.filter((lesson) => CHARGED_STATUSES.includes(lesson.status));
+  const remaining = lessons.filter((lesson) => RESERVED_STATUSES.includes(lesson.status));
+  const sum = (list) => list.reduce((total, lesson) => total + lessonCharge(lesson), 0);
   return {
-    planned,
-    bought,
-    used,
-    remaining: bought - used,
-    amount: planned * (+student.price || 0),
-    payments,
+    lessons: lessons.length,
+    conducted: conducted.length,
+    remaining: remaining.length,
+    amount: sum(lessons),
+    conductedAmount: sum(conducted),
+    remainingAmount: sum(remaining),
   };
+}
+
+/**
+ * Сколько ближайших занятий покрыто балансом. Идём по реальным датам и
+ * вычитаем цену каждого занятия — так работает и при разных ценах у одного
+ * ученика (группа + индивидуальные).
+ */
+export function coveredLessons(state, studentId, balance) {
+  const upcoming = state.lessons
+    .filter(
+      (lesson) =>
+        lesson.studentId === studentId &&
+        RESERVED_STATUSES.includes(lesson.status) &&
+        isChargeable(lesson),
+    )
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+  let rest = balance;
+  let count = 0;
+  for (const lesson of upcoming) {
+    const price = lessonCharge(lesson);
+    if (price > rest) break;
+    rest -= price;
+    count += 1;
+  }
+  return count;
 }
 
 export function getStudentPaymentState(state, student, date = new Date()) {
   const finance = finances(state, student.id);
-  if (student.payType === 'package') {
-    const progress = getPackageProgress(state, student.id, date);
-    if (!progress) return { kind: 'ok', finance };
-    const price = +student.price || 0;
-    const packageLessons = Math.max(0, +student.packageSize || progress.planned || 0);
-    const packageShortfall = Math.max(0, packageLessons - progress.bought);
-    if (progress.planned > 0 && packageShortfall > 0)
-      return {
-        kind: 'need',
-        label: 'Нужно принять абонемент',
-        amountDue: Math.round(packageShortfall * price) + (+finance.extraDebt || 0),
-        progress,
-        finance,
-      };
-    if (progress.remaining <= 1)
-      return {
-        kind: 'ending',
-        label: progress.remaining < 0 ? 'Абонемент закончился' : 'Абонемент заканчивается',
-        amountDue: Math.round(packageLessons * price) + (+finance.extraDebt || 0),
-        progress,
-        finance,
-      };
-    if (finance.extraDebt > 0)
-      return {
-        kind: 'need',
-        label: 'Есть доплата за разовые занятия',
-        amountDue: finance.extraDebt,
-        progress,
-        finance,
-      };
-    return { kind: 'ok', label: 'Оплачено', amountDue: 0, progress, finance };
-  }
+  if (!hasFinancialActivity(state, student))
+    return { kind: 'empty', label: 'Нет начислений', amountDue: 0, finance };
+  const plan = getMonthPlan(state, student.id, date);
+  const covered = coveredLessons(state, student.id, finance.balance);
+  const base = { plan, covered, finance };
+
   if (finance.debt > 0)
-    return { kind: 'need', label: 'Есть долг', amountDue: finance.debt, finance };
+    return { ...base, kind: 'need', label: 'Есть долг', amountDue: finance.debt };
+
+  if (student.payType === 'package') {
+    const due = Math.max(0, Math.round(plan.remainingAmount - finance.balance));
+    if (due > 0) return { ...base, kind: 'need', label: 'Нужно принять абонемент', amountDue: due };
+    if (plan.remaining > 0 && covered <= 1) {
+      const nextMonth = new Date(date.getFullYear(), date.getMonth() + 1, 1);
+      return {
+        ...base,
+        kind: 'ending',
+        label: 'Абонемент заканчивается',
+        amountDue: Math.max(0, Math.round(getMonthPlan(state, student.id, nextMonth).amount)),
+      };
+    }
+    return { ...base, kind: 'ok', label: 'Оплачено', amountDue: 0 };
+  }
+
   return {
+    ...base,
     kind: 'ok',
     label: finance.balance > 0 ? 'Есть аванс' : 'Оплачено',
     amountDue: 0,
-    finance,
   };
 }
 
 export function getPaymentRows(state, date = new Date()) {
   return state.students
+    .filter((student) => student.status !== 'paused')
     .map((student) => ({ student, ...getStudentPaymentState(state, student, date) }))
     .sort((a, b) => {
-      const priority = { need: 0, ending: 1, ok: 2 };
+      const priority = { need: 0, ending: 1, ok: 2, empty: 3 };
       return (
         priority[a.kind] - priority[b.kind] || a.student.name.localeCompare(b.student.name, 'ru')
       );
@@ -102,7 +129,7 @@ export function getPaymentRows(state, date = new Date()) {
 }
 
 export function getPaymentAttentionRows(state, date = new Date()) {
-  return getPaymentRows(state, date).filter((row) => row.kind !== 'ok');
+  return getPaymentRows(state, date).filter((row) => ['need', 'ending'].includes(row.kind));
 }
 
 export function getMonthlyPaymentSummary(state, date = new Date()) {
@@ -113,15 +140,11 @@ export function getMonthlyPaymentSummary(state, date = new Date()) {
   });
   const received = payments.reduce((sum, payment) => sum + (+payment.amount || 0), 0);
   const rows = getPaymentRows(state, date);
-  const debt = rows.reduce((sum, row) => sum + (+row.amountDue || 0), 0);
-  const attention = rows.filter((row) => row.kind !== 'ok').length;
+  // Только реальный долг: amountDue у строк «ending» — это цена будущего
+  // абонемента, а не задолженность, и в «Долг сейчас» ей не место.
+  const debt = rows.reduce((sum, row) => sum + Math.max(0, +row.finance?.debt || 0), 0);
+  const attention = rows.filter((row) => ['need', 'ending'].includes(row.kind)).length;
   return { received, debt, attention, payments: payments.length };
-}
-
-export function getPackageMonthRows(state, date = new Date()) {
-  return state.students
-    .filter((student) => student.payType === 'package')
-    .map((student) => ({ student, progress: getPackageProgress(state, student.id, date) }));
 }
 
 export function getPaymentHistory(state, { days = 31, studentId = '', now = new Date() } = {}) {
@@ -138,12 +161,29 @@ export function getPaymentHistory(state, { days = 31, studentId = '', now = new 
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 }
 
-export function expectedPackageLessons(student, date) {
-  const billingSince = +student.billingSince || +student.createdAt || 0;
-  const monthStart = new Date(date.getFullYear(), date.getMonth(), 1).getTime();
-  const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 1).getTime();
-  if (billingSince >= monthEnd) return 0;
-  return billingSince > monthStart
-    ? countMonthlyRecurringLessonsFrom(student.scheduleSlots || [], date, billingSince)
-    : countMonthlyRecurringLessons(student.scheduleSlots || [], date);
+/** Builds the view model consumed by the payments page. */
+export function buildPaymentsModel(state, { now = new Date() } = {}) {
+  const summary = getMonthlyPaymentSummary(state, now);
+  const monthFrom = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const monthTo = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+  const analytics = periodAnalytics(state, monthFrom, monthTo);
+  const rows = getPaymentRows(state, now);
+  const attentionCount = rows.filter((row) => ['need', 'ending'].includes(row.kind)).length;
+  const history = state.payments
+    .filter((payment) => !payment.ledgerOnly)
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .map((payment) => ({
+      ...payment,
+      studentName:
+        state.students.find((student) => student.id === payment.studentId)?.name ||
+        'Удалённый ученик',
+    }));
+
+  return {
+    monthLabel: monthName(now),
+    stats: { paid: analytics.paid, charged: analytics.charged, debt: summary.debt, attentionCount },
+    rows,
+    students: state.students.map(({ id, name }) => ({ id, name })),
+    history,
+  };
 }

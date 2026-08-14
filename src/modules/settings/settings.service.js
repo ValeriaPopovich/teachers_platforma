@@ -1,3 +1,5 @@
+import { store as appStore } from '../../state/app-store.js';
+
 export function createSettingsService({ store }) {
   function toggleTheme() {
     return store.update('settings:theme', (draft) => {
@@ -28,3 +30,5 @@ export function createSettingsService({ store }) {
 
   return { toggleTheme, toggleSidebar, save, completeOnboarding };
 }
+
+export const settingsService = createSettingsService({ store: appStore });

@@ -1,4 +1,5 @@
-import { generateSchedule, countMonthlyRecurringLessonsFrom } from '../schedule/schedule.domain.js';
+import { generateSchedule } from '../schedule/schedule.domain.js';
+import { store as appStore, uid as appUid } from '../../state/app-store.js';
 import { syncFutureGroupBilling } from '../../state/maintenance.js';
 
 function replaceDraft(draft, next) {
@@ -18,42 +19,28 @@ export function createStudentsService({ store, uid, now = () => Date.now() }) {
         code: 'NAME_REQUIRED',
         message: 'Введите имя ученика, а не только пробелы.',
       };
-    const formatChanged = !!current && current.payType !== input.payType;
-    if (formatChanged && !options.confirmPaymentFormatChange) {
-      return {
-        ok: false,
-        code: 'PAYMENT_FORMAT_CONFIRM_REQUIRED',
-        message:
-          'Старые занятия и платежи останутся в истории, но новый баланс начнёт считаться с момента смены формата.',
-      };
-    }
     const at = now();
-    const selectedStart =
+    // Дата начала учёта нужна тем, кто пришёл в платформу в середине месяца:
+    // всё, что было раньше, в баланс не попадает.
+    const startedAt =
       input.billingStartDate && input.billingStartDate !== options.today
         ? new Date(`${input.billingStartDate}T00:00`).getTime()
         : at;
-    const startedAt =
-      current && !formatChanged
-        ? Math.max(+current.createdAt || 0, +current.billingSince || 0)
-        : current
-          ? at
-          : selectedStart;
     const student = {
       ...input,
       name,
       price: +input.price || 0,
       duration: +input.duration || 60,
-      scheduleSlots: input.scheduleSlots || [],
+      status: input.status === 'paused' ? 'paused' : 'active',
+      // Vue makes both the array and its slot objects reactive. Store only plain
+      // objects, otherwise schedule generation cannot structuredClone the draft.
+      scheduleSlots: (input.scheduleSlots || []).map((slot) => ({ ...slot })),
     };
     delete student.billingStartDate;
-    student.packageSize =
-      student.payType === 'package'
-        ? countMonthlyRecurringLessonsFrom(student.scheduleSlots, new Date(startedAt), startedAt)
-        : 0;
     if (current) {
       student.id = current.id;
       student.createdAt = current.createdAt;
-      student.billingSince = formatChanged ? at : +current.billingSince || current.createdAt || at;
+      student.billingSince = +current.billingSince || current.createdAt || at;
     } else {
       student.id = uid();
       student.createdAt = startedAt;
@@ -61,16 +48,24 @@ export function createStudentsService({ store, uid, now = () => Date.now() }) {
     }
 
     store.update(current ? 'students:update' : 'students:create', (draft) => {
-      if (formatChanged)
-        draft.financeArchive[student.id] = {
-          packageUsed: 0,
-          singleCharged: 0,
-          since: student.billingSince,
-        };
       if (current) {
         const index = draft.students.findIndex((item) => item.id === student.id);
         draft.students[index] = { ...draft.students[index], ...student };
       } else draft.students.push(student);
+
+      if (student.status === 'paused') {
+        // Пауза убирает только ещё не проведённые занятия — заполненные отчёты
+        // и деньги остаются на месте.
+        draft.lessons = draft.lessons.filter(
+          (lesson) =>
+            !(
+              lesson.studentId === student.id &&
+              lesson.status === 'planned' &&
+              new Date(lesson.date).getTime() >= at
+            ),
+        );
+        return;
+      }
 
       let next = generateSchedule(draft, {
         type: 'student',
@@ -88,14 +83,12 @@ export function createStudentsService({ store, uid, now = () => Date.now() }) {
             new Date(lesson.date).getTime() >= at,
         )
         .forEach((lesson) => {
-          lesson.amount = +savedStudent?.price || 0;
-          if (formatChanged && lesson.payment !== 'paid')
-            lesson.payment = savedStudent?.payType === 'package' ? 'package' : 'unpaid';
+          if (lesson.lessonKind !== 'trial') lesson.amount = +savedStudent?.price || 0;
         });
       next = syncFutureGroupBilling(next).data;
       replaceDraft(draft, next);
     });
-    return { ok: true, value: student, formatChanged };
+    return { ok: true, value: student };
   }
 
   function removeStudent(id) {
@@ -105,7 +98,6 @@ export function createStudentsService({ store, uid, now = () => Date.now() }) {
       draft.students = draft.students.filter((student) => student.id !== id);
       draft.lessons = draft.lessons.filter((lesson) => lesson.studentId !== id);
       draft.payments = draft.payments.filter((payment) => payment.studentId !== id);
-      delete draft.financeArchive[id];
       delete draft.topicLog[id];
       draft.groups.forEach((group) => {
         group.members = (group.members || []).filter((studentId) => studentId !== id);
@@ -138,7 +130,7 @@ export function createStudentsService({ store, uid, now = () => Date.now() }) {
       name,
       members,
       duration: +input.duration || 60,
-      scheduleSlots: input.scheduleSlots || [],
+      scheduleSlots: (input.scheduleSlots || []).map((slot) => ({ ...slot })),
       id: current?.id || uid(),
     };
     store.update(current ? 'groups:update' : 'groups:create', (draft) => {
@@ -213,3 +205,5 @@ export function createStudentsService({ store, uid, now = () => Date.now() }) {
 
   return { saveStudent, removeStudent, saveGroup, removeGroup, addCustomGoal, removeGoal };
 }
+
+export const studentsService = createStudentsService({ store: appStore, uid: appUid });

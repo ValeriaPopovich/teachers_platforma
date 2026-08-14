@@ -21,8 +21,12 @@ export default {
     function updatePosition() {
       const bounds = trigger.value?.getBoundingClientRect();
       if (!bounds) return;
+      const viewportInset = 152;
       position.value = {
-        left: bounds.left + bounds.width / 2,
+        left: Math.min(
+          Math.max(bounds.left + bounds.width / 2, viewportInset),
+          window.innerWidth - viewportInset,
+        ),
         top: bounds.top,
       };
     }

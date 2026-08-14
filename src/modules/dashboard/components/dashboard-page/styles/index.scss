@@ -1,8 +1,26 @@
 .dashboard-page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 28px;
   width: 100%;
+
+  &__content {
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  &__primary {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    min-width: 0;
+  }
+
+  &__timeline {
+    width: 100%;
+  }
 
   &__topbar {
     display: flex;
@@ -20,21 +38,57 @@
     display: flex;
     gap: 10px;
     align-items: center;
+
+    .btn {
+      white-space: nowrap;
+    }
   }
 
-  &__bell {
-    padding-inline: 12px;
-  }
+  @media (width <= 1200px) {
+    gap: 20px;
 
-  &__top-row {
-    display: grid;
-    grid-template-columns: 1.15fr 1fr;
-    gap: 16px;
-  }
-
-  @media (width <= 900px) {
-    &__top-row {
+    .dashboard-page__content {
       grid-template-columns: 1fr;
+      gap: 20px;
+    }
+
+    &__primary {
+      display: contents;
+    }
+
+    &__summary {
+      order: 1;
+    }
+
+    &__timeline {
+      order: 2;
+    }
+
+    &__attention {
+      order: 3;
+    }
+  }
+
+  @media (width <= 560px) {
+    &__topbar {
+      gap: 12px;
+    }
+
+    &__title {
+      min-width: 0;
+      font-size: 19px;
+      line-height: 1.15;
+    }
+
+    &__actions {
+      flex: 0 0 auto;
+      gap: 6px;
+
+      .btn {
+        gap: 5px;
+        padding: 9px 10px;
+        font-size: 13px;
+      }
     }
   }
 }

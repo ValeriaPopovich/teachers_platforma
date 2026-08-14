@@ -1,7 +1,6 @@
 .ui-page-layout {
   display: grid;
   min-width: 0;
-  gap: 20px;
 }
 
 .ui-page-layout--aside {
@@ -17,7 +16,7 @@
   min-width: 0;
 }
 
-@media (width <= 1024px) {
+@container app-content (width <= 1024px) {
   .ui-page-layout--aside {
     grid-template-columns: minmax(0, 1fr);
   }

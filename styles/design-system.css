@@ -1,0 +1,261 @@
+/*
+ * TutRoom design system — единственный источник цветов, типографики, радиусов, теней.
+ * Значения меняются только здесь. Утилиты Tailwind v4 (bg-primary, text-foreground, ...)
+ * автоматически собираются из @theme.
+ */
+
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop {
+    border-color: var(--border);
+    outline-color: color-mix(in oklab, var(--ring) 50%, transparent);
+  }
+}
+
+:root {
+  /* =========================
+     TUTROOM BRAND
+     ========================= */
+
+  --tutroom-pink: rgb(233, 30, 99);       /* #E91E63 */
+  --tutroom-black: rgb(17, 17, 17);       /* #111111 */
+  --tutroom-milk: rgb(247, 245, 242);     /* #F7F5F2 */
+  --tutroom-sage: rgb(200, 213, 193);     /* #C8D5C1 */
+  --tutroom-gray: rgb(217, 217, 217);     /* #D9D9D9 */
+
+  /* =========================
+     BASE
+     ========================= */
+
+  --background: rgb(247, 245, 242);
+  --foreground: rgb(17, 17, 17);
+
+  --card: rgb(252, 251, 249);
+  --card-foreground: rgb(17, 17, 17);
+
+  --popover: rgb(252, 251, 249);
+  --popover-foreground: rgb(17, 17, 17);
+
+  /* rgb(233,30,99) [--tutroom-pink] fails AA (4.35:1) as a bg under white
+     text — darkened to pass 4.5:1 while staying the same hue. --ring/
+     --chart-1/--sidebar-ring keep the vivid brand pink: they're non-text UI
+     (3:1 threshold), which the original value already clears. */
+  --primary: rgb(195, 19, 78);
+  --primary-foreground: rgb(255, 255, 255);
+
+  --secondary: rgb(200, 213, 193);
+  --secondary-foreground: rgb(17, 17, 17);
+
+  --muted: rgb(235, 235, 233);
+  --muted-foreground: rgb(95, 95, 95);
+
+  --accent: rgb(232, 238, 229);
+  --accent-foreground: rgb(17, 17, 17);
+
+  /* shifted hue away from --primary (340→355) so danger reads as red, not
+     brand pink; white-on-destructive was already AA (6.11:1) here */
+  --destructive: rgb(170, 24, 36);
+  --destructive-foreground: rgb(255, 255, 255);
+
+  /* brand color used AS TEXT (links, "brand-ink" accents) — needs its own
+     value per theme since --primary alone fails 4.5:1 against page bg */
+  --primary-text: rgb(162, 16, 65);
+  /* real amber, was aliased to --primary (warning == brand, indistinguishable) */
+  --warning: rgb(145, 95, 8);
+
+  --border: rgb(217, 217, 217);
+  --input: rgb(217, 217, 217);
+  --ring: rgb(233, 30, 99);
+
+  --chart-1: rgb(233, 30, 99);
+  --chart-2: rgb(200, 213, 193);
+  --chart-3: rgb(17, 17, 17);
+  --chart-4: rgb(217, 217, 217);
+  --chart-5: rgb(244, 133, 171);
+
+  --sidebar: rgb(242, 240, 237);
+  --sidebar-foreground: rgb(17, 17, 17);
+  --sidebar-primary: rgb(195, 19, 78);
+  --sidebar-primary-foreground: rgb(255, 255, 255);
+  --sidebar-accent: rgb(232, 238, 229);
+  --sidebar-accent-foreground: rgb(17, 17, 17);
+  --sidebar-border: rgb(217, 217, 217);
+  --sidebar-ring: rgb(233, 30, 99);
+
+  --font-sans: Poppins, sans-serif;
+  --font-serif: Libre Baskerville, serif;
+  --font-mono: IBM Plex Mono, monospace;
+
+  --radius: 0.625rem;
+
+  --shadow-x: 0px;
+  --shadow-y: 4px;
+  --shadow-blur: 18px;
+  --shadow-spread: -4px;
+  --shadow-opacity: 0.10;
+  --shadow-color: #111111;
+
+  --shadow-2xs: 0px 1px 4px 0px rgb(17 17 17 / 0.04);
+  --shadow-xs:  0px 2px 8px -2px rgb(17 17 17 / 0.06);
+  --shadow-sm:  0px 4px 12px -4px rgb(17 17 17 / 0.08);
+  --shadow:     0px 5px 16px -5px rgb(17 17 17 / 0.10);
+  --shadow-md:  0px 8px 22px -7px rgb(17 17 17 / 0.12);
+  --shadow-lg:  0px 12px 30px -9px rgb(17 17 17 / 0.14);
+  --shadow-xl:  0px 18px 40px -12px rgb(17 17 17 / 0.16);
+  --shadow-2xl: 0px 24px 60px -16px rgb(17 17 17 / 0.20);
+
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+}
+
+
+.dark {
+  --background: rgb(17, 17, 17);
+  --foreground: rgb(247, 245, 242);
+
+  --card: rgb(27, 27, 27);
+  --card-foreground: rgb(247, 245, 242);
+
+  --popover: rgb(27, 27, 27);
+  --popover-foreground: rgb(247, 245, 242);
+
+  --primary: rgb(195, 19, 78);
+  --primary-foreground: rgb(255, 255, 255);
+
+  --secondary: rgb(54, 63, 50);
+  --secondary-foreground: rgb(200, 213, 193);
+
+  --muted: rgb(34, 34, 34);
+  --muted-foreground: rgb(179, 179, 179);
+
+  --accent: rgb(61, 29, 41);
+  --accent-foreground: rgb(247, 245, 242);
+
+  --destructive: rgb(199, 35, 49);
+  --destructive-foreground: rgb(255, 255, 255);
+
+  --primary-text: rgb(242, 90, 140);
+  --warning: rgb(244, 180, 52);
+
+  --border: rgb(58, 58, 58);
+  --input: rgb(58, 58, 58);
+  --ring: rgb(233, 30, 99);
+
+  --chart-1: rgb(233, 30, 99);
+  --chart-2: rgb(200, 213, 193);
+  --chart-3: rgb(247, 245, 242);
+  --chart-4: rgb(217, 217, 217);
+  --chart-5: rgb(244, 133, 171);
+
+  --sidebar: rgb(20, 20, 20);
+  --sidebar-foreground: rgb(247, 245, 242);
+  --sidebar-primary: rgb(195, 19, 78);
+  --sidebar-primary-foreground: rgb(255, 255, 255);
+  --sidebar-accent: rgb(42, 48, 39);
+  --sidebar-accent-foreground: rgb(200, 213, 193);
+  --sidebar-border: rgb(52, 52, 52);
+  --sidebar-ring: rgb(233, 30, 99);
+
+  --font-sans: Poppins, sans-serif;
+  --font-serif: Libre Baskerville, serif;
+  --font-mono: IBM Plex Mono, monospace;
+
+  --radius: 0.625rem;
+
+  --shadow-x: 0px;
+  --shadow-y: 6px;
+  --shadow-blur: 22px;
+  --shadow-spread: -6px;
+  --shadow-opacity: 0.30;
+  --shadow-color: #000000;
+
+  --shadow-2xs: 0px 1px 4px rgb(0 0 0 / 0.15);
+  --shadow-xs:  0px 2px 8px -2px rgb(0 0 0 / 0.20);
+  --shadow-sm:  0px 4px 12px -4px rgb(0 0 0 / 0.25);
+  --shadow:     0px 6px 18px -6px rgb(0 0 0 / 0.30);
+  --shadow-md:  0px 8px 24px -8px rgb(0 0 0 / 0.35);
+  --shadow-lg:  0px 12px 32px -10px rgb(0 0 0 / 0.40);
+  --shadow-xl:  0px 18px 44px -14px rgb(0 0 0 / 0.45);
+  --shadow-2xl: 0px 24px 64px -18px rgb(0 0 0 / 0.55);
+}
+
+
+/* =========================================================
+   TAILWIND THEME — сюда смотрят утилиты bg-*, text-*, border-*
+   ========================================================= */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-tutroom-pink: var(--tutroom-pink);
+  --color-tutroom-black: var(--tutroom-black);
+  --color-tutroom-milk: var(--tutroom-milk);
+  --color-tutroom-sage: var(--tutroom-sage);
+  --color-tutroom-gray: var(--tutroom-gray);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-serif: var(--font-serif);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+
+  --shadow-2xs: var(--shadow-2xs);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow: var(--shadow);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-2xl: var(--shadow-2xl);
+}

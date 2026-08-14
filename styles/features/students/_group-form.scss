@@ -10,9 +10,14 @@
 
 .schedule-slot {
   display: grid;
-  grid-template-columns: minmax(120px, 1fr) 120px 36px;
+  grid-template-columns: minmax(120px, 1fr) 120px 44px;
   gap: 8px;
   align-items: center;
+}
+
+.schedule-slot .remove-slot {
+  width: 44px;
+  height: 44px;
 }
 
 .schedule-slot select,
@@ -45,18 +50,18 @@
 .groups-empty {
   grid-column: 1/-1;
   text-align: center;
-  color: var(--muted);
+  color: var(--text-muted);
   padding: 32px 10px;
 }
 
 @include bp.till(bp.$tablet) {
   .schedule-slot {
-    grid-template-columns: minmax(0, 1fr) 105px 36px;
+    grid-template-columns: minmax(0, 1fr) 105px 44px;
   }
 }
 
 @include bp.till(bp.$mobile-small) {
   .schedule-slot {
-    grid-template-columns: 1fr 1fr 34px;
+    grid-template-columns: 1fr 1fr 44px;
   }
 }

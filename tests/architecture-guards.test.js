@@ -21,7 +21,7 @@ describe('Lean Domain Modules architecture guards', () => {
   it('mounts the application navigation as a Vue component', () => {
     const html = read('index.html');
     const bootstrap = read('src/app/bootstrap.js');
-    const navigation = read('src/app/components/AppNavigation.vue');
+    const navigation = read('src/app/components/app-navigation/index.vue');
 
     expect(html).toContain('<nav class="nav" id="nav"></nav>');
     expect(bootstrap).toContain("import './mount-vue-islands.js';");
@@ -107,9 +107,9 @@ describe('Lean Domain Modules architecture guards', () => {
     }
 
     for (const [file, selector] of [
-      ['styles/features/_payments.scss', '#page-payments'],
-      ['styles/features/_reports.scss', '#page-reports'],
-      ['styles/features/_students.scss', '#profileModal'],
+      ['styles/features/payments/_workbench.scss', '#page-payments'],
+      ['styles/features/_reports.scss', '.reports-page {'],
+      ['styles/features/students/_profile-modal.scss', '.ui-modal-wrap:has(.profile-modal-card) {'],
     ]) {
       expect(read(file).split(selector), file).toHaveLength(2);
     }

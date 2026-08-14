@@ -5,8 +5,6 @@ export default {
   props: {
     /** Доступное название кнопки, открывающей меню. */
     ariaLabel: { type: String, required: true },
-    /** Идентификатор владельца меню для делегирования действия. */
-    ownerId: { type: String, default: '' },
     /** Доступные действия меню. */
     items: {
       type: Array,
@@ -15,7 +13,8 @@ export default {
         items.every((item) => item && item.value && item.label && typeof item.value === 'string'),
     },
   },
-  setup() {
+  emits: ['select'],
+  setup(props, { emit }) {
     const root = ref(null);
     const isOpen = ref(false);
 
@@ -29,6 +28,11 @@ export default {
 
     function itemClass(item) {
       return item.danger ? 'is-danger' : '';
+    }
+
+    function onItemClick(item) {
+      close();
+      emit('select', item.value);
     }
 
     function handleOutsideClick(event) {
@@ -48,6 +52,6 @@ export default {
       document.removeEventListener('keydown', handleKeydown);
     });
 
-    return { close, isOpen, itemClass, root, toggle };
+    return { close, isOpen, itemClass, onItemClick, root, toggle };
   },
 };

@@ -6,7 +6,7 @@
       class="student-card-menu"
       :aria-label="optionsLabel"
       :items="menuItems"
-      :owner-id="studentId"
+      @select="onMenuSelect"
     />
 
     <div
@@ -15,10 +15,13 @@
       tabindex="0"
       :aria-label="openCardLabel"
       :data-student="studentId"
+      @click="onCardClick"
+      @keydown.enter="onCardClick"
+      @keydown.space.prevent="onCardClick"
     >
       <div class="student-top">
         <div class="student-identity">
-          <div class="student-card-eyebrow">{{ grade }}</div>
+          <div class="student-card-eyebrow text-primary">{{ grade }}</div>
           <h3>{{ row.student.name }}</h3>
           <div class="meta">{{ row.contact }}</div>
         </div>
@@ -56,8 +59,9 @@
           <button
             class="student-lesson-link is-empty"
             type="button"
-            :data-add-lesson-link="studentId"
             :aria-label="addVideoCallLabel"
+            :data-add-lesson-link="studentId"
+            @click="onAddLessonLinkClick"
           >
             <span aria-hidden="true">＋</span>
           </button>

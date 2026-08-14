@@ -1,0 +1,39 @@
+.ui-hint {
+  display: inline-flex;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.ui-hint__trigger {
+  display: inline-grid;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.ui-hint__trigger:hover,
+.ui-hint__trigger:focus-visible {
+  color: var(--brand2);
+  background: color-mix(in sRGB, var(--brand2) 9%, transparent);
+}
+
+.ui-hint__trigger:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.ui-hint__trigger svg {
+  width: 16px;
+  height: 16px;
+}
+
+@media (width <= 620px) {
+  .ui-hint {
+    display: none;
+  }
+}

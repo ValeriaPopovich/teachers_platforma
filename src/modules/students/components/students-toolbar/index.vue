@@ -4,16 +4,21 @@
   <div class="toolbar students-toolbar">
     <label class="student-search">
       <span class="sr-only">Поиск учеников</span>
-      <UiInput id="studentSearch" v-model="query" placeholder="Поиск по ученикам и группам..." />
+      <UiInput
+        id="studentSearch"
+        :model-value="query"
+        placeholder="Поиск по ученикам и группам..."
+        @update:model-value="onSearchInput"
+      />
     </label>
 
-    <div id="studentFilter" class="student-filter" role="group" aria-label="Фильтр учеников">
+    <div class="student-filter" role="group" aria-label="Фильтр учеников">
       <button
         v-for="filter in filters"
         :key="filter.value"
         type="button"
         :class="filter.classes"
-        :data-student-filter="filter.value"
+        :data-label="filter.label"
         :aria-pressed="filter.isActive"
         @click="onFilterButtonClick(filter.value)"
       >
@@ -22,14 +27,8 @@
     </div>
 
     <div class="students-toolbar-actions">
-      <UiButton data-open="group">
-        <template #iconBefore><UiIcon name="user-plus" /></template>
-        + Группа
-      </UiButton>
-      <UiButton variant="primary" data-open="student">
-        <template #iconBefore><UiIcon name="user-plus" /></template>
-        + Ученик
-      </UiButton>
+      <UiButton data-open="group" @click="openNewGroup"> + Группа </UiButton>
+      <UiButton variant="primary" data-open="student" @click="openNewStudent"> + Ученик </UiButton>
     </div>
   </div>
 </template>

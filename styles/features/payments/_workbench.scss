@@ -6,10 +6,7 @@
 /* stylelint-disable-next-line selector-max-id -- feature ownership root */
 #page-payments {
   --payments-gap: 18px;
-  --payments-blue: #6e8fe8;
-  --payments-pink: #e96aa9;
   width: 100%;
-  color: var(--color-text-strong);
   font-family: var(--font-family-display);
   letter-spacing: -0.01em;
 
@@ -26,10 +23,10 @@
     align-items: center;
     gap: 9px;
     padding-inline: 20px;
-    border: 0;
+    border: 1px solid transparent;
     border-radius: 999px;
-    background: var(--payments-pink);
-    box-shadow: 0 8px 22px color-mix(in sRGB, var(--payments-pink) 24%, transparent);
+    background: var(--primary);
+    box-shadow: 0 8px 22px color-mix(in sRGB, var(--primary) 24%, transparent);
     font-family: inherit;
     font-size: 15px;
     font-weight: 700;
@@ -60,9 +57,7 @@
     padding: 34px 28px 26px;
     border-radius: 24px;
     box-shadow: 0 10px 24px rgb(28, 24, 38, 4%);
-    background: var(--panel);
     position: relative;
-    border: 1px solid var(--line);
     overflow: visible;
   }
 
@@ -82,7 +77,6 @@
   .payments-stats .label {
     font-size: 15px;
     font-weight: 700;
-    color: var(--muted);
     letter-spacing: 0.07em;
     text-transform: uppercase;
   }
@@ -90,7 +84,6 @@
   .payment-stat-note {
     display: block;
     margin-top: 8px;
-    color: var(--muted);
     font-size: 14px;
     line-height: 1.35;
   }
@@ -98,7 +91,7 @@
   .payments-workbench {
     margin-bottom: var(--payments-gap);
     padding: 0;
-    overflow: hidden;
+    overflow: visible;
     border-radius: 24px;
     min-height: 350px;
   }
@@ -108,8 +101,9 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    padding: 46px 24px 24px;
-    border-bottom: 1px solid var(--line);
+    padding: 24px;
+    border-radius: 24px 24px 0 0;
+    background: var(--panel);
   }
 
   .payments-tabs {
@@ -117,21 +111,18 @@
     align-items: center;
     gap: 4px;
     padding: 4px;
-    border-bottom: 1px solid var(--line);
     flex: 0 1 auto;
     margin: 0;
     border: 0;
     border-radius: 999px;
-    background: var(--panel2);
   }
 
   .payments-tab {
     position: relative;
     min-height: 42px;
     padding: 9px 16px;
-    border: 0;
+    border: 1px solid transparent;
     background: transparent;
-    color: var(--muted);
     font-weight: 650;
     border-radius: 999px;
     font-family: inherit;
@@ -139,6 +130,13 @@
     white-space: nowrap;
     -webkit-tap-highlight-color: transparent;
     user-select: none;
+    cursor: pointer;
+    transition:
+      color 160ms ease,
+      background-color 160ms ease,
+      border-color 160ms ease,
+      box-shadow 160ms ease,
+      transform 100ms ease;
   }
 
   .payments-tab::after {
@@ -154,9 +152,16 @@
   }
 
   .payments-tab[aria-selected='true'] {
-    color: var(--text);
+    color: var(--brand-ink);
+    border-color: color-mix(in sRGB, var(--primary) 28%, var(--line));
     background: var(--panel);
-    box-shadow: 0 2px 9px rgb(35, 31, 44, 8%);
+    box-shadow: 0 2px 9px rgb(35, 31, 44, 12%);
+  }
+
+  .payments-tab:hover:not([aria-selected='true']),
+  .payments-tab:focus-visible:not([aria-selected='true']) {
+    color: var(--text);
+    background: color-mix(in sRGB, var(--primary) 8%, var(--panel));
   }
 
   .payments-tab[aria-selected='true']::after {
@@ -172,8 +177,6 @@
     margin-left: 5px;
     padding: 0 6px;
     border-radius: 999px;
-    background: var(--neutral-chip);
-    color: var(--muted);
     font-size: 10px;
     line-height: 1;
   }
@@ -184,7 +187,9 @@
   }
 
   .payment-balance-list {
-    padding: 52px 24px 44px;
+    padding: 24px 24px 32px;
+    border-radius: 0 0 24px 24px;
+    background: var(--panel);
   }
 
   .payment-panel[hidden] {
@@ -196,6 +201,28 @@
     gap: 12px;
   }
 
+  .entity-card-enter-active,
+  .entity-card-leave-active,
+  .entity-card-move {
+    transition:
+      opacity 0.24s ease,
+      transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .entity-card-enter-from,
+  .entity-card-leave-to {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .entity-card-enter-active,
+    .entity-card-leave-active,
+    .entity-card-move {
+      transition: none;
+    }
+  }
+
   .payments-show-more {
     display: flex;
     align-items: center;
@@ -204,10 +231,8 @@
     width: 100%;
     min-height: 44px;
     margin-top: 10px;
-    border: 1px dashed var(--line);
     border-radius: 13px;
     background: color-mix(in sRGB, var(--panel2) 72%, transparent);
-    color: var(--brand-ink);
     font: inherit;
     font-size: var(--font-size-caption);
     font-weight: 800;
@@ -219,21 +244,17 @@
     background: color-mix(in sRGB, var(--brand2) 7%, var(--panel));
   }
 
-  .payments-show-more span {
-    color: var(--muted);
-    font-size: 11px;
-  }
-
   .payment-balance-item {
     display: grid;
-    grid-template-columns: 46px minmax(180px, 1fr) minmax(340px, 1.35fr) 260px 190px;
+    grid-template-columns: 5px minmax(150px, 1fr) minmax(250px, 1.35fr) minmax(120px, auto) minmax(
+        160px,
+        190px
+      );
     gap: 14px;
     align-items: center;
     min-width: 0;
     padding: 16px 18px;
-    border: 1px solid var(--line);
     border-radius: 18px;
-    background: var(--panel);
     min-height: 92px;
   }
 
@@ -250,7 +271,6 @@
   .payment-balance-main small {
     display: block;
     margin-top: 3px;
-    color: var(--muted);
     font-size: 13px;
   }
 
@@ -272,6 +292,16 @@
     color: var(--ok);
   }
 
+  .payment-balance-item[data-kind='empty'] .payment-balance-state {
+    color: var(--text-muted);
+  }
+
+  .payment-progress-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
   .payment-balance-item .btn {
     min-height: 40px;
     white-space: nowrap;
@@ -290,13 +320,11 @@
     min-height: 120px;
     padding: 24px;
     text-align: center;
-    color: var(--muted);
   }
 
   .payments-empty b {
     display: block;
     margin-bottom: 3px;
-    color: var(--text);
   }
 
   .payments-history-card {
@@ -316,10 +344,7 @@
   .payments-history-controls select {
     min-height: 40px;
     max-width: 220px;
-    border: 1px solid var(--line);
     border-radius: 11px;
-    background-color: var(--panel2);
-    color: var(--text);
     padding: 9px 36px 9px 11px;
   }
 
@@ -335,9 +360,7 @@
     align-items: center;
     min-width: 0;
     padding: 14px 16px;
-    border: 1px solid var(--line);
     border-radius: 18px;
-    background: var(--panel);
     min-height: 78px;
   }
 
@@ -350,7 +373,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    color: var(--text);
     font-size: 15px;
     font-weight: 700;
   }
@@ -361,12 +383,10 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     margin-top: 4px;
-    color: var(--muted);
     font-size: 13px;
   }
 
   .payment-history-amount {
-    color: var(--ok);
     font-weight: 850;
     white-space: nowrap;
     font-size: 16px;
@@ -375,7 +395,7 @@
   .payment-history-item .icon-btn {
     width: 36px;
     height: 36px;
-    color: var(--muted);
+    color: var(--text-muted);
   }
 
   .payment-history-item .icon-btn:hover {
@@ -387,12 +407,11 @@
     display: none !important;
   }
 
-  .payments-stats .help-tip {
+  .payments-stats .ui-hint {
     top: 28px;
     right: 25px;
     width: 25px;
     height: 25px;
-    font-size: 14px;
   }
 
   .payments-topbar h1 {
@@ -424,12 +443,9 @@
     stroke-width: 1.8;
   }
 
-  .payments-stats .stat:has(.help-tip:hover) {
-    z-index: 5;
-  }
-
-  .payments-stats .stat:has(.help-tip:focus) {
-    z-index: 5;
+  .payments-stats .stat:hover,
+  .payments-stats .stat:focus-within {
+    z-index: 40;
   }
 
   .payments-stats .debt-stat .value {
@@ -442,8 +458,6 @@
     bottom: 56px;
     padding: 5px 11px;
     border-radius: 999px;
-    background: var(--neutral-chip);
-    color: var(--muted);
     font-size: 12px;
     font-weight: 800;
   }
@@ -474,10 +488,7 @@
     gap: 8px;
     min-width: 300px;
     padding: 0 13px;
-    border: 1px solid var(--line);
     border-radius: 999px;
-    background: var(--panel);
-    color: var(--muted);
   }
 
   .payments-search input {
@@ -486,13 +497,12 @@
     border: 0;
     outline: 0;
     background: transparent;
-    color: var(--text);
     font-family: inherit;
     font-size: 14px;
   }
 
   .payment-subpanel {
-    padding: 52px 24px 44px;
+    padding: 24px 24px 44px;
   }
 
   .payment-state-rail {
@@ -500,7 +510,7 @@
     width: 5px;
     min-height: 46px;
     border-radius: 999px;
-    background: var(--payments-blue);
+    background: var(--secondary);
   }
 
   .payment-balance-item[data-kind='need'] .payment-state-rail {
@@ -508,7 +518,7 @@
   }
 
   .payment-balance-item[data-kind='ending'] .payment-state-rail {
-    background: #f59f0a;
+    background: var(--primary);
   }
 
   .payment-progress div {
@@ -516,7 +526,6 @@
     grid-template-columns: minmax(0, 1fr) 54px;
     align-items: center;
     gap: 10px;
-    color: var(--muted);
     font-size: 13px;
   }
 
@@ -526,7 +535,6 @@
     margin: 7px 0 5px;
     overflow: hidden;
     border-radius: 999px;
-    background: var(--line);
   }
 
   .payment-progress div b {
@@ -537,11 +545,9 @@
     display: block;
     height: 100%;
     border-radius: inherit;
-    background: var(--ok);
   }
 
   .payment-progress small {
-    color: var(--muted);
     font-size: 12px;
   }
 
@@ -554,7 +560,7 @@
   .payment-balance-state span {
     display: block;
     margin-top: 4px;
-    color: var(--muted);
+    color: var(--text-muted);
     font-size: 11px;
   }
 
@@ -574,7 +580,7 @@
     min-height: 44px;
     border: 0;
     border-radius: 999px;
-    background: var(--payments-pink);
+    background: var(--primary);
     color: white;
     font-family: inherit;
     font-size: 13px;
@@ -592,11 +598,132 @@
   }
 
   .payments-history-card .section-head {
-    margin-bottom: 22px;
+    margin-bottom: 12px;
+  }
+
+  .payments-period-picker {
+    position: relative;
+  }
+
+  .payments-period-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 42px;
+    padding: 0 14px;
+    border-radius: 12px;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .payments-period-trigger svg {
+    width: 17px;
+    height: 17px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+  }
+
+  .payments-mini-calendar {
+    position: absolute;
+    z-index: 80;
+    top: calc(100% + 8px);
+    right: 0;
+    width: min(320px, calc(100vw - 32px));
+    padding: 14px;
+    border-radius: 18px;
+    box-shadow: 0 20px 55px rgb(28, 24, 38, 18%);
+  }
+
+  .payments-mini-calendar-head {
+    display: grid;
+    grid-template-columns: 34px 1fr 34px;
+    align-items: center;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+
+  .payments-mini-calendar-head b {
+    font-size: 14px;
+    text-transform: capitalize;
+  }
+
+  .payments-mini-calendar-head button,
+  .payments-mini-days button {
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .payments-mini-calendar-head button {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    font-size: 24px;
+  }
+
+  .payments-mini-weekdays,
+  .payments-mini-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+  }
+
+  .payments-mini-weekdays span {
+    padding-block: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  .payments-mini-days button {
+    position: relative;
+    z-index: 0;
+    height: 36px;
+    padding: 0;
+    border-radius: 10px;
+    font-size: 12px;
+  }
+
+  .payments-mini-days button.in-range {
+    border-radius: 0;
+    background: color-mix(in sRGB, var(--primary) 13%, transparent);
+  }
+
+  .payments-mini-days button.selected {
+    border-radius: 10px;
+    color: white;
+    background: var(--primary);
+    font-weight: 750;
+  }
+
+  .payments-mini-days button.outside {
+    color: color-mix(in sRGB, var(--text-muted) 50%, transparent);
+  }
+
+  .payments-mini-calendar-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 12px;
+  }
+
+  .payments-mini-calendar-actions button {
+    min-height: 34px;
+    padding-inline: 12px;
+    border: 0;
+    border-radius: 10px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .payments-mini-calendar-actions button.primary {
+    color: white;
   }
 
   .payments-history-head h2 {
-    color: var(--muted);
     font-size: 13px;
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -609,7 +736,6 @@
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    color: var(--ok);
     background: color-mix(in sRGB, var(--ok) 10%, var(--panel));
   }
 
@@ -624,57 +750,30 @@
   }
 
   .payment-history-item time {
-    color: var(--muted);
     font-size: 13px;
     white-space: nowrap;
   }
 
   .payment-history-badge {
     padding: 5px 10px;
-    border: 1px solid var(--line);
     border-radius: 999px;
-    color: var(--muted);
     font-size: 11px;
     line-height: 1;
     white-space: nowrap;
   }
 
   .payment-history-delete {
-    color: var(--muted);
+    color: var(--text-muted);
   }
 
-  .payment-history-delete .student-delete-icon {
-    position: relative;
-    display: block;
-    width: 12px;
-    height: 12px;
-    margin: auto;
-    border: 1.5px solid currentColor;
-    border-top: 0;
-    border-radius: 0 0 3px 3px;
-  }
-
-  .payment-history-delete .student-delete-icon::before {
-    position: absolute;
-    top: -4px;
-    left: -2px;
-    width: 14px;
-    height: 1.5px;
-    border-radius: 999px;
-    background: currentColor;
-    content: '';
-  }
-
-  .payment-history-delete .student-delete-icon::after {
-    position: absolute;
-    top: -6px;
-    left: 3px;
-    width: 5px;
-    height: 3px;
-    border: 1.5px solid currentColor;
-    border-bottom: 0;
-    border-radius: 2px 2px 0 0;
-    content: '';
+  .payment-history-delete svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.7;
   }
 
   .payment-history-delete:hover {
@@ -696,18 +795,31 @@
     }
 
     .payment-balance-item {
-      grid-template-columns: 44px minmax(0, 1fr) minmax(180px, 1fr) auto;
+      grid-template-columns: 5px minmax(0, 1fr) minmax(150px, 180px);
+      grid-template-areas:
+        'avatar identity state'
+        'avatar progress action';
+    }
+
+    .payment-state-rail {
+      grid-area: avatar;
+    }
+
+    .payment-balance-main {
+      grid-area: identity;
+    }
+
+    .payment-progress {
+      grid-area: progress;
     }
 
     .payment-balance-state {
       text-align: left;
-      grid-column: 2;
-      grid-row: 2;
+      grid-area: state;
     }
 
-    .payment-balance-item .btn {
-      grid-column: 2;
-      grid-row: 1 / span 2;
+    .payment-balance-item .payment-row-action {
+      grid-area: action;
     }
 
     .payment-history-item {
@@ -767,9 +879,9 @@
     }
 
     .payment-balance-item {
-      grid-template-columns: 5px minmax(150px, 0.8fr) minmax(260px, 1.2fr) 176px;
+      grid-template-columns: 5px minmax(0, 1fr) minmax(140px, 176px);
       gap: 10px 14px;
-      grid-template-areas: 'avatar identity state action' 'avatar progress progress action';
+      grid-template-areas: 'avatar identity state' 'avatar progress action';
     }
 
     .payment-balance-main {
@@ -836,7 +948,7 @@
     .payments-primary-action {
       min-height: 42px;
       padding-inline: 14px;
-      box-shadow: 0 6px 16px color-mix(in sRGB, var(--payments-pink) 20%, transparent);
+      box-shadow: 0 6px 16px color-mix(in sRGB, var(--primary) 20%, transparent);
       font-size: 12px;
       position: static;
       width: fit-content;
@@ -875,17 +987,18 @@
     }
 
     .payments-tabs {
-      display: grid;
-      overflow-x: hidden;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      display: flex;
+      overflow-x: auto;
       width: 100%;
+      scroll-padding-inline: 4px;
     }
 
     .payments-tab {
+      flex: 0 0 auto;
       min-height: 38px;
       padding: 8px 12px;
       font-size: 12px;
-      white-space: normal;
+      white-space: nowrap;
       min-width: 0;
     }
 
@@ -1016,7 +1129,7 @@
     }
 
     .payments-tabs {
-      margin-top: 12px;
+      margin-top: 0;
     }
 
     .payments-tab {
@@ -1054,7 +1167,7 @@
       min-width: 0;
     }
 
-    .payments-stats .help-tip {
+    .payments-stats .ui-hint {
       display: none;
     }
 
@@ -1064,16 +1177,16 @@
     }
 
     .payment-balance-item .payment-row-action {
-      grid-column: 3;
-      grid-row: 1 / span 2;
-    }
-
-    .payment-progress {
-      grid-column: 1/-1;
+      grid-area: action;
     }
   }
 
   @include bp.till(479px) {
+    .payments-mini-calendar {
+      right: auto;
+      left: 0;
+    }
+
     .payments-tab-count {
       min-width: 18px;
       height: 18px;
@@ -1153,8 +1266,8 @@
 }
 
 .debt-stat {
-  border-color: rgb(220, 82, 96, 50%);
-  background: rgb(220, 82, 96, 8%);
+  border-color: color-mix(in sRGB, var(--bad) 50%, transparent);
+  background: color-mix(in sRGB, var(--bad) 8%, transparent);
 }
 
 .debt-stat .value {

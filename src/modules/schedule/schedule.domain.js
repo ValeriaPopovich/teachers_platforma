@@ -25,6 +25,17 @@ export function existingLessonOwnerPatch(lesson, { type, id }) {
   return type === 's' ? { studentId: id } : null;
 }
 
+// Сдвиг опорной даты календаря на шаг вперёд/назад. В режиме месяца сначала
+// встаём на 1-е число, иначе setMonth от 31-го перепрыгивает короткий месяц.
+export function shiftCalendarAnchor(view, date, amount) {
+  const next = new Date(date);
+  if (view === 'month') {
+    next.setDate(1);
+    next.setMonth(next.getMonth() + amount);
+  } else next.setDate(next.getDate() + amount * (view === 'week' ? 7 : 1));
+  return next;
+}
+
 export function calendarViewRange(view, now = new Date()) {
   const start = new Date(now);
   start.setHours(0, 0, 0, 0);
@@ -142,13 +153,14 @@ export function generateSchedule(data, { type, id, slots, replace = true, now = 
         )
           continue;
         const student = next.students.find((item) => item.id === studentId);
+        if (student?.status === 'paused') continue;
         next.lessons.push({
           id: uid(),
           ...(seriesId ? { seriesId, groupId: id } : {}),
           studentId,
           date: iso,
           status: 'planned',
-          payment: student?.payType === 'package' ? 'package' : 'unpaid',
+          payment: 'unpaid',
           topics: '',
           amount: +student?.price || 0,
           homework: '',
@@ -164,7 +176,8 @@ export function generateSchedule(data, { type, id, slots, replace = true, now = 
 
 export function extendAllSchedules(data, { now = new Date(), uid }) {
   let next = structuredClone(data);
-  for (const student of next.students)
+  for (const student of next.students) {
+    if (student.status === 'paused') continue;
     next = generateSchedule(next, {
       type: 'student',
       id: student.id,
@@ -173,6 +186,7 @@ export function extendAllSchedules(data, { now = new Date(), uid }) {
       now,
       uid,
     });
+  }
   for (const group of next.groups)
     next = generateSchedule(next, {
       type: 'group',

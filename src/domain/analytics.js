@@ -1,80 +1,38 @@
-import {
-  monthlyRecurringDates,
-  recurringScheduleKey,
-} from '../modules/schedule/schedule.domain.js';
+import { CHARGED_STATUSES, RESERVED_STATUSES, lessonCharge } from '../modules/payments/finances.js';
+
+/**
+ * Начислено = проведённые занятия периода по их собственной цене.
+ * Плановая сумма (то, что ещё предстоит провести) считается отдельно как
+ * `reserved`, чтобы не смешивать факт и ожидание в одном числе.
+ */
 export function periodAnalytics(data, fromMs, toMs) {
-  const inRange = (ms) => ms >= fromMs && ms <= toMs,
-    allPeriodLessons = (data.lessons || []).filter((lesson) =>
-      inRange(new Date(lesson.date).getTime()),
-    ),
-    lessons = allPeriodLessons.filter((lesson) => ['done', 'paid_missed'].includes(lesson.status)),
-    chargeableLessons = allPeriodLessons.filter(
-      (lesson) =>
-        ['planned', 'unconfirmed', 'done', 'paid_missed'].includes(lesson.status) &&
-        !['package', 'not_charged'].includes(lesson.payment),
-    ),
-    pays = (data.payments || []).filter((payment) => inRange(new Date(payment.date).getTime())),
-    paid = pays.reduce((sum, payment) => sum + (+payment.amount || 0), 0),
-    packageOneoffs = (student, start) =>
-      (data.lessons || []).filter((lesson) => {
-        const at = new Date(lesson.date).getTime();
-        return (
-          lesson.studentId === student.id &&
-          !lesson.groupId &&
-          lesson.lessonKind === 'oneoff' &&
-          lesson.payment === 'package' &&
-          ['planned', 'unconfirmed', 'done', 'paid_missed'].includes(lesson.status) &&
-          inRange(at) &&
-          at >= start
-        );
-      }),
-    plannedPackages = (data.students || [])
-      .filter((student) => student.payType === 'package')
-      .reduce((sum, student) => {
-        const start = Math.max(+student.createdAt || 0, +student.billingSince || 0),
-          exclusions = new Set(data.settings?.scheduleExclusions || []),
-          dates = monthlyRecurringDates(student.scheduleSlots || [], new Date(fromMs)).filter(
-            (date) =>
-              inRange(date.getTime()) &&
-              date.getTime() >= start &&
-              !exclusions.has(recurringScheduleKey('student', student.id, date)),
-          );
-        return sum + (dates.length + packageOneoffs(student, start).length) * (+student.price || 0);
-      }, 0),
-    charged =
-      plannedPackages + chargeableLessons.reduce((sum, lesson) => sum + (+lesson.amount || 0), 0),
-    byStudent = {};
-  for (const payment of pays) {
-    byStudent[payment.studentId] ||= { paid: 0, charged: 0, lessons: 0 };
-    byStudent[payment.studentId].paid += +payment.amount || 0;
-  }
+  const inRange = (ms) => ms >= fromMs && ms <= toMs;
+  const periodLessons = (data.lessons || []).filter((lesson) =>
+    inRange(new Date(lesson.date).getTime()),
+  );
+  const lessons = periodLessons.filter((lesson) => CHARGED_STATUSES.includes(lesson.status));
+  const reservedLessons = periodLessons.filter((lesson) =>
+    RESERVED_STATUSES.includes(lesson.status),
+  );
+  const pays = (data.payments || []).filter((payment) => inRange(new Date(payment.date).getTime()));
+  const paid = pays.reduce((sum, payment) => sum + (+payment.amount || 0), 0);
+  const charged = lessons.reduce((sum, lesson) => sum + lessonCharge(lesson), 0);
+  const reserved = reservedLessons.reduce((sum, lesson) => sum + lessonCharge(lesson), 0);
+
+  const byStudent = {};
+  const bucket = (id) => (byStudent[id] ||= { paid: 0, charged: 0, lessons: 0 });
+  for (const payment of pays) bucket(payment.studentId).paid += +payment.amount || 0;
   for (const lesson of lessons) {
     if (!lesson.studentId) continue;
-    byStudent[lesson.studentId] ||= { paid: 0, charged: 0, lessons: 0 };
-    byStudent[lesson.studentId].lessons++;
+    const entry = bucket(lesson.studentId);
+    entry.lessons += 1;
+    entry.charged += lessonCharge(lesson);
   }
-  for (const lesson of chargeableLessons) {
-    if (!lesson.studentId) continue;
-    byStudent[lesson.studentId] ||= { paid: 0, charged: 0, lessons: 0 };
-    byStudent[lesson.studentId].charged += +lesson.amount || 0;
-  }
-  for (const student of data.students || []) {
-    if (student.payType !== 'package') continue;
-    const start = Math.max(+student.createdAt || 0, +student.billingSince || 0),
-      exclusions = new Set(data.settings?.scheduleExclusions || []),
-      dates = monthlyRecurringDates(student.scheduleSlots || [], new Date(fromMs)).filter(
-        (date) =>
-          inRange(date.getTime()) &&
-          date.getTime() >= start &&
-          !exclusions.has(recurringScheduleKey('student', student.id, date)),
-      );
-    byStudent[student.id] ||= { paid: 0, charged: 0, lessons: 0 };
-    byStudent[student.id].charged +=
-      (dates.length + packageOneoffs(student, start).length) * (+student.price || 0);
-  }
+
   return {
     paid,
     charged,
+    reserved,
     paidCount: pays.length,
     lessonsCount: lessons.length,
     pays,
